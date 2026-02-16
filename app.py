@@ -1,14 +1,14 @@
 """
-NSE SCANNER PRO v5.1 — Smart Targets + Confluence + F&O
+NSE SCANNER PRO v11 — RRG + Walk-Forward + Cost Model + Volume Profile
 ============================================================
-v5.1 changes:
-- Smart R:R targets (resistance-based T1, Fibonacci T2 — stock-specific)
-- Multi-strategy confluence detection (🔥 when stock appears in 2+ strategies)
-- F&O stock tagging on all signals
-- Telegram alerts include RS, sector performance, F&O status
-- Sector RS shown alongside signals
-- PWA manifest for mobile install (Add to Home Screen)
-- GitHub Actions fix (streamlit conditional import)
+v11 changes (from v5.2 backend):
+- RRG sector rotation quadrant visualisation in UI
+- Walk-forward validation with overfit detection in Backtest
+- Net P&L with slippage/brokerage/STT cost breakdown
+- Volume Profile (POC/VAH/VAL) display when Breeze connected
+- VCP multi-contraction detection (Minervini-style)
+- Data quality gates visible to user
+- Breeze connection: 20s timeout + manual retry button
 """
 
 import streamlit as st
@@ -210,7 +210,7 @@ for k, v in {
     "breeze_connected":False, "breeze_engine":None, "breeze_msg":"",
     "workflow_checks":{}, "universe_size":"nifty200",
     "telegram_token":"", "telegram_chat_id":"",
-    "journal":None, "last_scan_time":None, "sector_rankings":{},
+    "journal":None, "last_scan_time":None, "sector_rankings":{}, "rrg_data":{},
     "rs_filter": 70, "regime_filter": True,
 }.items():
     if k not in st.session_state: st.session_state[k] = v
@@ -228,7 +228,7 @@ def try_breeze():
         st_ = get_secret("BREEZE_SESSION_TOKEN", "")
         if ak and asc and st_ and "your_" not in ak:
             import threading
-            result = {"ok": False, "msg": "Breeze connection timed out (10s)"}
+            result = {"ok": False, "msg": "Breeze connection timed out (20s)"}
             def _connect():
                 try:
                     e = BreezeEngine()
@@ -241,7 +241,7 @@ def try_breeze():
                     result["msg"] = f"Breeze: {type(ex).__name__}: {str(ex)[:80]}"
             t = threading.Thread(target=_connect, daemon=True)
             t.start()
-            t.join(timeout=10)
+            t.join(timeout=20)
             st.session_state.breeze_connected = result.get("ok", False)
             st.session_state.breeze_msg = result.get("msg", "")
             if result.get("ok"):
@@ -434,6 +434,11 @@ with st.sidebar:
             st.markdown(f'<div class="bb bb-off">⚪ {short_err}</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="bb bb-off">⚪ Breeze Off — intraday disabled</div>', unsafe_allow_html=True)
+        if st.button("🔄 Retry Breeze", key="retry_breeze"):
+            st.session_state.breeze_connected = False
+            st.session_state.breeze_msg = ""
+            try_breeze()
+            st.rerun()
     
     if st.session_state.last_scan_time:
         age = (now_ist() - st.session_state.last_scan_time).total_seconds() / 60
@@ -548,6 +553,13 @@ def page_dashboard():
             breadth = compute_market_breadth(enriched)
             st.session_state.regime = detect_market_regime(nifty, breadth)
             st.session_state.sector_rankings = compute_sector_ranks()
+            # Compute RRG sector rotation
+            try:
+                rrg = compute_sector_rrg(enriched or data, nifty)
+                st.session_state.rrg_data = rrg
+            except Exception as e:
+                logging.warning(f"RRG computation failed: {e}")
+                st.session_state.rrg_data = {}
             st.rerun()
     
     if not st.session_state.data_loaded:
@@ -618,6 +630,44 @@ def page_dashboard():
         fig = plot_sector_heatmap(sector_df)
         if fig: st.plotly_chart(fig, use_container_width=True)
     
+    # === RRG SECTOR ROTATION ===
+    rrg = st.session_state.get("rrg_data", {})
+    if rrg:
+        with st.expander("🔄 RRG Sector Rotation (Relative Rotation Graph)", expanded=True):
+            st.caption("Sectors classified by RS-Ratio (strength vs Nifty) and RS-Momentum (acceleration). "
+                       "LEADING sectors boost scan confidence +8, LAGGING sectors penalize -15.")
+            q_map = {"LEADING": [], "WEAKENING": [], "IMPROVING": [], "LAGGING": []}
+            for sector, data in rrg.items():
+                q = data.get("quadrant", "LAGGING")
+                score = data.get("score", 0)
+                q_map.get(q, q_map["LAGGING"]).append((sector, score, data.get("ratio", 0), data.get("momentum", 0)))
+            
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown("**🟢 LEADING**")
+                st.caption("Strong + Improving")
+                for s, sc, r, m in sorted(q_map["LEADING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · Score {sc}")
+                if not q_map["LEADING"]: st.markdown("*None*")
+            with c2:
+                st.markdown("**🟡 WEAKENING**")
+                st.caption("Strong but Slowing")
+                for s, sc, r, m in sorted(q_map["WEAKENING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · Score {sc}")
+                if not q_map["WEAKENING"]: st.markdown("*None*")
+            with c3:
+                st.markdown("**🔵 IMPROVING**")
+                st.caption("Weak but Accelerating")
+                for s, sc, r, m in sorted(q_map["IMPROVING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · Score {sc}")
+                if not q_map["IMPROVING"]: st.markdown("*None*")
+            with c4:
+                st.markdown("**🔴 LAGGING**")
+                st.caption("Weak + Declining")
+                for s, sc, r, m in sorted(q_map["LAGGING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · Score {sc}")
+                if not q_map["LAGGING"]: st.markdown("*None*")
+    
     # === QUICK SCAN ===
     st.markdown("### ⚡ Quick Scan")
     c1, c2 = st.columns(2)
@@ -637,6 +687,7 @@ def page_dashboard():
                 regime=st.session_state.regime if st.session_state.regime_filter else None,
                 has_intraday=st.session_state.breeze_connected,
                 sector_rankings=st.session_state.sector_rankings,
+                rrg_data=st.session_state.get("rrg_data"),
                 min_rs=st.session_state.rs_filter,
             )
             st.session_state.scan_results = results
@@ -750,6 +801,7 @@ def page_scanner_hub():
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
+                    rrg_data=st.session_state.get("rrg_data"),
                     min_rs=st.session_state.rs_filter)
         else:
             with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']}..."):
@@ -758,6 +810,7 @@ def page_scanner_hub():
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
+                    rrg_data=st.session_state.get("rrg_data"),
                     min_rs=st.session_state.rs_filter)
         st.session_state.last_scan_time = now_ist()
         # Auto-save signals to log
@@ -844,7 +897,7 @@ def page_charts_rs():
     if not st.session_state.data_loaded:
         st.warning("Load data first.")
         return
-    tab1, tab2, tab3 = st.tabs(["📊 Chart", "💪 RS Rankings", "🗺️ Sectors"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Chart", "💪 RS Rankings", "🗺️ Sectors", "📊 Volume Profile"])
     with tab1:
         enriched = st.session_state.enriched_data or st.session_state.stock_data
         sel = st.selectbox("Stock", sorted(enriched.keys()))
@@ -877,6 +930,61 @@ def page_charts_rs():
             if fig: st.plotly_chart(fig, use_container_width=True)
             st.dataframe(sector_df.reset_index().rename(columns={"index":"Sector","stocks":"#","avg_1w":"1W%","avg_1m":"1M%","avg_3m":"3M%"}),
                          use_container_width=True, hide_index=True)
+    with tab4:
+        if not st.session_state.breeze_connected:
+            st.warning("🔌 Volume Profile requires Breeze API connection for intraday data. "
+                       "Connect Breeze in Settings to use this feature.")
+        else:
+            enriched = st.session_state.enriched_data or st.session_state.stock_data
+            vp_sym = st.selectbox("Stock", sorted(enriched.keys()), key="vp_sym")
+            vp_days = st.slider("Days of intraday data", 5, 60, 20, key="vp_days")
+            if st.button("📊 Compute Volume Profile", key="vp_run"):
+                with st.spinner(f"Fetching {vp_days}d intraday data for {vp_sym}..."):
+                    try:
+                        from data_engine import BreezeEngine, get_secret
+                        be = BreezeEngine(get_secret("BREEZE_API_KEY"),
+                                          get_secret("BREEZE_API_SECRET"),
+                                          get_secret("BREEZE_SESSION_TOKEN"))
+                        vp = be.fetch_volume_profile(vp_sym, days_back=vp_days)
+                        if vp and vp.get("poc"):
+                            st.markdown("### Volume-by-Price Analysis")
+                            c1, c2, c3 = st.columns(3)
+                            with c1: pc("POC (Point of Control)", fp(vp["poc"]), "g")
+                            with c2: pc("Value Area High", fp(vp["vah"]))
+                            with c3: pc("Value Area Low", fp(vp["val"]))
+                            
+                            st.markdown("**🟢 High Volume Nodes (Support/Resistance):**")
+                            for node in vp.get("hvn", []):
+                                st.markdown(f"  ₹{node:,.1f}")
+                            
+                            st.markdown("**🔵 Low Volume Nodes (Breakout Zones):**")
+                            for node in vp.get("lvn", []):
+                                st.markdown(f"  ₹{node:,.1f}")
+                            
+                            # Volume histogram chart
+                            if vp.get("histogram"):
+                                import plotly.graph_objects as go
+                                hist = vp["histogram"]
+                                fig = go.Figure(go.Bar(
+                                    y=[f"₹{h['price']:.0f}" for h in hist],
+                                    x=[h["volume"] for h in hist],
+                                    orientation='h',
+                                    marker_color=["#FF6B35" if abs(h["price"] - vp["poc"]) < 1 else "#5dade2" for h in hist]
+                                ))
+                                fig.add_hline(y=f"₹{vp['poc']:.0f}", line_dash="dash", line_color="#00d26a",
+                                              annotation_text="POC")
+                                fig.update_layout(template="plotly_dark", title="Volume-by-Price Distribution",
+                                                  xaxis_title="Volume", yaxis_title="Price Level",
+                                                  height=500, margin=dict(t=40, b=30))
+                                st.plotly_chart(fig, use_container_width=True)
+                            
+                            st.caption(f"Based on {vp_days} days of 5-min intraday data from Breeze API. "
+                                       "POC = most traded price level. HVN = areas of high acceptance (support/resistance). "
+                                       "LVN = areas of low acceptance (price tends to move through quickly).")
+                        else:
+                            st.warning("Could not compute Volume Profile. Breeze may not have intraday data for this symbol.")
+                    except Exception as e:
+                        st.error(f"Volume Profile error: {e}")
 
 
 # ============================================================================
@@ -1063,6 +1171,9 @@ def page_backtest():
             max_hold = st.number_input("Max Hold (days)", 5, 60, 20, 5, key="bt_hold",
                 help="Force exit after N days if neither SL nor T1 is hit. Shorter = more trades, less risk per trade.")
         
+        run_wf = st.checkbox("🔬 Run Walk-Forward Validation", value=False, key="bt_wf",
+            help="Splits data 70/30 into train/test periods. Flags overfitting if train win rate exceeds test by >15%.")
+        
         if sym and st.button("🧪 Run Backtest", type="primary", key="bt_run1"):
             if sym not in stock_data:
                 st.error(f"{sym} data not available."); return
@@ -1073,6 +1184,27 @@ def page_backtest():
             
             if result and result.total_trades > 0:
                 _render_backtest_result(result)
+                # Walk-forward validation
+                if run_wf:
+                    with st.spinner("Running walk-forward validation..."):
+                        wf = backtest_walk_forward(stock_data[sym], sym, strat, max_hold=max_hold)
+                    if wf:
+                        st.markdown("---")
+                        st.markdown("### 🔬 Walk-Forward Validation")
+                        c1, c2, c3, c4 = st.columns(4)
+                        with c1: pc("Train Win%", f"{wf.get('train_win_rate', 0):.1f}%")
+                        with c2: pc("Test Win%", f"{wf.get('test_win_rate', 0):.1f}%",
+                                    "g" if not wf.get("overfit_warning") else "r")
+                        with c3: pc("Train Trades", str(wf.get("train_trades", 0)))
+                        with c4: pc("Test Trades", str(wf.get("test_trades", 0)))
+                        if wf.get("overfit_warning"):
+                            st.error(f"⚠️ **Overfit Warning:** Train win rate ({wf['train_win_rate']:.1f}%) exceeds "
+                                     f"test ({wf['test_win_rate']:.1f}%) by >{wf.get('overfit_threshold', 15)}%. "
+                                     "Strategy may not perform as well live.")
+                        else:
+                            st.success("✅ Walk-forward passed — no significant overfitting detected.")
+                    else:
+                        st.info("Insufficient trades for walk-forward split.")
             else:
                 st.info(f"No {STRATEGY_PROFILES[strat]['name']} signals found for {sym} in ~1 year of data. "
                         "This strategy may need different market conditions to trigger.")
@@ -1118,14 +1250,19 @@ def page_backtest():
             r = backtest_multi_stock(list(stock_data.keys()),
                                      stock_data, s, lookback=500, max_hold=20)
             if r and r.total_trades > 0:
+                net_pnl = getattr(r, 'net_pnl_pct', r.total_pnl_pct)
+                net_pf = getattr(r, 'net_profit_factor', r.profit_factor)
+                total_costs = getattr(r, 'total_costs_pct', 0)
                 comparison.append({
                     "Strategy": f"{STRATEGY_PROFILES[s]['icon']} {STRATEGY_PROFILES[s]['name']}",
                     "Trades": r.total_trades,
                     "Win Rate": f"{r.win_rate}%",
-                    "Total P&L": f"{r.total_pnl_pct:+.1f}%",
+                    "Gross P&L": f"{r.total_pnl_pct:+.1f}%",
+                    "Costs": f"{total_costs:.1f}%",
+                    "Net P&L": f"{net_pnl:+.1f}%",
+                    "Net PF": f"{net_pf:.2f}" if isinstance(net_pf, (int, float)) else str(net_pf),
                     "Avg Win": f"+{r.avg_win_pct:.1f}%",
                     "Avg Loss": f"-{r.avg_loss_pct:.1f}%",
-                    "Profit Factor": r.profit_factor,
                     "Max DD": f"{r.max_drawdown_pct:.1f}%",
                     "Expectancy": f"{r.expectancy_pct:+.2f}%",
                     "Avg Hold": f"{r.avg_holding_days:.0f}d",
@@ -1133,8 +1270,9 @@ def page_backtest():
             else:
                 comparison.append({
                     "Strategy": f"{STRATEGY_PROFILES[s]['icon']} {STRATEGY_PROFILES[s]['name']}",
-                    "Trades": 0, "Win Rate": "-", "Total P&L": "-", "Avg Win": "-",
-                    "Avg Loss": "-", "Profit Factor": "-", "Max DD": "-", 
+                    "Trades": 0, "Win Rate": "-", "Gross P&L": "-", "Costs": "-",
+                    "Net P&L": "-", "Net PF": "-", "Avg Win": "-",
+                    "Avg Loss": "-", "Max DD": "-", 
                     "Expectancy": "-", "Avg Hold": "-",
                 })
         progress.empty()
@@ -1149,7 +1287,8 @@ def _render_backtest_result(result):
     st.markdown(f"### Results: {result.strategy} on {result.symbol}")
     st.caption(f"Period: {result.period} | Max hold: inferred from trades")
     
-    # Key metrics row
+    # Key metrics row — GROSS
+    st.markdown("**📊 Gross Performance** (before costs)")
     c1,c2,c3,c4,c5,c6 = st.columns(6)
     with c1: pc("Trades", str(result.total_trades))
     with c2: pc("Win Rate", f"{result.win_rate}%", "g" if result.win_rate > 50 else "r")
@@ -1158,13 +1297,31 @@ def _render_backtest_result(result):
     with c5: pc("Max Drawdown", f"{result.max_drawdown_pct:.1f}%", "r")
     with c6: pc("Expectancy", f"{result.expectancy_pct:+.2f}%/trade", "g" if result.expectancy_pct > 0 else "r")
     
+    # Key metrics row — NET (after costs)
+    has_net = hasattr(result, 'net_pnl_pct') and result.net_pnl_pct is not None
+    if has_net:
+        st.markdown("**💰 Net Performance** (after slippage + brokerage + STT + fees + GST)")
+        c1,c2,c3,c4,c5,c6 = st.columns(6)
+        net_pf = getattr(result, 'net_profit_factor', result.profit_factor)
+        net_exp = getattr(result, 'net_expectancy_pct', result.expectancy_pct)
+        total_costs = getattr(result, 'total_costs_pct', 0)
+        with c1: pc("Total Costs", f"{total_costs:.2f}%", "r")
+        with c2: pc("Net P&L", f"{result.net_pnl_pct:+.1f}%", "g" if result.net_pnl_pct > 0 else "r")
+        with c3: pc("Net PF", f"{net_pf:.2f}" if isinstance(net_pf, (int, float)) else str(net_pf),
+                     "g" if isinstance(net_pf, (int, float)) and net_pf > 1.5 else "r")
+        with c4: pc("Net Expect.", f"{net_exp:+.2f}%", "g" if isinstance(net_exp, (int, float)) and net_exp > 0 else "r")
+        with c5: pc("Cost/Trade", f"{total_costs/result.total_trades:.3f}%" if result.total_trades > 0 else "-")
+        with c6: pc("Slippage", "0.10% × 2 sides")
+    
     # Interpretation
-    if result.profit_factor > 1.5 and result.win_rate > 45:
-        st.success(f"✅ **Strong edge detected.** PF {result.profit_factor} with {result.win_rate}% win rate.")
-    elif result.profit_factor > 1:
-        st.info(f"➖ **Marginal edge.** PF {result.profit_factor} — consider with regime filter for better results.")
+    check_pf = getattr(result, 'net_profit_factor', result.profit_factor) if has_net else result.profit_factor
+    check_pf = check_pf if isinstance(check_pf, (int, float)) else 0
+    if check_pf > 1.5 and result.win_rate > 45:
+        st.success(f"✅ **Strong edge detected.** {'Net ' if has_net else ''}PF {check_pf:.2f} with {result.win_rate}% win rate.")
+    elif check_pf > 1:
+        st.info(f"➖ **Marginal edge.** {'Net ' if has_net else ''}PF {check_pf:.2f} — consider with regime filter for better results.")
     else:
-        st.warning(f"⚠️ **No edge in this period.** PF {result.profit_factor} — strategy may need different market conditions.")
+        st.warning(f"⚠️ **No edge in this period.** {'Net ' if has_net else ''}PF {check_pf:.2f} — strategy may need different market conditions.")
     
     c1,c2 = st.columns(2)
     with c1: pc("Avg Win", f"+{result.avg_win_pct:.1f}%", "g"); pc("Best Trade", f"{result.best_trade_pct:+.1f}%", "g")
@@ -1189,17 +1346,22 @@ def _render_backtest_result(result):
         rows = []
         for t in result.trades:
             pnl_color = "🟢" if t.pnl_pct > 0 else "🔴"
-            rows.append({
+            net = getattr(t, 'net_pnl_pct', t.pnl_pct)
+            cost = getattr(t, 'cost_pct', 0)
+            row = {
                 "": pnl_color,
                 "Symbol": t.symbol,
                 "Entry Date": t.entry_date,
                 "Entry ₹": fp(t.entry_price),
                 "Exit Date": t.exit_date,
                 "Exit ₹": fp(t.exit_price),
-                "P&L %": f"{t.pnl_pct:+.1f}%",
+                "Gross %": f"{t.pnl_pct:+.1f}%",
+                "Costs %": f"{cost:.2f}%" if cost else "-",
+                "Net %": f"{net:+.1f}%",
                 "Hold": f"{t.holding_days}d",
                 "Exit Reason": t.exit_reason,
-            })
+            }
+            rows.append(row)
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
@@ -1428,6 +1590,24 @@ def page_settings():
     | 🟡 ACCUMULATION | 2 to 5 | 70% | VCP, EMA21, VWAP — be selective |
     | 🟠 DISTRIBUTION | -2 to 1 | 40% | Shorts, mean-reversion — defensive |
     | 🔴 PANIC | < -2 | 15% | Shorts only — protect capital |
+    """)
+    
+    st.markdown("---")
+    st.markdown("### 🆕 v5.2 Features (Current)")
+    st.markdown("""
+    **🔄 RRG Sector Rotation** — Sectors classified as LEADING / WEAKENING / IMPROVING / LAGGING based on RS-Ratio + RS-Momentum vs Nifty. LEADING sectors get +8 confidence boost in scans, LAGGING get -15. Visible on Dashboard after data load.
+    
+    **✨ VCP Multi-Contraction** — Upgraded from single-window to 3-wave contraction detection (Minervini-style). Checks 40d → 25d → 10d windows. 3-wave VCPs get +15 confidence.
+    
+    **💰 Realistic Backtesting** — All backtest results now show Gross vs Net P&L. Costs include: 0.10% slippage per side, ₹20 brokerage, STT, exchange fees, GST. Expect win rates 2-5% lower than before.
+    
+    **🔬 Walk-Forward Validation** — Toggle in Backtest page. Splits data 70/30 train/test. Flags overfitting if train exceeds test by >15%.
+    
+    **📊 Volume Profile** — Available in Charts → Volume Profile tab (requires Breeze). Shows POC, Value Area, HVN (support/resistance), LVN (breakout zones) from 5-min intraday data.
+    
+    **🛡️ Data Quality Gates** — Rejects symbols with <50 bars, stale data, bad OHLC, or >20% zero-volume before they reach scanner logic.
+    
+    **🔧 Breeze Fix** — Replaced SIGALRM (crashed in threads) with threading-based timeout. Now shows actual error messages instead of silent failure.
     """)
 
 
