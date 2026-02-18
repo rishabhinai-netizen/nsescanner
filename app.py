@@ -294,8 +294,12 @@ def _get_sector_perf_str(sector):
     """Get sector performance string for display."""
     ranks = st.session_state.get("sector_rankings", {})
     if sector and sector in ranks:
-        rank_pct = ranks[sector]
-        return f"Sector: #{int(100-rank_pct)+1}"
+        # ranks is {sector: percentile_0_to_100}
+        # Sort all sectors by percentile descending to get actual rank
+        sorted_sectors = sorted(ranks.items(), key=lambda x: -x[1])
+        total = len(sorted_sectors)
+        rank_pos = next((i+1 for i, (s, _) in enumerate(sorted_sectors) if s == sector), total)
+        return f"Sector: #{rank_pos}/{total}"
     return "Sector: -"
 
 def results_df(results):
@@ -378,6 +382,7 @@ def load_data():
 # ============================================================================
 PAGES = [
     "📊 Dashboard", "🔍 Scanner Hub", "📈 Charts & RS",
+    "🔎 Stock Lookup", "📜 Signal History",
     "🧪 Backtest", "📋 Signal Log", "📊 Tracker",
     "📐 Trade Planner", "⭐ Watchlist", "📓 Journal", "⚙️ Settings"
 ]
@@ -390,7 +395,7 @@ if default_page not in PAGES:
 
 with st.sidebar:
     st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v5.1 — Smart Targets + Confluence")
+    st.caption("v11 — RRG + Costs + Stock Lookup")
     st.markdown("---")
     page = st.radio("Navigation", PAGES,
                     index=PAGES.index(default_page),
@@ -942,47 +947,51 @@ def page_charts_rs():
                 with st.spinner(f"Fetching {vp_days}d intraday data for {vp_sym}..."):
                     try:
                         from data_engine import BreezeEngine, get_secret
-                        be = BreezeEngine(get_secret("BREEZE_API_KEY"),
-                                          get_secret("BREEZE_API_SECRET"),
-                                          get_secret("BREEZE_SESSION_TOKEN"))
-                        vp = be.fetch_volume_profile(vp_sym, days_back=vp_days)
-                        if vp and vp.get("poc"):
-                            st.markdown("### Volume-by-Price Analysis")
-                            c1, c2, c3 = st.columns(3)
-                            with c1: pc("POC (Point of Control)", fp(vp["poc"]), "g")
-                            with c2: pc("Value Area High", fp(vp["vah"]))
-                            with c3: pc("Value Area Low", fp(vp["val"]))
-                            
-                            st.markdown("**🟢 High Volume Nodes (Support/Resistance):**")
-                            for node in vp.get("hvn", []):
-                                st.markdown(f"  ₹{node:,.1f}")
-                            
-                            st.markdown("**🔵 Low Volume Nodes (Breakout Zones):**")
-                            for node in vp.get("lvn", []):
-                                st.markdown(f"  ₹{node:,.1f}")
-                            
-                            # Volume histogram chart
-                            if vp.get("histogram"):
-                                import plotly.graph_objects as go
-                                hist = vp["histogram"]
-                                fig = go.Figure(go.Bar(
-                                    y=[f"₹{h['price']:.0f}" for h in hist],
-                                    x=[h["volume"] for h in hist],
-                                    orientation='h',
-                                    marker_color=["#FF6B35" if abs(h["price"] - vp["poc"]) < 1 else "#5dade2" for h in hist]
-                                ))
-                                fig.add_hline(y=f"₹{vp['poc']:.0f}", line_dash="dash", line_color="#00d26a",
-                                              annotation_text="POC")
-                                fig.update_layout(template="plotly_dark", title="Volume-by-Price Distribution",
-                                                  xaxis_title="Volume", yaxis_title="Price Level",
-                                                  height=500, margin=dict(t=40, b=30))
-                                st.plotly_chart(fig, use_container_width=True)
-                            
-                            st.caption(f"Based on {vp_days} days of 5-min intraday data from Breeze API. "
-                                       "POC = most traded price level. HVN = areas of high acceptance (support/resistance). "
-                                       "LVN = areas of low acceptance (price tends to move through quickly).")
+                        be = BreezeEngine()
+                        ok, msg = be.connect(get_secret("BREEZE_API_KEY"),
+                                             get_secret("BREEZE_API_SECRET"),
+                                             get_secret("BREEZE_SESSION_TOKEN"))
+                        if not ok:
+                            st.error(f"Breeze connection failed: {msg}")
                         else:
-                            st.warning("Could not compute Volume Profile. Breeze may not have intraday data for this symbol.")
+                            vp = be.fetch_volume_profile(vp_sym, days_back=vp_days)
+                            if vp and vp.get("poc"):
+                                st.markdown("### Volume-by-Price Analysis")
+                                c1, c2, c3 = st.columns(3)
+                                with c1: pc("POC (Point of Control)", fp(vp["poc"]), "g")
+                                with c2: pc("Value Area High", fp(vp["vah"]))
+                                with c3: pc("Value Area Low", fp(vp["val"]))
+                                
+                                st.markdown("**🟢 High Volume Nodes (Support/Resistance):**")
+                                for node in vp.get("hvn", []):
+                                    st.markdown(f"  ₹{node:,.1f}")
+                                
+                                st.markdown("**🔵 Low Volume Nodes (Breakout Zones):**")
+                                for node in vp.get("lvn", []):
+                                    st.markdown(f"  ₹{node:,.1f}")
+                                
+                                # Volume histogram chart
+                                if vp.get("histogram"):
+                                    import plotly.graph_objects as go
+                                    hist = vp["histogram"]
+                                    fig = go.Figure(go.Bar(
+                                        y=[f"₹{h['price']:.0f}" for h in hist],
+                                        x=[h["volume"] for h in hist],
+                                        orientation='h',
+                                        marker_color=["#FF6B35" if abs(h["price"] - vp["poc"]) < 1 else "#5dade2" for h in hist]
+                                    ))
+                                    fig.add_hline(y=f"₹{vp['poc']:.0f}", line_dash="dash", line_color="#00d26a",
+                                                  annotation_text="POC")
+                                    fig.update_layout(template="plotly_dark", title="Volume-by-Price Distribution",
+                                                      xaxis_title="Volume", yaxis_title="Price Level",
+                                                      height=500, margin=dict(t=40, b=30))
+                                    st.plotly_chart(fig, use_container_width=True)
+                                
+                                st.caption(f"Based on {vp_days} days of 5-min intraday data from Breeze API. "
+                                           "POC = most traded price level. HVN = areas of high acceptance (support/resistance). "
+                                           "LVN = areas of low acceptance (price tends to move through quickly).")
+                            else:
+                                st.warning("Could not compute Volume Profile. Breeze may not have intraday data for this symbol.")
                     except Exception as e:
                         st.error(f"Volume Profile error: {e}")
 
@@ -1612,12 +1621,345 @@ def page_settings():
 
 
 # ============================================================================
+# STOCK LOOKUP — Individual stock deep-dive
+# ============================================================================
+def page_stock_lookup():
+    st.markdown("# 🔎 Stock Lookup")
+    st.caption("Deep-dive into any stock — indicators, scanner hits, signal history, and verdict.")
+    
+    enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
+    all_symbols = sorted(enriched.keys()) if enriched else []
+    
+    # Search input — allow typing or selecting
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        query = st.text_input("🔍 Search stock (e.g. ASHOKLEY, RELIANCE, TATAMOTORS)",
+                              key="sl_query", placeholder="Type stock symbol...").strip().upper()
+    with c2:
+        if all_symbols:
+            selected = st.selectbox("Or select from loaded", [""] + all_symbols, key="sl_select")
+            if selected: query = selected
+    
+    if not query:
+        st.info("Enter a stock symbol above. Works with all loaded stocks (Nifty 50/200/500 depending on your universe).")
+        if not st.session_state.get("data_loaded"):
+            st.warning("⚠️ Load data from Dashboard first to enable lookup.")
+        return
+    
+    # Try to find the symbol — handle .NS suffix
+    sym = query.replace(".NS", "")
+    if sym not in enriched:
+        # Try fuzzy match
+        matches = [s for s in all_symbols if sym in s]
+        if matches:
+            if len(matches) == 1:
+                sym = matches[0]
+            else:
+                sym = st.selectbox(f"Multiple matches for '{sym}':", matches, key="sl_fuzzy")
+        else:
+            st.error(f"**{sym}** not found in loaded universe ({len(all_symbols)} stocks). "
+                     "Try loading a larger universe (Nifty 500) from Dashboard.")
+            return
+    
+    df = enriched[sym]
+    if df.empty or len(df) < 10:
+        st.warning(f"Insufficient data for {sym}.")
+        return
+    
+    lat = df.iloc[-1]
+    sector = get_sector(sym)
+    fno = get_fno_tag(sym)
+    
+    # === HEADER ===
+    st.markdown(f"## {sym} {fno}")
+    st.caption(f"Sector: **{sector}** | Data: {len(df)} bars | Last: {df.index[-1].strftime('%Y-%m-%d') if hasattr(df.index[-1], 'strftime') else str(df.index[-1])}")
+    
+    # === KEY METRICS ROW ===
+    c1,c2,c3,c4,c5,c6 = st.columns(6)
+    cmp = lat["close"]
+    with c1: pc("CMP", f"₹{cmp:,.1f}")
+    with c2:
+        chg_1d = ((cmp / df.iloc[-2]["close"]) - 1) * 100 if len(df) > 1 else 0
+        pc("1D Change", f"{chg_1d:+.1f}%", "g" if chg_1d > 0 else "r")
+    with c3: pc("RSI (14)", f"{lat.get('rsi_14', 0):.0f}", "r" if lat.get('rsi_14', 50) > 70 else ("g" if lat.get('rsi_14', 50) < 30 else ""))
+    with c4:
+        vol_ratio = lat.get("volume", 0) / lat.get("vol_sma_20", 1) if lat.get("vol_sma_20", 0) > 0 else 0
+        pc("Vol Ratio", f"{vol_ratio:.1f}x", "g" if vol_ratio > 1.5 else "")
+    with c5: pc("52W High", f"₹{lat.get('high_52w', 0):,.1f}")
+    with c6:
+        pct_52 = lat.get("pct_from_52w_high", 0)
+        pc("From 52WH", f"{pct_52:+.1f}%", "g" if pct_52 > -5 else ("r" if pct_52 < -25 else ""))
+    
+    # === TECHNICAL INDICATORS ===
+    with st.expander("📊 Technical Indicators", expanded=True):
+        c1,c2,c3,c4 = st.columns(4)
+        with c1:
+            st.markdown("**Moving Averages**")
+            st.markdown(f"SMA 20: ₹{lat.get('sma_20', 0):,.1f}")
+            st.markdown(f"SMA 50: ₹{lat.get('sma_50', 0):,.1f}")
+            st.markdown(f"SMA 200: ₹{lat.get('sma_200', 0):,.1f}")
+            st.markdown(f"EMA 21: ₹{lat.get('ema_21', 0):,.1f}")
+            # MA alignment
+            above_20 = cmp > lat.get("sma_20", 0)
+            above_50 = cmp > lat.get("sma_50", 0)
+            above_200 = cmp > lat.get("sma_200", 0)
+            alignment = sum([above_20, above_50, above_200])
+            st.markdown(f"**MA Alignment: {alignment}/3** {'🟢' if alignment == 3 else '🟡' if alignment >= 2 else '🔴'}")
+        with c2:
+            st.markdown("**Momentum**")
+            st.markdown(f"RSI 14: {lat.get('rsi_14', 0):.1f}")
+            st.markdown(f"RSI 9: {lat.get('rsi_9', 0):.1f}")
+            st.markdown(f"MACD: {lat.get('macd', 0):.2f}")
+            st.markdown(f"MACD Signal: {lat.get('macd_signal', 0):.2f}")
+            macd_bull = lat.get("macd", 0) > lat.get("macd_signal", 0)
+            st.markdown(f"MACD Cross: {'🟢 Bullish' if macd_bull else '🔴 Bearish'}")
+        with c3:
+            st.markdown("**Volatility**")
+            st.markdown(f"ATR 14: ₹{lat.get('atr_14', 0):.1f}")
+            st.markdown(f"ADX: {lat.get('adx_14', 0):.1f}")
+            st.markdown(f"BB Upper: ₹{lat.get('bb_upper', 0):,.1f}")
+            st.markdown(f"BB Lower: ₹{lat.get('bb_lower', 0):,.1f}")
+            bb_pos = "Above" if cmp > lat.get("bb_upper", 0) else ("Below" if cmp < lat.get("bb_lower", 0) else "Inside")
+            st.markdown(f"BB Position: **{bb_pos}**")
+        with c4:
+            st.markdown("**Volume**")
+            st.markdown(f"Volume: {lat.get('volume', 0):,.0f}")
+            st.markdown(f"Avg 20d: {lat.get('vol_sma_20', 0):,.0f}")
+            st.markdown(f"Avg 50d: {lat.get('vol_sma_50', 0):,.0f}")
+            st.markdown(f"Vol Ratio: {vol_ratio:.2f}x")
+            st.markdown(f"52W Low: ₹{lat.get('low_52w', 0):,.1f}")
+    
+    # === WEEKLY ALIGNMENT ===
+    mtf = check_weekly_alignment(df)
+    if mtf["aligned"]:
+        st.success(f"✅ Weekly timeframe confirms ({mtf['score']}/4)")
+    else:
+        st.warning(f"⚠️ Weekly not aligned ({mtf['score']}/4)")
+    
+    # === RRG SECTOR STATUS ===
+    rrg = st.session_state.get("rrg_data", {})
+    if rrg and sector in rrg:
+        rrg_s = rrg[sector]
+        q = rrg_s.get("quadrant", "N/A")
+        q_icon = {"LEADING":"🟢","WEAKENING":"🟡","IMPROVING":"🔵","LAGGING":"🔴"}.get(q, "⚪")
+        st.info(f"Sector **{sector}** is {q_icon} **{q}** (RRG Score: {rrg_s.get('score', 0)})")
+    
+    # === CHART ===
+    fig = plot_candlestick(df, sym, days=90)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # === SCANNER RESULTS — Run all daily scanners on this stock ===
+    st.markdown("### 🎯 Scanner Verdict")
+    st.caption("Running all daily strategies on this stock to check if it qualifies right now.")
+    
+    nifty_df = st.session_state.get("nifty_data")
+    regime = st.session_state.get("regime")
+    sector_rankings = st.session_state.get("sector_rankings", {})
+    rrg_data_now = st.session_state.get("rrg_data", {})
+    
+    hits = []
+    for scanner_name, scanner_func in DAILY_SCANNERS.items():
+        try:
+            result = scanner_func(df, sym, nifty_df)
+            if result:
+                hits.append(result)
+        except Exception:
+            pass
+    
+    if hits:
+        st.success(f"**{sym} qualifies in {len(hits)} strateg{'y' if len(hits)==1 else 'ies'}!**")
+        for r in hits:
+            p = STRATEGY_PROFILES.get(r.strategy, {})
+            st.markdown(f"**{p.get('icon','')} {p.get('name', r.strategy)}** — {r.signal} | "
+                        f"Entry ₹{r.entry:,.1f} | SL ₹{r.stop_loss:,.1f} | T1 ₹{r.target_1:,.1f} | "
+                        f"Conf {r.confidence}%")
+            for reason in r.reasons[:3]:
+                st.markdown(f"  • {reason}")
+    else:
+        st.info(f"**{sym}** doesn't qualify in any daily strategy right now. "
+                "This doesn't mean it's a bad stock — it just doesn't meet any scanner criteria today.")
+    
+    # === SIGNAL HISTORY for this stock ===
+    st.markdown("### 📜 Signal History")
+    st.caption(f"Past signals recorded for {sym} across all scan sessions.")
+    all_signals = load_signals()
+    if all_signals is not None and not all_signals.empty:
+        stock_hist = all_signals[all_signals["Symbol"] == sym].copy()
+        if not stock_hist.empty:
+            stock_hist = stock_hist.sort_values("Date", ascending=False)
+            
+            # Summary: first seen, price then vs now
+            first = stock_hist.iloc[-1]
+            first_date = first.get("Date", "?")
+            first_entry = first.get("Entry", 0)
+            first_strat = first.get("Strategy", "?")
+            pnl_since = ((cmp / first_entry) - 1) * 100 if first_entry > 0 else 0
+            
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: pc("First Flagged", str(first_date))
+            with c2: pc("Entry Then", f"₹{first_entry:,.1f}")
+            with c3: pc("CMP Now", f"₹{cmp:,.1f}")
+            with c4: pc("Since Signal", f"{pnl_since:+.1f}%", "g" if pnl_since > 0 else "r")
+            
+            # Show entry price drift (the Ashok Leyland problem)
+            entries_over_time = stock_hist[stock_hist["Strategy"] == first_strat][["Date", "Entry", "CMP", "Confidence"]].head(10)
+            if len(entries_over_time) > 1:
+                entry_first = entries_over_time.iloc[-1]["Entry"]
+                entry_latest = entries_over_time.iloc[0]["Entry"]
+                if abs(entry_first - entry_latest) > 0.5:
+                    drift = ((entry_latest / entry_first) - 1) * 100
+                    st.warning(f"⚠️ **Entry Price Drift:** {first_strat} first flagged at ₹{entry_first:,.1f}, "
+                               f"now suggesting ₹{entry_latest:,.1f} ({drift:+.1f}%). "
+                               f"The earlier entry at ₹{entry_first:,.1f} was the stronger setup.")
+            
+            st.dataframe(stock_hist[["Date","Time","Strategy","Signal","CMP","Entry","SL","T1","Confidence","RS","Regime_Fit","Status"]].head(20),
+                         use_container_width=True, hide_index=True)
+        else:
+            st.info(f"No historical signals recorded for {sym}. Run scans to start building history.")
+    else:
+        st.info("No signal history available yet. Signal history builds over time as you run scans.")
+
+
+# ============================================================================
+# SIGNAL HISTORY — Cross-stock signal tracking & drift detection
+# ============================================================================
+def page_signal_history():
+    st.markdown("# 📜 Signal History")
+    st.caption("Track when stocks were first flagged, at what price, and how they've performed since. "
+               "Detects entry price drift (same stock, changed entry) to avoid confusion.")
+    
+    all_signals = load_signals()
+    if all_signals is None or all_signals.empty:
+        st.info("No signals recorded yet. Run scans from Dashboard or Scanner Hub to start building history. "
+                "Each scan auto-records all signals with prices and timestamps.")
+        return
+    
+    enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
+    
+    # === OVERVIEW STATS ===
+    unique_stocks = all_signals["Symbol"].nunique()
+    total_signals = len(all_signals)
+    date_range = f"{all_signals['Date'].min()} to {all_signals['Date'].max()}"
+    c1, c2, c3 = st.columns(3)
+    with c1: pc("Unique Stocks", str(unique_stocks))
+    with c2: pc("Total Signals", str(total_signals))
+    with c3: pc("Date Range", date_range)
+    
+    # === BUILD FIRST-SEEN TABLE ===
+    st.markdown("### 📊 First Signal vs Current Price")
+    st.caption("Every stock ever flagged — sorted by performance since first signal.")
+    
+    records = []
+    for sym, group in all_signals.groupby("Symbol"):
+        group = group.sort_values("Date")
+        first = group.iloc[0]
+        latest = group.iloc[-1]
+        
+        first_date = first.get("Date", "")
+        first_entry = float(first.get("Entry", 0))
+        first_strat = first.get("Strategy", "")
+        first_conf = int(first.get("Confidence", 0))
+        
+        latest_date = latest.get("Date", "")
+        latest_entry = float(latest.get("Entry", 0))
+        latest_strat = latest.get("Strategy", "")
+        
+        # Current price from enriched data
+        cmp = 0
+        if sym in enriched and not enriched[sym].empty:
+            cmp = enriched[sym].iloc[-1]["close"]
+        elif first.get("CMP"):
+            cmp = float(latest.get("CMP", 0))
+        
+        pnl_from_first = ((cmp / first_entry) - 1) * 100 if first_entry > 0 and cmp > 0 else 0
+        
+        # Detect entry drift
+        drift = ""
+        same_strat = group[group["Strategy"] == first_strat]
+        if len(same_strat) > 1:
+            e_first = float(same_strat.iloc[0].get("Entry", 0))
+            e_last = float(same_strat.iloc[-1].get("Entry", 0))
+            if e_first > 0 and abs(e_first - e_last) > 1:
+                drift_pct = ((e_last / e_first) - 1) * 100
+                drift = f"⚠️ ₹{e_first:.0f}→₹{e_last:.0f} ({drift_pct:+.1f}%)"
+        
+        times_flagged = len(group)
+        strategies_flagged = ", ".join(group["Strategy"].unique()[:3])
+        
+        records.append({
+            "Symbol": sym,
+            "Sector": get_sector(sym),
+            "First Signal": first_date,
+            "First Strategy": first_strat,
+            "Entry Then": f"₹{first_entry:,.1f}",
+            "CMP Now": f"₹{cmp:,.1f}" if cmp > 0 else "-",
+            "P&L %": round(pnl_from_first, 1),
+            "Times Flagged": times_flagged,
+            "Strategies": strategies_flagged,
+            "Entry Drift": drift,
+            "Latest Date": latest_date,
+        })
+    
+    if records:
+        hist_df = pd.DataFrame(records).sort_values("P&L %", ascending=False)
+        
+        # Filters
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            sort_by = st.selectbox("Sort by", ["P&L %", "First Signal", "Times Flagged", "Symbol"], key="sh_sort")
+            ascending = sort_by == "First Signal" or sort_by == "Symbol"
+            hist_df = hist_df.sort_values(sort_by, ascending=ascending)
+        with c2:
+            filter_strat = st.selectbox("Filter by strategy", ["All"] + sorted(all_signals["Strategy"].unique().tolist()), key="sh_fstrat")
+            if filter_strat != "All":
+                filtered_syms = all_signals[all_signals["Strategy"] == filter_strat]["Symbol"].unique()
+                hist_df = hist_df[hist_df["Symbol"].isin(filtered_syms)]
+        with c3:
+            show_drift_only = st.checkbox("🚨 Show entry drift only", key="sh_drift")
+            if show_drift_only:
+                hist_df = hist_df[hist_df["Entry Drift"] != ""]
+        
+        # Color P&L
+        def color_pnl(val):
+            if isinstance(val, (int, float)):
+                return f"color: {'#00d26a' if val > 0 else '#ff4757'}"
+            return ""
+        
+        st.dataframe(hist_df, use_container_width=True, hide_index=True,
+                     column_config={
+                         "P&L %": st.column_config.NumberColumn("P&L %", format="%.1f%%"),
+                     })
+        
+        # Entry drift alerts
+        drifted = [r for r in records if r["Entry Drift"]]
+        if drifted:
+            st.markdown("### ⚠️ Entry Price Drift Alerts")
+            st.caption("These stocks have been flagged in the same strategy but with different entry prices over time. "
+                       "The **first entry was usually the better setup** — later entries may reflect changed conditions.")
+            for d in drifted:
+                st.warning(f"**{d['Symbol']}** ({d['First Strategy']}): {d['Entry Drift']} — "
+                           f"First flagged {d['First Signal']}, flagged {d['Times Flagged']} times")
+    
+    # === CURRENTLY ACTIVE ===
+    st.markdown("### ⏳ Currently Active Signals")
+    st.caption("Signals from the most recent scan that are still in OPEN status.")
+    open_signals = all_signals[all_signals["Status"] == "OPEN"].sort_values("Date", ascending=False)
+    if not open_signals.empty:
+        st.dataframe(open_signals[["Date","Symbol","Strategy","Signal","Entry","SL","T1","Confidence","RS","Regime_Fit"]].head(30),
+                     use_container_width=True, hide_index=True)
+    else:
+        st.info("No currently open signals.")
+
+
+# ============================================================================
 # ROUTER
 # ============================================================================
 page_map = {
     "📊 Dashboard": page_dashboard,
     "🔍 Scanner Hub": page_scanner_hub,
     "📈 Charts & RS": page_charts_rs,
+    "🔎 Stock Lookup": page_stock_lookup,
+    "📜 Signal History": page_signal_history,
     "🧪 Backtest": page_backtest,
     "📋 Signal Log": page_signal_log,
     "📊 Tracker": page_tracker,
