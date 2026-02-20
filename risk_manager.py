@@ -42,6 +42,33 @@ class RiskManager:
     MAX_LOSS_PER_TRADE_PCT = 7.0
     TIME_STOP_DAYS = 10
     
+    # Regime-Adaptive Heat Caps
+    REGIME_HEAT_CAPS = {
+        "EXPANSION": 6.0,      # Aggressive — full risk budget
+        "ACCUMULATION": 4.0,   # Moderate — building positions carefully
+        "DISTRIBUTION": 2.0,   # Defensive — minimize exposure
+        "PANIC": 1.0,          # Survival — almost flat
+        "UNKNOWN": 3.0,        # Conservative default
+    }
+    
+    REGIME_RISK_PER_TRADE = {
+        "EXPANSION": 2.0,
+        "ACCUMULATION": 1.5,
+        "DISTRIBUTION": 1.0,
+        "PANIC": 0.5,
+        "UNKNOWN": 1.0,
+    }
+    
+    @staticmethod
+    def get_regime_heat_cap(regime: str = "UNKNOWN") -> float:
+        """Get the maximum portfolio heat for the current regime."""
+        return RiskManager.REGIME_HEAT_CAPS.get(regime, 3.0)
+    
+    @staticmethod
+    def get_regime_risk_per_trade(regime: str = "UNKNOWN") -> float:
+        """Get the maximum risk per trade for the current regime."""
+        return RiskManager.REGIME_RISK_PER_TRADE.get(regime, 1.0)
+    
     @staticmethod
     def calculate_position(capital: float, risk_pct: float, 
                            entry: float, stop_loss: float,
@@ -116,14 +143,18 @@ class RiskManager:
         )
     
     @staticmethod
-    def portfolio_heat(positions: List[Dict], capital: float) -> Dict:
+    def portfolio_heat(positions: List[Dict], capital: float, 
+                       regime: str = "UNKNOWN") -> Dict:
         """
-        Calculate total portfolio heat.
+        Calculate total portfolio heat with regime-adaptive caps.
         Each position: {"symbol": str, "entry": float, "stop": float, "shares": int}
         """
         total_risk = 0
         position_details = []
         sector_exposure = {}
+        
+        # Get regime-specific heat cap
+        heat_cap = RiskManager.get_regime_heat_cap(regime)
         
         for pos in positions:
             risk_per_share = abs(pos["entry"] - pos["stop"])
@@ -145,8 +176,10 @@ class RiskManager:
         heat_pct = round((total_risk / capital) * 100, 2) if capital > 0 else 0
         
         warnings = []
-        if heat_pct > RiskManager.MAX_PORTFOLIO_HEAT_PCT:
-            warnings.append(f"⚠️ Portfolio heat {heat_pct}% exceeds {RiskManager.MAX_PORTFOLIO_HEAT_PCT}% limit!")
+        if heat_pct > heat_cap:
+            warnings.append(f"⚠️ Portfolio heat {heat_pct}% exceeds {regime} cap of {heat_cap}%!")
+        elif heat_pct > RiskManager.MAX_PORTFOLIO_HEAT_PCT:
+            warnings.append(f"🔴 Portfolio heat {heat_pct}% exceeds absolute max {RiskManager.MAX_PORTFOLIO_HEAT_PCT}%!")
         
         if len(positions) > RiskManager.MAX_POSITIONS:
             warnings.append(f"⚠️ {len(positions)} positions exceeds {RiskManager.MAX_POSITIONS} max!")
@@ -156,13 +189,24 @@ class RiskManager:
             if sector_pct > RiskManager.MAX_SECTOR_EXPOSURE_PCT:
                 warnings.append(f"⚠️ {sector} exposure {sector_pct:.1f}% exceeds 30% limit!")
         
+        # Status uses regime-adaptive cap
+        if heat_pct <= heat_cap * 0.6:
+            status = "🟢 SAFE"
+        elif heat_pct <= heat_cap:
+            status = "🟡 MODERATE"
+        else:
+            status = "🔴 DANGER"
+        
         return {
             "total_risk": round(total_risk, 2),
             "heat_pct": heat_pct,
-            "max_heat": RiskManager.MAX_PORTFOLIO_HEAT_PCT,
+            "max_heat": heat_cap,
+            "regime_heat_cap": heat_cap,
+            "absolute_max_heat": RiskManager.MAX_PORTFOLIO_HEAT_PCT,
             "positions": position_details,
             "position_count": len(positions),
             "sector_exposure": {k: round((v/capital)*100, 1) for k, v in sector_exposure.items()},
             "warnings": warnings,
-            "status": "🟢 SAFE" if heat_pct <= 6 else ("🟡 MODERATE" if heat_pct <= 10 else "🔴 DANGER"),
+            "status": status,
+            "regime": regime,
         }

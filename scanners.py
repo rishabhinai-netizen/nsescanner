@@ -23,95 +23,6 @@ from data_engine import Indicators, now_ist
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
-# RRG-LITE — Simplified Relative Rotation: Momentum + Direction per sector
-# ============================================================================
-
-def compute_sector_rrg(data_dict: Dict[str, pd.DataFrame],
-                       nifty_df: pd.DataFrame,
-                       sector_map: Dict[str, str] = None) -> Dict[str, Dict]:
-    """
-    RRG-Lite: For each sector, compute:
-      - RS Momentum: rate of change of RS-Ratio (direction of rotation)
-      - RS Ratio: current relative strength vs Nifty
-      - Quadrant: Leading / Weakening / Lagging / Improving
-
-    Returns: {sector: {"ratio": float, "momentum": float, "quadrant": str, "score": float}}
-    """
-    if nifty_df is None or len(nifty_df) < 63:
-        return {}
-
-    from stock_universe import get_sector
-
-    # Group stocks by sector
-    sector_stocks: Dict[str, List[pd.DataFrame]] = {}
-    for symbol, df in data_dict.items():
-        if df is None or len(df) < 63:
-            continue
-        sector = (sector_map or {}).get(symbol, get_sector(symbol))
-        if sector not in sector_stocks:
-            sector_stocks[sector] = []
-        sector_stocks[sector].append(df)
-
-    nifty_ret_63 = (nifty_df["close"].iloc[-1] / nifty_df["close"].iloc[-63] - 1) * 100
-    nifty_ret_21 = (nifty_df["close"].iloc[-1] / nifty_df["close"].iloc[-21] - 1) * 100
-
-    results = {}
-    for sector, stocks in sector_stocks.items():
-        if len(stocks) < 2:
-            continue
-
-        # Average sector return over 63d and 21d
-        ret_63_list = []
-        ret_21_list = []
-        for sdf in stocks:
-            if len(sdf) >= 63:
-                ret_63_list.append((sdf["close"].iloc[-1] / sdf["close"].iloc[-63] - 1) * 100)
-            if len(sdf) >= 21:
-                ret_21_list.append((sdf["close"].iloc[-1] / sdf["close"].iloc[-21] - 1) * 100)
-
-        if not ret_63_list:
-            continue
-
-        avg_ret_63 = np.mean(ret_63_list)
-        avg_ret_21 = np.mean(ret_21_list) if ret_21_list else avg_ret_63
-
-        # RS Ratio: sector performance vs Nifty (normalized around 100)
-        rs_ratio = 100 + (avg_ret_63 - nifty_ret_63) * 2
-
-        # RS Momentum: how fast RS is changing (21d vs 63d relative)
-        rs_momentum = 100 + (avg_ret_21 - nifty_ret_21) * 3
-
-        # Quadrant classification (RRG-style)
-        if rs_ratio >= 100 and rs_momentum >= 100:
-            quadrant = "LEADING"      # Strong and improving
-            score = 90
-        elif rs_ratio >= 100 and rs_momentum < 100:
-            quadrant = "WEAKENING"    # Strong but losing momentum
-            score = 65
-        elif rs_ratio < 100 and rs_momentum < 100:
-            quadrant = "LAGGING"      # Weak and getting weaker
-            score = 25
-        else:
-            quadrant = "IMPROVING"    # Weak but gaining momentum
-            score = 55
-
-        # Fine-tune score based on magnitude
-        score += min(10, max(-10, (rs_ratio - 100) * 0.5))
-        score += min(10, max(-10, (rs_momentum - 100) * 0.3))
-        score = max(0, min(100, score))
-
-        results[sector] = {
-            "ratio": round(rs_ratio, 1),
-            "momentum": round(rs_momentum, 1),
-            "quadrant": quadrant,
-            "score": round(score, 1),
-            "stocks_count": len(stocks),
-        }
-
-    return results
-
-
 @dataclass
 class ScanResult:
     """A single scan result with trade parameters."""
@@ -348,11 +259,11 @@ STRATEGY_PROFILES = {
         "blocked_regimes": ["PANIC"],
     },
     "VCP": {
-        "name": "VCP (Minervini)", "icon": "🏆", "type": "Swing",
-        "hold": "15-40 days", "win_rate": 67.2, "expectancy": 5.12,
-        "profit_factor": 3.1, "best_time": "Post-Market (3:30 PM+)",
+        "name": "VCP (Minervini v2)", "icon": "🏆", "type": "Swing",
+        "hold": "15-40 days", "win_rate": 45.0, "expectancy": 3.5,
+        "profit_factor": 1.8, "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,  # Any time
-        "description": "Volatility Contraction Pattern with tight pivot",
+        "description": "Volatility Contraction Pattern — tight base, volume dry-up, breakout confirmation",
         "requires_intraday": False,
         "ideal_regimes": ["EXPANSION", "ACCUMULATION"],
         "ok_regimes": [],
@@ -360,10 +271,10 @@ STRATEGY_PROFILES = {
     },
     "EMA21_Bounce": {
         "name": "21 EMA Bounce", "icon": "🔄", "type": "Swing",
-        "hold": "5-15 days", "win_rate": 62.5, "expectancy": 2.14,
-        "profit_factor": 2.2, "best_time": "Post-Market (3:30 PM+)",
+        "hold": "5-15 days", "win_rate": 40.0, "expectancy": 2.14,
+        "profit_factor": 1.96, "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,
-        "description": "Pullback to 21 EMA in strong uptrend",
+        "description": "Pullback to 21 EMA in strong uptrend — best long strategy by backtest",
         "requires_intraday": False,
         "ideal_regimes": ["EXPANSION"],
         "ok_regimes": ["ACCUMULATION"],
@@ -371,10 +282,10 @@ STRATEGY_PROFILES = {
     },
     "52WH_Breakout": {
         "name": "52-Week High Breakout", "icon": "🚀", "type": "Positional",
-        "hold": "20-60 days", "win_rate": 58.8, "expectancy": 5.82,
-        "profit_factor": 2.8, "best_time": "Post-Market (3:30 PM+)",
+        "hold": "20-60 days", "win_rate": 35.0, "expectancy": 5.82,
+        "profit_factor": 1.86, "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,
-        "description": "Breaking to new 52-week highs with volume",
+        "description": "Breaking to new 52-week highs with volume — rare but high reward",
         "requires_intraday": False,
         "ideal_regimes": ["EXPANSION"],
         "ok_regimes": ["ACCUMULATION"],
@@ -382,10 +293,10 @@ STRATEGY_PROFILES = {
     },
     "Failed_Breakout_Short": {
         "name": "Failed Breakout Short", "icon": "📉", "type": "Swing",
-        "hold": "3-10 days", "win_rate": 64.2, "expectancy": 3.12,
-        "profit_factor": 2.5, "best_time": "Post-Market (3:30 PM+)",
+        "hold": "3-10 days", "win_rate": 24.0, "expectancy": 3.12,
+        "profit_factor": 1.60, "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,
-        "description": "Attempted breakout that reversed — trap play",
+        "description": "Attempted breakout that reversed — most consistent strategy across regimes",
         "requires_intraday": False,
         "ideal_regimes": ["DISTRIBUTION", "PANIC"],
         "ok_regimes": ["ACCUMULATION"],
@@ -595,111 +506,136 @@ def check_market_health(nifty_df):
 
 def scan_vcp(df: pd.DataFrame, symbol: str) -> Optional[ScanResult]:
     """
-    VCP (Volatility Contraction Pattern) — Minervini-style MULTI-CONTRACTION.
-    Detects 2-3 successive tighter contractions (real VCP, not just tight range).
+    VCP (Volatility Contraction Pattern) — Minervini style, REWRITTEN v2.
+    
+    KEY CHANGES from broken v1:
+    1. Uses std_10/std_50 volatility compression ratio instead of fixed windows
+    2. Requires actual breakout confirmation (close > pivot on volume)
+    3. Checks down-day volume < up-day volume (accumulation)
+    4. Tighter stop loss (last contraction low, not 10-day low minus ATR)
+    5. Stricter contraction threshold (< 0.5 instead of 0.65)
+    6. Range depth check (base not too deep)
     """
     if df is None or len(df) < 200:
         return None
-
+    
     latest = df.iloc[-1]
-
-    # Stage 2 uptrend checks
+    
+    # ── Stage 2 Uptrend (Minervini Trend Template) ──
     if latest["close"] < latest["sma_50"] or latest["close"] < latest["sma_200"]:
         return None
     if latest["sma_50"] < latest["sma_200"]:
         return None
-
+    
     # Must be within 25% of 52W high and > 30% above 52W low
     if latest["pct_from_52w_high"] < -25:
         return None
     pct_above_low = (latest["close"] - latest["low_52w"]) / latest["low_52w"] * 100
     if pct_above_low < 30:
         return None
-
-    # ---- MULTI-CONTRACTION DETECTION ----
-    # Look for 2-3 successive contraction waves where each is tighter
-    # Check overlapping windows: 40d, 25d, 10d
-    range_40 = df["high"].iloc[-40:].max() - df["low"].iloc[-40:].min()
-    range_25 = df["high"].iloc[-25:].max() - df["low"].iloc[-25:].min()
-    range_10 = df["high"].iloc[-10:].max() - df["low"].iloc[-10:].min()
-
-    if range_40 == 0:
-        return None
-
-    # Each successive contraction must be tighter
-    contraction_1 = range_25 / range_40  # 2nd wave vs base
-    contraction_2 = range_10 / range_25 if range_25 > 0 else 1  # 3rd wave vs 2nd
-
-    # Count contractions: need at least 1 proper contraction
-    n_contractions = 0
-    if contraction_1 < 0.75:
-        n_contractions += 1
-    if contraction_2 < 0.75:
-        n_contractions += 1
-
-    # Overall contraction: recent vs wide
-    overall_contraction = range_10 / range_40
-    if overall_contraction > 0.65:
-        return None  # Not contracted enough
-
-    # Volume dry-up in contraction
-    recent_vol = df["volume"].iloc[-10:].mean()
-    avg_vol = df["vol_sma_20"].iloc[-1]
-    vol_ratio = recent_vol / avg_vol if avg_vol > 0 else 1
-    if vol_ratio > 1.2:
-        return None  # Want volume to dry up
-
-    # Build confidence score
+    
+    # ── Volatility Compression Check (CORE FIX) ──
+    # std_10/std_50 < 0.50 = strong contraction (Gemini's recommendation)
+    from data_engine import Indicators
+    vol_ratio = Indicators.volatility_compression_ratio(df, short=10, long=50)
+    if vol_ratio > 0.50:
+        return None  # Not compressed enough
+    
+    # ── Range Depth Check — base shouldn't be too deep ──
+    # Recent 25-day range as % of price should be < 15%
+    recent_high = df["high"].iloc[-25:].max()
+    recent_low = df["low"].iloc[-25:].min()
+    range_depth = (recent_high - recent_low) / recent_high
+    if range_depth > 0.15:
+        return None  # Base too loose — not a tight VCP
+    
+    # ── Volume Dry-Up in Contraction ──
+    avg_vol_5d = df["volume"].iloc[-5:].mean()
+    avg_vol_50d = df["vol_sma_50"].iloc[-1] if "vol_sma_50" in df.columns else df["volume"].iloc[-50:].mean()
+    vol_dryup = avg_vol_5d / (avg_vol_50d + 1) 
+    if vol_dryup > 0.70:
+        return None  # Volume not dried up enough (want < 70% of 50d avg)
+    
+    # ── Down-Day Volume < Up-Day Volume (Accumulation, not Distribution) ──
+    vol_dd_ratio = Indicators.volume_down_day_ratio(df, lookback=20)
+    if vol_dd_ratio > 1.2:
+        return None  # More volume on down days = distribution, not VCP
+    
+    # ── Breakout Confirmation (CRITICAL FIX) ──
+    # Entry ONLY when close > pivot on above-average volume
+    pivot = round(recent_high, 2)
+    cmp = round(latest["close"], 2)
+    
+    # Check if breakout happened TODAY
+    breakout_confirmed = False
+    if cmp >= pivot * 0.998:  # Within 0.2% of pivot (allow slight tolerance)
+        today_vol_ratio = latest["volume"] / (avg_vol_50d + 1)
+        if today_vol_ratio >= 1.3:  # Volume 30%+ above average on breakout day
+            breakout_confirmed = True
+    
+    if not breakout_confirmed:
+        # If not breaking out yet, only show as "ABOVE pivot" entry
+        # The old code entered BEFORE breakout — that's the main reason VCP was losing money
+        if cmp < pivot * 0.97:
+            return None  # Too far from pivot, not a valid VCP setup
+    
+    # ── Build Confidence Score ──
     reasons = []
-    confidence = 42
-
-    # Stage 2 alignment
-    reasons.append("Stage 2 uptrend (Price > 50 SMA > 200 SMA)")
+    confidence = 45
+    
+    reasons.append("Stage 2 uptrend confirmed (Price > 50 SMA > 200 SMA)")
     confidence += 8
-
-    # Multi-contraction quality
-    if n_contractions >= 2:
-        reasons.append(f"✨ {n_contractions + 1}-wave VCP: contractions {contraction_1*100:.0f}% → {contraction_2*100:.0f}% (textbook Minervini)")
-        confidence += 15
-    elif n_contractions == 1:
-        reasons.append(f"2-wave VCP: overall {overall_contraction*100:.0f}% contraction")
-        confidence += 8
-    else:
-        reasons.append(f"Tight range ({overall_contraction*100:.0f}% of base)")
-        confidence += 4
-
-    # Volume dry-up
-    reasons.append(f"Volume dried to {vol_ratio:.1f}x avg (ideal VCP)")
-    confidence += 5 if vol_ratio < 0.7 else 2
-
-    # Near highs
-    reasons.append(f"{latest['pct_from_52w_high']:.1f}% from 52W high")
+    
+    reasons.append(f"Volatility compressed to {vol_ratio:.2f}x (std₁₀/std₅₀ < 0.50)")
+    confidence += 8 if vol_ratio < 0.35 else 5
+    
+    reasons.append(f"Volume dried up to {vol_dryup:.1f}x 50d avg — institutional pause")
+    confidence += 5 if vol_dryup < 0.5 else 3
+    
+    reasons.append(f"Down-day vol ratio: {vol_dd_ratio:.2f} — {'accumulation' if vol_dd_ratio < 0.9 else 'neutral'}")
+    confidence += 5 if vol_dd_ratio < 0.8 else 2
+    
+    reasons.append(f"Range depth: {range_depth*100:.1f}% — tight base")
+    confidence += 3 if range_depth < 0.10 else 1
+    
     if latest["pct_from_52w_high"] > -10:
+        reasons.append(f"{latest['pct_from_52w_high']:.1f}% from 52W high — strong stock")
         confidence += 7
     elif latest["pct_from_52w_high"] > -15:
         confidence += 4
-
-    # ADX
+    
+    if breakout_confirmed:
+        today_vol_ratio = latest["volume"] / (avg_vol_50d + 1)
+        reasons.append(f"🔥 BREAKOUT confirmed on {today_vol_ratio:.1f}x volume!")
+        confidence += 10
+    else:
+        reasons.append(f"Approaching pivot ₹{pivot:,.0f} — wait for volume breakout")
+    
     if latest["adx_14"] > 20:
-        reasons.append(f"ADX {latest['adx_14']:.0f} — trending")
+        reasons.append(f"ADX {latest['adx_14']:.0f} — trending market")
         confidence += 3
-
-    confidence = min(confidence, 95)
-
-    # Pivot = recent 10-day high
-    pivot = round(df["high"].iloc[-10:].max(), 2)
-    cmp = round(latest["close"], 2)
-    entry = cmp if cmp >= pivot else pivot
-    entry_type = "AT CMP" if cmp >= pivot else f"ABOVE ₹{pivot:,.0f}"
-
-    atr = latest["atr_14"]
-    stop_loss = round(df["low"].iloc[-10:].min() - 0.5 * atr, 2)
+    
+    confidence = min(confidence, 92)
+    
+    # ── Entry and Risk ──
+    if breakout_confirmed:
+        entry = cmp
+        entry_type = "AT CMP"
+    else:
+        entry = pivot
+        entry_type = f"ABOVE ₹{pivot:,.0f}"
+    
+    # TIGHTER stop loss: last contraction low (not 10-day low minus ATR)
+    # Find the lowest low in the contraction period
+    contraction_low = df["low"].iloc[-15:].min()  # 15-day contraction low
+    stop_loss = round(contraction_low * 0.995, 2)  # 0.5% below contraction low
+    
     risk = entry - stop_loss
-    if risk <= 0:
-        return None
-
+    if risk <= 0 or (risk / entry * 100) > 8:
+        return None  # Invalid risk or stop too wide (max 8%)
+    
     targets = compute_smart_targets(df, entry, stop_loss, "BUY")
-
+    
     return ScanResult(
         symbol=symbol, strategy="VCP", signal="BUY",
         cmp=cmp, entry=entry, stop_loss=stop_loss,
@@ -709,7 +645,7 @@ def scan_vcp(df: pd.DataFrame, symbol: str) -> Optional[ScanResult]:
         risk_reward=targets["rr"],
         confidence=confidence, reasons=reasons,
         entry_type=entry_type,
-        volume_ratio=round(vol_ratio, 1),
+        volume_ratio=round(vol_dryup, 2),
         rsi=round(latest["rsi_14"], 1),
         hold_type="Swing (15-40d)",
         timestamp=str(df.index[-1].date()),
@@ -1016,6 +952,85 @@ def scan_failed_breakout_short(df: pd.DataFrame, symbol: str) -> Optional[ScanRe
 
 
 # ============================================================================
+# APPROACHING SETUP WATCHLIST — Stocks near (but not at) setups
+# ============================================================================
+
+@dataclass
+class ApproachingSetup:
+    """A stock approaching a scanner's trigger criteria."""
+    symbol: str
+    strategy: str
+    progress_pct: float  # How close to triggering (0-100)
+    description: str
+    cmp: float
+    trigger_level: float  # Price level needed to trigger
+    rs_rating: float = 50.0
+    sector: str = ""
+
+def scan_approaching_setups(df: pd.DataFrame, symbol: str,
+                             nifty_df: pd.DataFrame = None) -> List[ApproachingSetup]:
+    """
+    Find stocks 70-95% through a setup — not triggering yet, but on watchlist.
+    Solves the "zero signals" problem by showing what's forming.
+    """
+    setups = []
+    if df is None or len(df) < 200:
+        return setups
+    
+    from data_engine import Indicators
+    enriched = Indicators.enrich_dataframe(df)
+    latest = enriched.iloc[-1]
+    cmp = round(latest["close"], 2)
+    
+    rs = 50.0
+    if nifty_df is not None:
+        enriched_nifty = Indicators.enrich_dataframe(nifty_df)
+        rs = Indicators.relative_strength(enriched, enriched_nifty)
+    
+    # ── Approaching VCP ──
+    # Stage 2 uptrend but volatility not yet fully compressed
+    if (latest["close"] > latest["sma_50"] > latest["sma_200"] and
+        latest["pct_from_52w_high"] > -25):
+        vol_ratio = Indicators.volatility_compression_ratio(enriched, 10, 50)
+        if 0.50 <= vol_ratio <= 0.75:  # Contracting but not tight enough yet
+            progress = max(0, min(100, (0.75 - vol_ratio) / 0.25 * 100))
+            pivot = round(enriched["high"].iloc[-25:].max(), 2)
+            setups.append(ApproachingSetup(
+                symbol=symbol, strategy="VCP",
+                progress_pct=round(progress, 0),
+                description=f"Volatility contracting ({vol_ratio:.2f}x) — needs < 0.50x",
+                cmp=cmp, trigger_level=pivot, rs_rating=rs,
+            ))
+    
+    # ── Approaching EMA21 Bounce ──
+    # In uptrend, pulling back toward 21 EMA but not yet touching
+    if (latest["close"] > latest["sma_50"] and 
+        latest["sma_50"] > latest["sma_200"]):
+        ema_dist = (latest["close"] - latest["ema_21"]) / latest["ema_21"] * 100
+        if 1.5 < ema_dist <= 5.0:  # Getting close but not touching
+            progress = max(0, min(100, (5.0 - ema_dist) / 3.5 * 100))
+            setups.append(ApproachingSetup(
+                symbol=symbol, strategy="EMA21_Bounce",
+                progress_pct=round(progress, 0),
+                description=f"Pulling back to 21 EMA ({ema_dist:.1f}% above) — needs touch",
+                cmp=cmp, trigger_level=round(latest["ema_21"], 2), rs_rating=rs,
+            ))
+    
+    # ── Approaching 52WH Breakout ──
+    # Within 3% of 52-week high
+    if -5 < latest["pct_from_52w_high"] < -1:
+        progress = max(0, min(100, (5 + latest["pct_from_52w_high"]) / 4 * 100))
+        setups.append(ApproachingSetup(
+            symbol=symbol, strategy="52WH_Breakout",
+            progress_pct=round(progress, 0),
+            description=f"{latest['pct_from_52w_high']:.1f}% from 52W high — approaching breakout",
+            cmp=cmp, trigger_level=round(latest["high_52w"], 2), rs_rating=rs,
+        ))
+    
+    return setups
+
+
+# ============================================================================
 # INTRADAY SCANNERS — REQUIRE BREEZE (No Proxy Fallback)
 # ============================================================================
 
@@ -1045,7 +1060,70 @@ def scan_lunch_low_intraday(df: pd.DataFrame, symbol: str,
 
 
 # ============================================================================
-# MASTER SCANNER — Regime-filtered, RS-filtered
+# STRATEGY HEALTH TRACKER — Auto-dim weak strategies
+# ============================================================================
+
+class StrategyHealthTracker:
+    """
+    Track rolling profit factor per strategy.
+    If PF drops below 0.8 over last 20 closed trades, flag as WEAK.
+    """
+    
+    def __init__(self):
+        self._rolling_pf = {}  # strategy -> rolling PF
+        self._trade_counts = {}  # strategy -> count of closed trades
+    
+    def update_from_tracker(self, tracker_df):
+        """Compute rolling PF from signal tracker data."""
+        if tracker_df is None or tracker_df.empty:
+            return
+        
+        closed = tracker_df[tracker_df["Status"].isin(["TARGET", "STOPPED"])]
+        if closed.empty:
+            return
+        
+        for strategy in closed["Strategy"].unique():
+            strat_trades = closed[closed["Strategy"] == strategy].tail(20)
+            pnl = pd.to_numeric(strat_trades.get("PnL_Pct", pd.Series()), errors="coerce")
+            
+            wins = pnl[pnl > 0].sum()
+            losses = abs(pnl[pnl < 0].sum())
+            
+            if losses > 0:
+                self._rolling_pf[strategy] = round(wins / losses, 2)
+            elif wins > 0:
+                self._rolling_pf[strategy] = 3.0  # Cap at 3.0 for display
+            
+            self._trade_counts[strategy] = len(strat_trades)
+    
+    def get_health(self, strategy: str) -> dict:
+        """Get health status for a strategy."""
+        pf = self._rolling_pf.get(strategy)
+        count = self._trade_counts.get(strategy, 0)
+        
+        if pf is None or count < 5:
+            return {"status": "UNKNOWN", "icon": "❓", "pf": None, "trades": count,
+                    "sqi_weight": 1.0, "warning": ""}
+        
+        if pf >= 1.5:
+            return {"status": "STRONG", "icon": "💪", "pf": pf, "trades": count,
+                    "sqi_weight": 1.0, "warning": ""}
+        elif pf >= 1.0:
+            return {"status": "OK", "icon": "✅", "pf": pf, "trades": count,
+                    "sqi_weight": 1.0, "warning": ""}
+        elif pf >= 0.8:
+            return {"status": "WEAK", "icon": "⚠️", "pf": pf, "trades": count,
+                    "sqi_weight": 0.7, "warning": f"⚠️ {strategy} PF={pf:.2f} — use smaller size"}
+        else:
+            return {"status": "FAILING", "icon": "🔴", "pf": pf, "trades": count,
+                    "sqi_weight": 0.5, "warning": f"🔴 {strategy} PF={pf:.2f} — strategy failing, consider skipping"}
+
+# Global instance
+strategy_health = StrategyHealthTracker()
+
+
+# ============================================================================
+# MASTER SCANNER — Regime-filtered, RS-filtered, SQI-ranked
 # ============================================================================
 
 # Only daily scanners (honest scanners that work with yfinance)
@@ -1073,109 +1151,141 @@ def run_scanner(scanner_name: str, data_dict: Dict[str, pd.DataFrame],
                 regime: dict = None,
                 has_intraday: bool = False,
                 sector_rankings: Dict[str, float] = None,
-                rrg_data: Dict[str, Dict] = None,
-                min_rs: float = 0) -> List[ScanResult]:
+                min_rs: float = 0,
+                compute_sqi_flag: bool = True) -> List[ScanResult]:
     """
-    Run a single scanner with regime/RS/sector/data-quality filtering.
-    Now uses RRG-lite sector data when available.
+    Run a single scanner with regime/RS/sector filtering and SQI ranking.
+    
+    v2 changes:
+    - Strategy×Regime profit factor gating (blocks strategies with PF < 1.0 in current regime)
+    - Signal Quality Index computation and sorting
+    - Auto-dim integration from strategy health tracker
+    - RS acceleration computation
     """
-    from data_engine import check_data_quality
-
     scanner_func = ALL_SCANNERS.get(scanner_name) or DAILY_SCANNERS.get(scanner_name)
     if not scanner_func:
         return []
-
+    
+    current_regime = regime.get("regime", "UNKNOWN") if regime else "UNKNOWN"
+    
+    # ── Strategy × Regime Profit Factor Gate ──
+    # Block strategies with PF < 1.0 in current regime
+    from signal_quality import is_strategy_allowed, compute_sqi as _compute_sqi
+    if current_regime != "UNKNOWN" and not is_strategy_allowed(scanner_name, current_regime, min_pf=0.7):
+        logger.info(f"Scanner {scanner_name} GATED by {current_regime} regime (PF < 0.7)")
+        return []
+    
     # Check if this strategy is blocked by current regime
     if regime:
         blocked = regime.get("blocked_strategies", [])
         if scanner_name in blocked:
-            logger.info(f"Scanner {scanner_name} BLOCKED by {regime['regime']} regime")
+            logger.info(f"Scanner {scanner_name} BLOCKED by {current_regime} regime")
             return []
-
+    
+    # Determine regime fit for this scanner
     def get_regime_fit(scanner_name: str, regime: dict) -> str:
         if not regime: return "OK"
         if scanner_name in regime.get("allowed_strategies", []): return "IDEAL"
         if scanner_name in regime.get("caution_strategies", []): return "CAUTION"
         if scanner_name in regime.get("blocked_strategies", []): return "BLOCKED"
         return "OK"
-
+    
+    # Get strategy health for auto-dim
+    health = strategy_health.get_health(scanner_name)
+    
     results = []
-    skipped_quality = 0
     for symbol, df in data_dict.items():
         try:
-            # DATA QUALITY GATE
-            is_ok, reason = check_data_quality(df, symbol)
-            if not is_ok:
-                skipped_quality += 1
-                continue
-
             enriched = Indicators.enrich_dataframe(df)
-
+            
+            # Call scanner
             if scanner_name in INTRADAY_SCANNERS:
                 result = scanner_func(enriched, symbol, has_intraday=has_intraday)
             else:
                 result = scanner_func(enriched, symbol)
-
+            
             if result is None:
                 continue
-
+            
             # Compute RS rating
+            rs_accel = 0.0
             if nifty_df is not None:
                 enriched_nifty = Indicators.enrich_dataframe(nifty_df)
                 result.rs_rating = Indicators.relative_strength(enriched, enriched_nifty)
-
-            # RS FILTER
+                rs_accel = Indicators.rs_acceleration(enriched, enriched_nifty, lookback=21)
+            
+            # RS FILTER: Long signals require RS > min_rs
             if result.signal == "BUY" and min_rs > 0 and result.rs_rating < min_rs:
                 continue
-
-            # SECTOR FILTER with RRG-lite when available
+            
+            # SECTOR FILTER: Only buy in top-performing sectors
             from stock_universe import get_sector
             result.sector = get_sector(symbol)
-
-            if rrg_data and result.signal == "BUY" and result.sector in rrg_data:
-                rrg = rrg_data[result.sector]
-                quadrant = rrg.get("quadrant", "")
-                if quadrant == "LEADING":
-                    result.confidence = min(result.confidence + 8, 95)
-                    result.reasons.append(f"✅ Sector {result.sector} is LEADING (RRG)")
-                elif quadrant == "IMPROVING":
-                    result.confidence = min(result.confidence + 3, 95)
-                    result.reasons.append(f"📈 Sector {result.sector} IMPROVING (RRG)")
-                elif quadrant == "WEAKENING":
-                    result.confidence = max(result.confidence - 5, 20)
-                    result.reasons.append(f"⚠️ Sector {result.sector} WEAKENING (RRG)")
-                elif quadrant == "LAGGING":
-                    result.confidence = max(result.confidence - 15, 20)
-                    result.reasons.append(f"🔴 Sector {result.sector} LAGGING (RRG)")
-            elif sector_rankings and result.signal == "BUY":
+            if sector_rankings and result.signal == "BUY":
                 sector_rank = sector_rankings.get(result.sector, 50)
-                if sector_rank < 30:
+                if sector_rank < 30:  # Bottom 30% sectors
                     result.confidence = max(result.confidence - 15, 20)
                     result.reasons.append(f"⚠️ Weak sector ({result.sector}) — reduced confidence")
-                elif sector_rank > 70:
+                elif sector_rank > 70:  # Top 30% sectors
                     result.confidence = min(result.confidence + 5, 95)
                     result.reasons.append(f"✅ Strong sector tailwind ({result.sector})")
-
+            
             # Regime fit tag
             fit = get_regime_fit(scanner_name, regime)
             result.regime_fit = fit
             if fit == "IDEAL":
                 result.confidence = min(result.confidence + 5, 95)
-                result.reasons.append(f"✅ Regime: {regime['regime']} — ideal for this strategy")
+                result.reasons.append(f"✅ Regime: {current_regime} — ideal for this strategy")
             elif fit == "CAUTION":
                 result.confidence = max(result.confidence - 10, 25)
-                result.reasons.append(f"⚠️ Regime: {regime['regime']} — use smaller size")
-
+                result.reasons.append(f"⚠️ Regime: {current_regime} — use smaller size")
+            
+            # ── Compute SQI ──
+            if compute_sqi_flag:
+                vol_compression = Indicators.volatility_compression_ratio(enriched, 10, 50)
+                vol_dd = Indicators.volume_down_day_ratio(enriched, 20)
+                
+                sqi_result = _compute_sqi(
+                    strategy=scanner_name,
+                    regime=current_regime,
+                    rs_rating=result.rs_rating,
+                    rs_acceleration=rs_accel,
+                    vol_compression_ratio=vol_compression,
+                    volume_ratio=result.volume_ratio,
+                    confidence=result.confidence,
+                    vol_down_day_ratio=vol_dd,
+                    weekly_aligned=result.weekly_aligned,
+                    rolling_pf=health.get("pf"),
+                )
+                
+                # Attach SQI to result (using dynamic attributes)
+                result.sqi = sqi_result.sqi
+                result.sqi_grade = sqi_result.grade
+                result.sqi_icon = sqi_result.grade_icon
+                result.sqi_breakdown = sqi_result.breakdown
+                
+                # Auto-dim: add warning if strategy is weak
+                if health.get("warning"):
+                    result.reasons.append(health["warning"])
+                    # Reduce SQI by strategy health weight
+                    result.sqi = round(result.sqi * health.get("sqi_weight", 1.0), 1)
+                
+                # RS acceleration note
+                if rs_accel > 0.3:
+                    result.reasons.append(f"📈 RS accelerating (+{rs_accel:.2f}/day)")
+                elif rs_accel < -0.3:
+                    result.reasons.append(f"📉 RS decelerating ({rs_accel:.2f}/day)")
+            
             results.append(result)
-
+            
         except Exception as e:
-            logger.debug(f"Scanner {scanner_name} failed for {symbol}: {type(e).__name__}: {e}")
             continue
-
-    if skipped_quality > 0:
-        logger.info(f"Scanner {scanner_name}: skipped {skipped_quality} stocks (data quality)")
-
-    results.sort(key=lambda x: x.confidence, reverse=True)
+    
+    # Sort by SQI (if computed) then confidence
+    if compute_sqi_flag:
+        results.sort(key=lambda x: getattr(x, 'sqi', x.confidence), reverse=True)
+    else:
+        results.sort(key=lambda x: x.confidence, reverse=True)
     return results
 
 
@@ -1185,16 +1295,37 @@ def run_all_scanners(data_dict: Dict[str, pd.DataFrame],
                      regime: dict = None,
                      has_intraday: bool = False,
                      sector_rankings: Dict[str, float] = None,
-                     rrg_data: Dict[str, Dict] = None,
-                     min_rs: float = 70) -> Dict[str, List[ScanResult]]:
-    """Run all scanners with regime/RS/sector/RRG filters."""
+                     min_rs: float = 70,
+                     compute_sqi_flag: bool = True) -> Dict[str, List[ScanResult]]:
+    """Run all scanners with regime/RS/sector filters and SQI ranking."""
     results = {}
     scanners = DAILY_SCANNERS if daily_only else ALL_SCANNERS
-
+    
     for name in scanners:
-        res = run_scanner(name, data_dict, nifty_df, regime,
-                          has_intraday, sector_rankings, rrg_data, min_rs)
+        res = run_scanner(name, data_dict, nifty_df, regime, 
+                          has_intraday, sector_rankings, min_rs,
+                          compute_sqi_flag)
         if res:
             results[name] = res
-
+    
     return results
+
+
+def collect_approaching_setups(data_dict: Dict[str, pd.DataFrame],
+                                nifty_df: pd.DataFrame = None,
+                                min_progress: float = 50) -> List[ApproachingSetup]:
+    """
+    Scan all stocks for approaching setups.
+    Returns list sorted by progress % (most ready first).
+    """
+    all_setups = []
+    for symbol, df in data_dict.items():
+        try:
+            enriched = Indicators.enrich_dataframe(df)
+            setups = scan_approaching_setups(enriched, symbol, nifty_df)
+            all_setups.extend([s for s in setups if s.progress_pct >= min_progress])
+        except Exception:
+            continue
+    
+    all_setups.sort(key=lambda x: x.progress_pct, reverse=True)
+    return all_setups
