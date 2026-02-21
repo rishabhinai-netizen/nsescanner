@@ -1,14 +1,13 @@
 """
-NSE Elite Scanners v3 — Regime-Aware, Probabilistic
-====================================================
-Changes from reviews:
+NSE Elite Scanners v15 — Regime-Aware, SQI, RRG, Option Chain + IPO
+====================================================================
 1. Market Regime Engine (4 regimes: Accumulation/Expansion/Distribution/Panic)
-2. Intraday proxies KILLED — require Breeze or return nothing
+2. Intraday scanners require Breeze API (no proxies)
 3. RS > 70 filter on all long signals
-4. Sector alignment filter (top sectors only for buys)
-5. Confidence scoring = multi-factor (not just conditions met)
-6. Time-window awareness per scanner
-7. Allowed/disallowed strategies per regime
+4. RRG Sector Rotation — confidence +8 LEADING / -15 LAGGING
+5. Multi-factor SQI confidence scoring
+6. Strategy×Regime profit factor matrix (auto-block PF < 0.7)
+7. Approaching Setup Watchlist (50-95% through setups)
 """
 
 import pandas as pd
@@ -21,6 +20,90 @@ import logging
 from data_engine import Indicators, now_ist
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# RRG-LITE — Relative Rotation Graph (Sector Rotation)
+# ============================================================================
+
+def compute_sector_rrg(data_dict: Dict[str, pd.DataFrame],
+                       nifty_df: pd.DataFrame,
+                       sector_map: Dict[str, str] = None) -> Dict[str, Dict]:
+    """
+    RRG-Lite: For each sector, compute RS Ratio and RS Momentum vs Nifty.
+    Classifies sectors into 4 quadrants:
+    - LEADING: RS > Nifty AND accelerating → +8 confidence boost on signals
+    - WEAKENING: RS > Nifty BUT decelerating → no adjustment
+    - IMPROVING: RS < Nifty BUT accelerating → no adjustment
+    - LAGGING: RS < Nifty AND decelerating → -15 confidence penalty on signals
+
+    Returns: {sector: {"ratio", "momentum", "quadrant", "score", "stocks_count"}}
+    """
+    if nifty_df is None or len(nifty_df) < 63:
+        return {}
+
+    from stock_universe import get_sector
+
+    sector_stocks: Dict[str, List[pd.DataFrame]] = {}
+    for symbol, df in data_dict.items():
+        if df is None or len(df) < 63:
+            continue
+        sector = (sector_map or {}).get(symbol, get_sector(symbol))
+        if sector not in sector_stocks:
+            sector_stocks[sector] = []
+        sector_stocks[sector].append(df)
+
+    nifty_ret_63 = (nifty_df["close"].iloc[-1] / nifty_df["close"].iloc[-63] - 1) * 100
+    nifty_ret_21 = (nifty_df["close"].iloc[-1] / nifty_df["close"].iloc[-21] - 1) * 100
+
+    results = {}
+    for sector, stocks in sector_stocks.items():
+        if len(stocks) < 2:
+            continue
+
+        ret_63_list = []
+        ret_21_list = []
+        for sdf in stocks:
+            if len(sdf) >= 63:
+                ret_63_list.append((sdf["close"].iloc[-1] / sdf["close"].iloc[-63] - 1) * 100)
+            if len(sdf) >= 21:
+                ret_21_list.append((sdf["close"].iloc[-1] / sdf["close"].iloc[-21] - 1) * 100)
+
+        if not ret_63_list:
+            continue
+
+        avg_ret_63 = np.mean(ret_63_list)
+        avg_ret_21 = np.mean(ret_21_list) if ret_21_list else avg_ret_63
+
+        rs_ratio = 100 + (avg_ret_63 - nifty_ret_63) * 2
+        rs_momentum = 100 + (avg_ret_21 - nifty_ret_21) * 3
+
+        if rs_ratio >= 100 and rs_momentum >= 100:
+            quadrant = "LEADING"
+            score = 90
+        elif rs_ratio >= 100 and rs_momentum < 100:
+            quadrant = "WEAKENING"
+            score = 65
+        elif rs_ratio < 100 and rs_momentum < 100:
+            quadrant = "LAGGING"
+            score = 25
+        else:
+            quadrant = "IMPROVING"
+            score = 55
+
+        score += min(10, max(-10, (rs_ratio - 100) * 0.5))
+        score += min(10, max(-10, (rs_momentum - 100) * 0.3))
+        score = max(0, min(100, score))
+
+        results[sector] = {
+            "ratio": round(rs_ratio, 1),
+            "momentum": round(rs_momentum, 1),
+            "quadrant": quadrant,
+            "score": round(score, 1),
+            "stocks_count": len(stocks),
+        }
+
+    return results
 
 
 @dataclass

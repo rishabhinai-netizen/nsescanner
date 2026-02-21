@@ -1,23 +1,42 @@
 """
-NSE SCANNER PRO v5.2 — Signal Quality Index + Fundamental Gate + Regime Matrix
-================================================================================
-v5.2 changes:
-- Signal Quality Index (SQI) — multi-factor scoring replaces raw confidence
-- Fundamental Quality Gate — CANSLIM-inspired filters (EPS, revenue, PE, D/E)
-- Strategy×Regime profit factor matrix — auto-blocks weak strategy/regime combos
-- RS Acceleration slope — momentum of momentum
+NSE SCANNER PRO v15 — Complete Professional Trading Intelligence Suite
+=======================================================================
+v15 merges the best of all previous versions:
+
+CORE ENGINE (from v5.2):
+- Signal Quality Index (SQI) — multi-factor scoring (Backtest Edge 30%,
+  RS Acceleration 25%, Regime Fit 20%, Vol Contraction 15%, Volume 10%)
+- Fundamental Quality Gate — CANSLIM-inspired (EPS, revenue, PE, D/E)
+- Strategy×Regime Profit Factor Matrix — auto-blocks PF < 0.7 combos
 - Regime-Adaptive heat caps (EXPANSION 6%, PANIC 1%)
 - Approaching Setup Watchlist — stocks 50-95% through setups
 - Broker Basket Export — Zerodha Kite CSV + generic broker CSV
 - Strategy Health Tracker — auto-dim failing strategies
-- Volume dry-up on down-days indicator
+- VCP rewrite with std_10/std_50 < 0.50 volatility compression ratio
+
+RESTORED (from v11):
+- RRG Sector Rotation — 4-quadrant panel, +8 LEADING / -15 LAGGING
+- Net P&L / CostModel — slippage, STT, brokerage, GST in backtests
+- Volume Profile (POC, VAH/VAL, HVN/LVN) via Breeze API
+- Stock Lookup page — deep-dive indicator + signal history per stock
+- Signal History page — first-seen table, entry drift detection
+- Walk-Forward Validation — optional toggle in Backtest page
+- Breeze Retry button + threading fix (20s timeout, no SIGALRM)
+
+NEW MODULES (v15 original):
+- Option Chain Overlay — 7-factor scoring via Breeze API
+  (OI Change 25%, UOA 20%, IVP 15%, PCR 15%, Max Pain 10%, Skew 7.5%, IVS 7.5%)
+  Academic foundation: Cremers & Weinbaum (2010) IV Spread 50bps/week
+- IPO Base Scanner — listing date + subscription auto-scrape
+  O'Neil: 57% hit rate, 2.79% alpha on high-volume breakouts ≥150% avg volume
+  Lock-up alerts: Day 30/90/180/540 with 5-day buffer warnings
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, time as dtime, date
-import pytz, json, os
+import pytz, json, os, logging
 
 from stock_universe import get_stock_universe, get_sector, NIFTY_50
 from data_engine import (
@@ -28,6 +47,7 @@ from scanners import (
     STRATEGY_PROFILES, DAILY_SCANNERS, INTRADAY_SCANNERS,
     run_scanner, run_all_scanners, detect_market_regime, ScanResult,
     collect_approaching_setups, strategy_health, ApproachingSetup,
+    compute_sector_rrg,
 )
 from risk_manager import RiskManager
 from enhancements import (
@@ -36,7 +56,10 @@ from enhancements import (
     load_journal, save_journal, add_journal_entry, compute_journal_analytics, plot_equity_curve,
     check_weekly_alignment, compute_market_breadth, plot_breadth_gauge,
 )
-from backtester import backtest_strategy, backtest_multi_stock, BacktestResult
+from backtester import (
+    backtest_strategy, backtest_multi_stock, backtest_walk_forward,
+    BacktestResult, CostModel, DEFAULT_COSTS
+)
 from tooltips import TIPS, tip
 from signal_tracker import (
     load_signals, load_tracker, save_signals_today,
@@ -48,12 +71,30 @@ from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REG
 from fundamental_gate import check_fundamental_quality, batch_fundamental_check
 from basket_export import generate_zerodha_basket, generate_generic_basket
 
+# New v15 modules
+try:
+    from option_chain import analyze_option_chain, OptionChainResult, format_oc_signal
+    OPTION_CHAIN_AVAILABLE = True
+except ImportError:
+    OPTION_CHAIN_AVAILABLE = False
+
+try:
+    from ipo_scanner import (
+        scan_ipo_universe, IPOResult, get_upcoming_lock_up_alerts,
+        fetch_nse_ipo_list, format_ipo_alert
+    )
+    IPO_SCANNER_AVAILABLE = True
+except ImportError:
+    IPO_SCANNER_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
+
 # ============================================================================
 # PAGE CONFIG
 # ============================================================================
 st.set_page_config(
     page_title="NSE Scanner Pro", page_icon="🎯", layout="wide",
-    initial_sidebar_state="auto",  # Auto-collapse on mobile
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None, "About": None}
 )
 
@@ -220,16 +261,19 @@ for k, v in {
     "workflow_checks":{}, "universe_size":"nifty200",
     "telegram_token":"", "telegram_chat_id":"",
     "journal":None, "last_scan_time":None, "sector_rankings":{},
+    "rrg_data": {},  # v15: RRG sector rotation data
     "rs_filter": 70, "regime_filter": True,
     "fundamental_filter": False, "fundamental_cache": {},
     "approaching_setups": [],
+    "oc_results": {},    # v15: Option Chain results cache
+    "ipo_results": [],   # v15: IPO Scanner results
 }.items():
     if k not in st.session_state: st.session_state[k] = v
 
 if st.session_state.journal is None:
     st.session_state.journal = load_journal()
 
-# Breeze auto-connect
+# Breeze auto-connect — uses threading (cross-platform, no SIGALRM)
 def try_breeze():
     if st.session_state.breeze_connected: return
     try:
@@ -237,32 +281,29 @@ def try_breeze():
         asc = st.secrets.get("BREEZE_API_SECRET","")
         st_ = st.secrets.get("BREEZE_SESSION_TOKEN","")
         if ak and asc and st_ and "your_" not in ak:
-            import signal as _sig
-            def _timeout_handler(signum, frame):
-                raise TimeoutError("Breeze connection timed out")
-            # Set 10-second timeout for Breeze connection
-            old_handler = None
-            try:
-                old_handler = _sig.signal(_sig.SIGALRM, _timeout_handler)
-                _sig.alarm(10)
-            except (AttributeError, OSError):
-                pass  # Windows or restricted environment
-            try:
-                e = BreezeEngine()
-                ok, msg = e.connect(ak, asc, st_)
-                st.session_state.breeze_connected = ok
-                st.session_state.breeze_msg = msg
-                if ok: st.session_state.breeze_engine = e
-            finally:
+            import threading
+            result = {"ok": False, "msg": "Breeze connection timed out (20s)"}
+            def _connect():
                 try:
-                    _sig.alarm(0)
-                    if old_handler: _sig.signal(_sig.SIGALRM, old_handler)
-                except (AttributeError, OSError):
-                    pass
-    except TimeoutError:
-        st.session_state.breeze_msg = "Breeze connection timed out (10s)"
+                    e = BreezeEngine()
+                    ok, msg = e.connect(ak, asc, st_)
+                    result["ok"] = ok
+                    result["msg"] = msg
+                    if ok:
+                        result["engine"] = e
+                except Exception as ex:
+                    result["msg"] = f"Breeze: {type(ex).__name__}: {str(ex)[:80]}"
+            t = threading.Thread(target=_connect, daemon=True)
+            t.start()
+            t.join(timeout=20)
+            st.session_state.breeze_connected = result.get("ok", False)
+            st.session_state.breeze_msg = result.get("msg", "")
+            if result.get("ok"):
+                st.session_state.breeze_engine = result.get("engine")
+        else:
+            st.session_state.breeze_msg = "Breeze credentials not configured"
     except Exception as ex:
-        st.session_state.breeze_msg = f"Breeze: {str(ex)[:80]}"
+        st.session_state.breeze_msg = f"Breeze init: {type(ex).__name__}: {str(ex)[:80]}"
 try_breeze()
 
 # ============================================================================
@@ -402,6 +443,8 @@ def load_data():
 # ============================================================================
 PAGES = [
     "📊 Dashboard", "🔍 Scanner Hub", "📈 Charts & RS",
+    "🔗 Option Chain", "🚀 IPO Scanner",
+    "🔎 Stock Lookup", "📜 Signal History",
     "🧪 Backtest", "📋 Signal Log", "📊 Tracker",
     "📐 Trade Planner", "⭐ Watchlist", "📓 Journal", "⚙️ Settings"
 ]
@@ -414,7 +457,7 @@ if default_page not in PAGES:
 
 with st.sidebar:
     st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v5.2 — SQI + Fundamentals + Regime Matrix")
+    st.caption("v15 — Full Suite: RRG + OC + IPO + SQI + Costs")
     st.markdown("---")
     page = st.radio("Navigation", PAGES,
                     index=PAGES.index(default_page),
@@ -451,6 +494,10 @@ with st.sidebar:
         st.markdown('<div class="bb bb-on">✅ Breeze Connected</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="bb bb-off">⚪ Breeze Off — intraday disabled</div>', unsafe_allow_html=True)
+        if st.button("🔄 Retry Breeze", key="retry_breeze", use_container_width=True):
+            st.session_state.breeze_connected = False
+            try_breeze()
+            st.rerun()
     
     # v5.2: Fundamental filter toggle
     st.session_state.fundamental_filter = st.checkbox(
@@ -587,6 +634,13 @@ def page_dashboard():
             breadth = compute_market_breadth(enriched)
             st.session_state.regime = detect_market_regime(nifty, breadth)
             st.session_state.sector_rankings = compute_sector_ranks()
+            # Compute RRG sector rotation
+            try:
+                rrg = compute_sector_rrg(enriched or data, nifty)
+                st.session_state.rrg_data = rrg
+            except Exception as e:
+                logger.warning(f"RRG computation failed: {e}")
+                st.session_state.rrg_data = {}
             st.rerun()
     
     if not st.session_state.data_loaded:
@@ -691,6 +745,44 @@ def page_dashboard():
     if not sector_df.empty:
         fig = plot_sector_heatmap(sector_df)
         if fig: st.plotly_chart(fig, use_container_width=True)
+    
+    # === RRG SECTOR ROTATION ===
+    rrg = st.session_state.get("rrg_data", {})
+    if rrg:
+        with st.expander("🔄 RRG Sector Rotation (Relative Rotation Graph)", expanded=True):
+            st.caption("Sectors classified by RS-Ratio (strength vs Nifty) and RS-Momentum (acceleration). "
+                       "LEADING sectors boost scan confidence +8, LAGGING sectors penalize -15.")
+            q_map = {"LEADING": [], "WEAKENING": [], "IMPROVING": [], "LAGGING": []}
+            for sector_name, data in rrg.items():
+                q = data.get("quadrant", "LAGGING")
+                score = data.get("score", 0)
+                q_map.get(q, q_map["LAGGING"]).append((sector_name, score))
+            
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown("**🟢 LEADING**")
+                st.caption("Strong + Improving → +8 confidence")
+                for s, sc in sorted(q_map["LEADING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · {sc:.0f}")
+                if not q_map["LEADING"]: st.markdown("*None*")
+            with c2:
+                st.markdown("**🟡 WEAKENING**")
+                st.caption("Strong but Slowing")
+                for s, sc in sorted(q_map["WEAKENING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · {sc:.0f}")
+                if not q_map["WEAKENING"]: st.markdown("*None*")
+            with c3:
+                st.markdown("**🔵 IMPROVING**")
+                st.caption("Weak but Accelerating")
+                for s, sc in sorted(q_map["IMPROVING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · {sc:.0f}")
+                if not q_map["IMPROVING"]: st.markdown("*None*")
+            with c4:
+                st.markdown("**🔴 LAGGING**")
+                st.caption("Weak + Declining → -15 confidence")
+                for s, sc in sorted(q_map["LAGGING"], key=lambda x: -x[1]):
+                    st.markdown(f"**{s}** · {sc:.0f}")
+                if not q_map["LAGGING"]: st.markdown("*None*")
     
     # === QUICK SCAN ===
     st.markdown("### ⚡ Quick Scan")
@@ -1020,7 +1112,7 @@ def page_charts_rs():
     if not st.session_state.data_loaded:
         st.warning("Load data first.")
         return
-    tab1, tab2, tab3 = st.tabs(["📊 Chart", "💪 RS Rankings", "🗺️ Sectors"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Chart", "💪 RS Rankings", "🗺️ Sectors", "📊 Volume Profile"])
     with tab1:
         enriched = st.session_state.enriched_data or st.session_state.stock_data
         sel = st.selectbox("Stock", sorted(enriched.keys()))
@@ -1053,6 +1145,63 @@ def page_charts_rs():
             if fig: st.plotly_chart(fig, use_container_width=True)
             st.dataframe(sector_df.reset_index().rename(columns={"index":"Sector","stocks":"#","avg_1w":"1W%","avg_1m":"1M%","avg_3m":"3M%"}),
                          use_container_width=True, hide_index=True)
+    
+    with tab4:
+        st.markdown("### 📊 Volume Profile")
+        st.caption("Point of Control (POC), Value Area High/Low, and High/Low Volume Nodes from Breeze intraday data.")
+        
+        if not st.session_state.breeze_connected:
+            st.warning("🔌 Volume Profile requires Breeze API connection. Connect Breeze to use this feature.")
+        else:
+            enriched = st.session_state.enriched_data or st.session_state.stock_data
+            vp_sym = st.selectbox("Stock", sorted(enriched.keys()), key="vp_sym")
+            c1, c2 = st.columns(2)
+            with c1:
+                vp_days = st.slider("Lookback Days", 5, 60, 20, key="vp_days")
+            with c2:
+                vp_bins = st.slider("Price Bins", 10, 40, 20, key="vp_bins")
+            
+            if st.button("📊 Compute Volume Profile", key="vp_run"):
+                be = st.session_state.breeze_engine
+                if be:
+                    with st.spinner(f"Fetching {vp_days}d intraday data for {vp_sym}..."):
+                        vp = be.fetch_volume_profile(vp_sym, days_back=vp_days, num_bins=vp_bins)
+                    if vp:
+                        c1, c2, c3, c4 = st.columns(4)
+                        with c1: pc("POC (Point of Control)", fp(vp["poc"]), "g")
+                        with c2: pc("VAH (Value Area High)", fp(vp["vah"]), "g")
+                        with c3: pc("VAL (Value Area Low)", fp(vp["val"]), "r")
+                        with c4: pc("Data Bars", str(vp["total_bars"]))
+                        
+                        if vp["hvn"]:
+                            st.markdown(f"**🟢 HVN (High Vol Nodes — Support/Resistance):** {', '.join([fp(p) for p in vp['hvn']])}")
+                        if vp["lvn"]:
+                            st.markdown(f"**🔵 LVN (Low Vol Nodes — Breakout Zones):** {', '.join([fp(p) for p in vp['lvn']])}")
+                        
+                        # Volume Profile chart
+                        try:
+                            import plotly.graph_objects as go
+                            fig = go.Figure()
+                            fig.add_trace(go.Bar(
+                                x=vp["volumes"], y=vp["price_levels"],
+                                orientation='h', name="Volume",
+                                marker_color=["#FF6B35" if p == vp["poc"] else "#5dade2" for p in vp["price_levels"]]
+                            ))
+                            fig.add_hline(y=vp["poc"], line_color="#FF6B35", annotation_text="POC")
+                            fig.add_hline(y=vp["vah"], line_color="#00d26a", line_dash="dash", annotation_text="VAH")
+                            fig.add_hline(y=vp["val"], line_color="#ff4757", line_dash="dash", annotation_text="VAL")
+                            fig.update_layout(template="plotly_dark", title=f"{vp_sym} Volume Profile ({vp_days}d)",
+                                              height=500, margin=dict(t=40, b=30))
+                            st.plotly_chart(fig, use_container_width=True)
+                        except Exception:
+                            pass
+                        
+                        st.caption("POC = most traded price level. HVN = areas of high acceptance (support/resistance). "
+                                   "LVN = areas of low acceptance (potential breakout/breakdown zones).")
+                    else:
+                        st.warning(f"Could not compute Volume Profile for {vp_sym}. Breeze may not have sufficient intraday data.")
+                else:
+                    st.error("Breeze engine not initialized.")
 
 
 # ============================================================================
@@ -1282,15 +1431,26 @@ def page_backtest():
             if sym not in stock_data:
                 st.error(f"{sym} data not available."); return
             
+            run_wf = st.session_state.get("bt_wf_toggle", False)
             with st.spinner(f"Backtesting {STRATEGY_PROFILES[strat]['name']} on {sym} (~1 year data)..."):
-                result = backtest_strategy(stock_data[sym], sym, strat,
-                                          lookback_days=500, max_hold=max_hold)
+                if run_wf:
+                    result = backtest_walk_forward(stock_data[sym], sym, strat, max_hold=max_hold)
+                else:
+                    result = backtest_strategy(stock_data[sym], sym, strat,
+                                              lookback_days=500, max_hold=max_hold)
             
             if result and result.total_trades > 0:
                 _render_backtest_result(result)
             else:
                 st.info(f"No {STRATEGY_PROFILES[strat]['name']} signals found for {sym} in ~1 year of data. "
                         "This strategy may need different market conditions to trigger.")
+        
+        st.session_state["bt_wf_toggle"] = st.checkbox(
+            "🔬 Walk-Forward Validation (70% train / 30% test split)",
+            value=st.session_state.get("bt_wf_toggle", False), key="bt_wf_cb",
+            help="Splits data into train (70%) and test (30%). Detects overfitting if train win rate exceeds test by >15%. "
+                 "Requires at least 400 days of data per stock. Off by default — most strategies use established methodologies."
+        )
     
     with tab2:
         c1, c2, c3 = st.columns(3)
@@ -1362,40 +1522,60 @@ def page_backtest():
 def _render_backtest_result(result):
     """Render backtest results with metrics, equity curve, and trade log."""
     st.markdown(f"### Results: {result.strategy} on {result.symbol}")
-    st.caption(f"Period: {result.period} | Max hold: inferred from trades")
+    st.caption(f"Period: {result.period} | Net P&L after all realistic Indian market costs")
+    
+    # Walk-forward info
+    if getattr(result, "is_walk_forward", False):
+        col1, col2 = st.columns(2)
+        with col1: st.info(f"**Train Win Rate:** {result.train_win_rate:.1f}%")
+        with col2: st.info(f"**Test Win Rate:** {result.test_win_rate:.1f}%")
+        if getattr(result, "overfit_warning", False):
+            st.error(f"⚠️ **Overfit Warning:** Train ({result.train_win_rate:.1f}%) exceeds Test "
+                     f"({result.test_win_rate:.1f}%) by more than 15%. Strategy may be curve-fitted.")
+        else:
+            st.success("✅ Walk-Forward: Train and Test performance are consistent (no overfit detected).")
     
     # Key metrics row
     c1,c2,c3,c4,c5,c6 = st.columns(6)
     with c1: pc("Trades", str(result.total_trades))
     with c2: pc("Win Rate", f"{result.win_rate}%", "g" if result.win_rate > 50 else "r")
-    with c3: pc("Total P&L", f"{result.total_pnl_pct:+.1f}%", "g" if result.total_pnl_pct > 0 else "r")
-    with c4: pc("Profit Factor", str(result.profit_factor), "g" if result.profit_factor > 1.5 else ("y" if result.profit_factor > 1 else "r"))
-    with c5: pc("Max Drawdown", f"{result.max_drawdown_pct:.1f}%", "r")
-    with c6: pc("Expectancy", f"{result.expectancy_pct:+.2f}%/trade", "g" if result.expectancy_pct > 0 else "r")
+    with c3: pc("Gross P&L", f"{result.total_pnl_pct:+.1f}%", "g" if result.total_pnl_pct > 0 else "r")
+    net_pnl = getattr(result, "net_pnl_pct", result.total_pnl_pct)
+    with c4: pc("Net P&L", f"{net_pnl:+.1f}%", "g" if net_pnl > 0 else "r")
+    with c5: pc("Net PF", str(getattr(result, "net_profit_factor", result.profit_factor)),
+                "g" if getattr(result, "net_profit_factor", result.profit_factor) > 1.5 else "r")
+    with c6: pc("Max Drawdown", f"{result.max_drawdown_pct:.1f}%", "r")
+    
+    # Costs summary
+    total_costs = getattr(result, "total_costs_pct", 0)
+    if total_costs > 0:
+        st.caption(f"💰 Total trading costs: {total_costs:.2f}% | Avg per trade: {total_costs/result.total_trades:.2f}% "
+                   f"(includes slippage 0.20%, STT 0.025%, brokerage ₹40, exchange charges, GST)")
     
     # Interpretation
-    if result.profit_factor > 1.5 and result.win_rate > 45:
-        st.success(f"✅ **Strong edge detected.** PF {result.profit_factor} with {result.win_rate}% win rate.")
-    elif result.profit_factor > 1:
-        st.info(f"➖ **Marginal edge.** PF {result.profit_factor} — consider with regime filter for better results.")
+    net_pf = getattr(result, "net_profit_factor", result.profit_factor)
+    if net_pf > 1.5 and result.win_rate > 45:
+        st.success(f"✅ **Strong edge detected.** Net PF {net_pf} with {result.win_rate}% win rate.")
+    elif net_pf > 1:
+        st.info(f"➖ **Marginal edge.** Net PF {net_pf} — consider with regime filter for better results.")
     else:
-        st.warning(f"⚠️ **No edge in this period.** PF {result.profit_factor} — strategy may need different market conditions.")
+        st.warning(f"⚠️ **No edge in this period.** Net PF {net_pf} — strategy may need different market conditions.")
     
     c1,c2 = st.columns(2)
     with c1: pc("Avg Win", f"+{result.avg_win_pct:.1f}%", "g"); pc("Best Trade", f"{result.best_trade_pct:+.1f}%", "g")
     with c2: pc("Avg Loss", f"-{result.avg_loss_pct:.1f}%", "r"); pc("Worst Trade", f"{result.worst_trade_pct:+.1f}%", "r")
     
-    # Equity curve
+    # Equity curve (Net P&L)
     if result.equity_curve:
         import plotly.graph_objects as go
         eq_df = pd.DataFrame(result.equity_curve)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=eq_df["date"], y=eq_df["equity"], mode="lines+markers",
-                                  name="Cumulative P&L %", line=dict(color="#FF6B35", width=2),
+                                  name="Net P&L %", line=dict(color="#FF6B35", width=2),
                                   marker=dict(size=5)))
         fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
-        fig.update_layout(template="plotly_dark", title="Equity Curve (Cumulative P&L %)",
-                          xaxis_title="Date", yaxis_title="Cumulative P&L %",
+        fig.update_layout(template="plotly_dark", title="Equity Curve (Net P&L % after costs)",
+                          xaxis_title="Date", yaxis_title="Cumulative Net P&L %",
                           height=350, margin=dict(t=40, b=30, l=40, r=20))
         st.plotly_chart(fig, use_container_width=True)
     
@@ -1403,7 +1583,8 @@ def _render_backtest_result(result):
     with st.expander(f"📋 Trade Log ({result.total_trades} trades)", expanded=False):
         rows = []
         for t in result.trades:
-            pnl_color = "🟢" if t.pnl_pct > 0 else "🔴"
+            net_pnl_t = getattr(t, "net_pnl_pct", t.pnl_pct)
+            pnl_color = "🟢" if net_pnl_t > 0 else "🔴"
             rows.append({
                 "": pnl_color,
                 "Symbol": t.symbol,
@@ -1411,7 +1592,9 @@ def _render_backtest_result(result):
                 "Entry ₹": fp(t.entry_price),
                 "Exit Date": t.exit_date,
                 "Exit ₹": fp(t.exit_price),
-                "P&L %": f"{t.pnl_pct:+.1f}%",
+                "Gross P&L": f"{t.pnl_pct:+.1f}%",
+                "Net P&L": f"{net_pnl_t:+.1f}%",
+                "Cost": f"{getattr(t, 'cost_pct', 0):.2f}%",
                 "Hold": f"{t.holding_days}d",
                 "Exit Reason": t.exit_reason,
             })
@@ -1591,10 +1774,10 @@ def page_tracker():
 def page_settings():
     st.markdown("# ⚙️ Settings")
     st.session_state.capital = st.number_input("Capital ₹", value=st.session_state.capital, step=50000)
-    
+
     st.markdown("### 🔌 Breeze API")
     if st.session_state.breeze_connected:
-        st.success("✅ Breeze Connected! Intraday scanners (ORB, VWAP, Lunch Low) are LIVE.")
+        st.success("✅ Breeze Connected! Intraday scanners + Option Chain + Volume Profile are LIVE.")
     else:
         if st.session_state.breeze_msg:
             msg_lower = st.session_state.breeze_msg.lower()
@@ -1602,48 +1785,563 @@ def page_settings():
                 st.error("🔑 Breeze session token expired! Generate a new one from ICICI Direct and update Streamlit secrets.")
             else:
                 st.error(st.session_state.breeze_msg)
-        st.markdown("**Without Breeze:** ORB, VWAP Reclaim, Lunch Low are **disabled** (not proxied)."
-                     " VCP, EMA21, 52WH, Short, ATH work fine with daily data.")
-        st.warning("⚠️ Paste ONLY these lines in Streamlit Settings → Secrets (no backticks!):")
+        st.markdown("**Without Breeze:** ORB, VWAP, Lunch Low, Option Chain, Volume Profile are **disabled**. "
+                     "VCP, EMA21, 52WH, Short, ATH work fine with daily data.")
+        st.warning("⚠️ Paste ONLY these lines in Streamlit Settings → Secrets:")
         st.code('BREEZE_API_KEY = "your_key"\nBREEZE_API_SECRET = "your_secret"\nBREEZE_SESSION_TOKEN = "daily_token"', language="toml")
         st.info("⚠️ Session Token expires daily. Regenerate each morning from ICICI Direct portal.")
         with st.expander("Manual Connect"):
             with st.form("bf"):
-                ak = st.text_input("Key", type="password"); asc = st.text_input("Secret", type="password")
+                ak = st.text_input("Key", type="password")
+                asc = st.text_input("Secret", type="password")
                 st_ = st.text_input("Token", type="password")
                 if st.form_submit_button("Connect"):
                     if ak and asc and st_:
                         e = BreezeEngine(); ok, msg = e.connect(ak, asc, st_)
                         if ok: st.success(msg); st.session_state.breeze_connected=True; st.session_state.breeze_engine=e
                         else: st.error(msg)
-    
+
     st.session_state.universe_size = st.selectbox("Universe", ["nifty50","nifty200","nifty500"],
         index=["nifty50","nifty200","nifty500"].index(st.session_state.universe_size))
-    
+
     st.markdown("### 🔐 Access Control")
     st.markdown("Add this to Streamlit secrets to require a password:")
     st.code('APP_PASSWORD = "your_chosen_password"', language="toml")
-    st.caption("Leave blank or remove to disable. Share the password with trusted users.")
-    
+    st.caption("Leave blank or remove to disable.")
+
     st.markdown("### 🤖 GitHub Actions (Auto-Scanner)")
     st.markdown("""
     Auto-scans run daily via GitHub Actions (**free** on public repos):
     - **4:30 PM IST** — Quick Nifty 200 scan
     - **7:00 PM IST** — Full NSE 500 EOD scan + signal tracking
     - Results auto-committed to `signals/` folder in your repo
-    
-    See **SETUP_GUIDE.md** in your repo for step-by-step setup instructions.
     """)
-    
-    st.markdown("### 🧠 Regime Behavior (v5.2 — Adaptive Heat Caps)")
+
+    st.markdown("### 🧠 Regime Behavior (Adaptive Heat Caps)")
     st.markdown("""
-    | Regime | Score Range | Position Size | Heat Cap | Risk/Trade | Ideal For |
-    |--------|---:|---:|---:|---:|---|
-    | 🟢 EXPANSION | ≥ 6/12 | 100% | 6% | 2.0% | VCP, 52WH, ORB, ATH — buy breakouts |
-    | 🟡 ACCUMULATION | 2 to 5 | 70% | 4% | 1.5% | VCP, EMA21, VWAP — be selective |
-    | 🟠 DISTRIBUTION | -2 to 1 | 40% | 2% | 1.0% | Shorts, mean-reversion — defensive |
-    | 🔴 PANIC | < -2 | 15% | 1% | 0.5% | Shorts only — protect capital |
+    | Regime | Position Size | Heat Cap | Risk/Trade | Ideal For |
+    |--------|---:|---:|---:|---|
+    | 🟢 EXPANSION | 100% | 6% | 2.0% | VCP, 52WH, ORB, ATH — buy breakouts |
+    | 🟡 ACCUMULATION | 70% | 4% | 1.5% | VCP, EMA21, VWAP — be selective |
+    | 🟠 DISTRIBUTION | 40% | 2% | 1.0% | Shorts, mean-reversion — defensive |
+    | 🔴 PANIC | 15% | 1% | 0.5% | Shorts only — protect capital |
     """)
+
+    st.markdown("### 💹 Telegram Setup")
+    st.caption("Alerts are sent via Telegram when scans run. Set in Streamlit Secrets:")
+    st.code('TELEGRAM_BOT_TOKEN = "your_bot_token"\nTELEGRAM_CHAT_ID = "your_chat_id"', language="toml")
+
+
+# ============================================================================
+# STOCK LOOKUP — Deep-dive per stock
+# ============================================================================
+def page_stock_lookup():
+    st.markdown("# 🔎 Stock Lookup")
+    st.caption("Deep-dive into any stock — indicators, scanner verdict, signal history, and RRG sector status.")
+
+    enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
+    all_symbols = sorted(enriched.keys()) if enriched else []
+
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        query = st.text_input("🔍 Search stock (e.g. ASHOKLEY, RELIANCE, TATAMOTORS)",
+                              key="sl_query", placeholder="Type stock symbol...").strip().upper()
+    with c2:
+        if all_symbols:
+            selected = st.selectbox("Or select from loaded", [""] + all_symbols, key="sl_select")
+            if selected: query = selected
+
+    if not query:
+        st.info("Enter a stock symbol above. Load data from Dashboard first.")
+        if not st.session_state.get("data_loaded"):
+            st.warning("⚠️ Load data from Dashboard first to enable lookup.")
+        return
+
+    sym = query.replace(".NS", "")
+    if sym not in enriched:
+        matches = [s for s in all_symbols if sym in s]
+        if matches:
+            if len(matches) == 1:
+                sym = matches[0]
+            else:
+                sym = st.selectbox(f"Multiple matches for '{sym}':", matches, key="sl_fuzzy")
+        else:
+            st.error(f"**{sym}** not found in loaded universe ({len(all_symbols)} stocks). "
+                     "Try loading a larger universe (Nifty 500) from Dashboard.")
+            return
+
+    df = enriched[sym]
+    if df.empty or len(df) < 10:
+        st.warning(f"Insufficient data for {sym}.")
+        return
+
+    lat = df.iloc[-1]
+    sector = get_sector(sym)
+    fno_tag = get_fno_tag(sym)
+    cmp = lat["close"]
+
+    st.markdown(f"## {sym} {fno_tag}")
+    st.caption(f"Sector: **{sector}** | Data: {len(df)} bars | Last: {df.index[-1].strftime('%Y-%m-%d') if hasattr(df.index[-1], 'strftime') else str(df.index[-1])}")
+
+    c1,c2,c3,c4,c5,c6 = st.columns(6)
+    with c1: pc("CMP", f"₹{cmp:,.1f}")
+    with c2:
+        chg_1d = ((cmp / df.iloc[-2]["close"]) - 1) * 100 if len(df) > 1 else 0
+        pc("1D Change", f"{chg_1d:+.1f}%", "g" if chg_1d > 0 else "r")
+    with c3: pc("RSI (14)", f"{lat.get('rsi_14', 0):.0f}", "r" if lat.get('rsi_14', 50) > 70 else ("g" if lat.get('rsi_14', 50) < 30 else ""))
+    with c4:
+        vol_ratio = lat.get("volume", 0) / lat.get("vol_sma_20", 1) if lat.get("vol_sma_20", 0) > 0 else 0
+        pc("Vol Ratio", f"{vol_ratio:.1f}x", "g" if vol_ratio > 1.5 else "")
+    with c5: pc("52W High", f"₹{lat.get('high_52w', 0):,.1f}")
+    with c6:
+        pct_52 = lat.get("pct_from_52w_high", 0)
+        pc("From 52WH", f"{pct_52:+.1f}%", "g" if pct_52 > -5 else ("r" if pct_52 < -25 else ""))
+
+    with st.expander("📊 Technical Indicators", expanded=True):
+        c1,c2,c3,c4 = st.columns(4)
+        with c1:
+            st.markdown("**Moving Averages**")
+            st.markdown(f"SMA 20: ₹{lat.get('sma_20', 0):,.1f}")
+            st.markdown(f"SMA 50: ₹{lat.get('sma_50', 0):,.1f}")
+            st.markdown(f"SMA 200: ₹{lat.get('sma_200', 0):,.1f}")
+            st.markdown(f"EMA 21: ₹{lat.get('ema_21', 0):,.1f}")
+            above_20 = cmp > lat.get("sma_20", 0)
+            above_50 = cmp > lat.get("sma_50", 0)
+            above_200 = cmp > lat.get("sma_200", 0)
+            alignment = sum([above_20, above_50, above_200])
+            st.markdown(f"**MA Alignment: {alignment}/3** {'🟢' if alignment == 3 else '🟡' if alignment >= 2 else '🔴'}")
+        with c2:
+            st.markdown("**Momentum**")
+            st.markdown(f"RSI 14: {lat.get('rsi_14', 0):.1f}")
+            st.markdown(f"MACD: {lat.get('macd', 0):.2f}")
+            st.markdown(f"MACD Signal: {lat.get('macd_signal', 0):.2f}")
+            macd_bull = lat.get("macd", 0) > lat.get("macd_signal", 0)
+            st.markdown(f"MACD Cross: {'🟢 Bullish' if macd_bull else '🔴 Bearish'}")
+        with c3:
+            st.markdown("**Volatility**")
+            st.markdown(f"ATR 14: ₹{lat.get('atr_14', 0):.1f}")
+            st.markdown(f"ADX: {lat.get('adx_14', 0):.1f}")
+            st.markdown(f"BB Upper: ₹{lat.get('bb_upper', 0):,.1f}")
+            st.markdown(f"BB Lower: ₹{lat.get('bb_lower', 0):,.1f}")
+        with c4:
+            st.markdown("**Volume**")
+            st.markdown(f"Volume: {lat.get('volume', 0):,.0f}")
+            st.markdown(f"Avg 20d: {lat.get('vol_sma_20', 0):,.0f}")
+            st.markdown(f"Vol Ratio: {vol_ratio:.2f}x")
+            st.markdown(f"52W Low: ₹{lat.get('low_52w', 0):,.1f}")
+
+    # Weekly alignment
+    mtf = check_weekly_alignment(df)
+    if mtf["aligned"]:
+        st.success(f"✅ Weekly timeframe confirms ({mtf['score']}/4)")
+    else:
+        st.warning(f"⚠️ Weekly not aligned ({mtf['score']}/4)")
+
+    # RRG sector status
+    rrg = st.session_state.get("rrg_data", {})
+    if rrg and sector in rrg:
+        rrg_s = rrg[sector]
+        q = rrg_s.get("quadrant", "N/A")
+        q_icon = {"LEADING":"🟢","WEAKENING":"🟡","IMPROVING":"🔵","LAGGING":"🔴"}.get(q, "⚪")
+        st.info(f"Sector **{sector}** is {q_icon} **{q}** (RRG Score: {rrg_s.get('score', 0)})")
+
+    # Chart
+    fig = plot_candlestick(df, sym, days=90)
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Scanner verdict
+    st.markdown("### 🎯 Scanner Verdict")
+    st.caption("Running all daily strategies on this stock right now.")
+    nifty_df = st.session_state.get("nifty_data")
+    hits = []
+    for scanner_name, scanner_func in DAILY_SCANNERS.items():
+        try:
+            result = scanner_func(df, sym, nifty_df)
+            if result:
+                hits.append(result)
+        except Exception:
+            pass
+
+    if hits:
+        st.success(f"**{sym} qualifies in {len(hits)} strateg{'y' if len(hits)==1 else 'ies'}!**")
+        for r in hits:
+            p = STRATEGY_PROFILES.get(r.strategy, {})
+            st.markdown(f"**{p.get('icon','')} {p.get('name', r.strategy)}** — {r.signal} | "
+                        f"Entry ₹{r.entry:,.1f} | SL ₹{r.stop_loss:,.1f} | T1 ₹{r.target_1:,.1f}")
+            for reason in r.reasons[:3]:
+                st.markdown(f"  • {reason}")
+    else:
+        st.info(f"**{sym}** doesn't qualify in any daily strategy right now.")
+
+    # Signal history for this stock
+    st.markdown("### 📜 Signal History")
+    all_signals = load_signals()
+    if all_signals is not None and not all_signals.empty:
+        stock_hist = all_signals[all_signals["Symbol"] == sym].copy()
+        if not stock_hist.empty:
+            stock_hist = stock_hist.sort_values("Date", ascending=False)
+            first = stock_hist.iloc[-1]
+            first_entry = first.get("Entry", 0)
+            pnl_since = ((cmp / first_entry) - 1) * 100 if first_entry > 0 else 0
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: pc("First Flagged", str(first.get("Date", "?")))
+            with c2: pc("Entry Then", f"₹{first_entry:,.1f}")
+            with c3: pc("CMP Now", f"₹{cmp:,.1f}")
+            with c4: pc("Since Signal", f"{pnl_since:+.1f}%", "g" if pnl_since > 0 else "r")
+            st.dataframe(stock_hist[["Date","Strategy","Signal","CMP","Entry","SL","T1","Confidence","RS","Status"]].head(20),
+                         use_container_width=True, hide_index=True)
+        else:
+            st.info(f"No historical signals recorded for {sym}.")
+    else:
+        st.info("No signal history yet.")
+
+
+# ============================================================================
+# SIGNAL HISTORY — Cross-stock signal tracking & drift detection
+# ============================================================================
+def page_signal_history():
+    st.markdown("# 📜 Signal History")
+    st.caption("Track when stocks were first flagged, at what price, and how they've performed since. "
+               "Detects entry price drift (same stock, changed entry) to avoid chasing.")
+
+    all_signals = load_signals()
+    if all_signals is None or all_signals.empty:
+        st.info("No signals recorded yet. Run scans to start building history.")
+        return
+
+    enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
+
+    unique_stocks = all_signals["Symbol"].nunique()
+    c1, c2, c3 = st.columns(3)
+    with c1: pc("Unique Stocks", str(unique_stocks))
+    with c2: pc("Total Signals", str(len(all_signals)))
+    if "Date" in all_signals.columns:
+        with c3: pc("Date Range", f"{all_signals['Date'].min()} to {all_signals['Date'].max()}")
+
+    st.markdown("### 📊 First Signal vs Current Price")
+    st.caption("Every stock ever flagged — sorted by performance since first signal.")
+
+    first_seen = all_signals.sort_values("Date").groupby("Symbol").first().reset_index()
+    rows = []
+    for _, row in first_seen.iterrows():
+        sym = row["Symbol"]
+        first_entry = row.get("Entry", 0)
+        cmp_now = enriched.get(sym, pd.DataFrame())
+        cmp_val = cmp_now.iloc[-1]["close"] if not cmp_now.empty else 0
+        pnl = ((cmp_val / first_entry) - 1) * 100 if first_entry > 0 and cmp_val > 0 else 0
+        rows.append({
+            "Symbol": sym,
+            "First Seen": row.get("Date",""),
+            "Strategy": row.get("Strategy",""),
+            "Signal": row.get("Signal",""),
+            "Entry Then": fp(first_entry) if first_entry else "-",
+            "CMP Now": fp(cmp_val) if cmp_val else "-",
+            "P&L Since": f"{pnl:+.1f}%" if pnl else "-",
+        })
+
+    if rows:
+        result_df = pd.DataFrame(rows)
+        result_df = result_df.sort_values("P&L Since", ascending=False, key=lambda x: pd.to_numeric(x.str.replace("%","").str.replace("+",""), errors="coerce"))
+        st.dataframe(result_df, use_container_width=True, hide_index=True)
+
+    # Entry drift detection
+    st.markdown("### ⚠️ Entry Price Drift Detection")
+    st.caption("Same stock, same strategy — but entry price changed? This could mean you're chasing.")
+    for sym in all_signals["Symbol"].unique():
+        sym_sigs = all_signals[all_signals["Symbol"] == sym]
+        for strat in sym_sigs["Strategy"].unique():
+            strat_sigs = sym_sigs[sym_sigs["Strategy"] == strat].sort_values("Date")
+            if len(strat_sigs) >= 2 and "Entry" in strat_sigs.columns:
+                first_e = strat_sigs.iloc[0]["Entry"]
+                last_e = strat_sigs.iloc[-1]["Entry"]
+                if isinstance(first_e, (int, float)) and isinstance(last_e, (int, float)):
+                    if abs(first_e - last_e) / (first_e + 1) > 0.05:
+                        drift = ((last_e / first_e) - 1) * 100
+                        st.warning(f"**{sym} — {strat}:** Entry drifted from ₹{first_e:,.1f} → ₹{last_e:,.1f} ({drift:+.1f}%). "
+                                   f"Earlier entry was the stronger setup.")
+
+
+# ============================================================================
+# OPTION CHAIN PAGE — 7-Factor Composite Scoring
+# ============================================================================
+def page_option_chain():
+    st.markdown("# 🔗 Option Chain Analysis")
+    st.caption("7-factor composite scoring for F&O stocks via Breeze API. "
+               "Academic foundation: Cremers & Weinbaum (2010) IV Spread signal, NSE-specific PCR thresholds.")
+
+    if not OPTION_CHAIN_AVAILABLE:
+        st.error("option_chain.py module not found. Please ensure it's in your app directory.")
+        return
+
+    if not st.session_state.breeze_connected:
+        st.warning("🔌 Option Chain requires Breeze API. Connect Breeze in Settings.")
+        return
+
+    be = st.session_state.breeze_engine
+    if not be:
+        st.error("Breeze engine not initialized.")
+        return
+
+    # Get F&O stock list
+    enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
+    fno_stocks = sorted([s for s in enriched.keys() if is_fno(s)])
+
+    if not fno_stocks:
+        st.info("Load data from Dashboard first to see F&O stocks.")
+        return
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        oc_mode = st.radio("Mode", ["Single Stock", "Batch Scan"], horizontal=True)
+    with c2:
+        if oc_mode == "Single Stock":
+            oc_sym = st.selectbox("F&O Stock", fno_stocks, key="oc_sym")
+    with c3:
+        if oc_mode == "Batch Scan":
+            batch_limit = st.number_input("Max stocks to scan", 5, 50, 20)
+
+    if oc_mode == "Single Stock":
+        if st.button("🔗 Analyze Option Chain", type="primary", key="oc_run_single"):
+            with st.spinner(f"Fetching option chain for {oc_sym}..."):
+                try:
+                    oc_data = be.fetch_option_chain(oc_sym)
+                    if oc_data:
+                        result = analyze_option_chain(oc_sym, oc_data, enriched.get(oc_sym))
+                        _render_oc_result(result)
+                        st.session_state.oc_results[oc_sym] = result
+                    else:
+                        st.warning(f"No option chain data available for {oc_sym}. "
+                                   "Stock may not be in F&O, or Breeze session may need renewal.")
+                except Exception as e:
+                    st.error(f"Option chain error: {e}")
+
+    else:
+        if st.button("🔗 Batch Option Chain Scan", type="primary", key="oc_run_batch"):
+            results = []
+            progress = st.progress(0)
+            scan_stocks = fno_stocks[:int(batch_limit)]
+            for i, sym in enumerate(scan_stocks):
+                progress.progress((i+1)/len(scan_stocks), f"Scanning {sym}...")
+                try:
+                    oc_data = be.fetch_option_chain(sym)
+                    if oc_data:
+                        result = analyze_option_chain(sym, oc_data, enriched.get(sym))
+                        results.append(result)
+                        st.session_state.oc_results[sym] = result
+                except Exception:
+                    pass
+            progress.empty()
+
+            if results:
+                strong_buys = [r for r in results if r.score >= 75]
+                buys = [r for r in results if 60 <= r.score < 75]
+                st.success(f"Scan complete: {len(strong_buys)} Strong Buy, {len(buys)} Buy signals from {len(results)} stocks")
+
+                if strong_buys:
+                    st.markdown("### 🟢 Strong Buy (Score ≥ 75)")
+                    rows = [_oc_summary_row(r) for r in sorted(strong_buys, key=lambda x: -x.score)]
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+                if buys:
+                    st.markdown("### 🟡 Buy (Score 60-75)")
+                    rows = [_oc_summary_row(r) for r in sorted(buys, key=lambda x: -x.score)]
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+                sells = [r for r in results if r.score < 45]
+                if sells:
+                    with st.expander(f"🔴 Sell/Strong Sell Signals ({len(sells)})"):
+                        rows = [_oc_summary_row(r) for r in sorted(sells, key=lambda x: x.score)]
+                        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            else:
+                st.warning("No option chain data retrieved. Check Breeze connection.")
+
+    # Show cached results
+    if st.session_state.oc_results:
+        with st.expander(f"📋 Session Results ({len(st.session_state.oc_results)} stocks analyzed)"):
+            summary_rows = [_oc_summary_row(r) for r in st.session_state.oc_results.values()]
+            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+
+
+def _oc_summary_row(r):
+    """Build a summary row dict for option chain result."""
+    signal_emoji = {"STRONG BUY":"🟢","BUY":"🟡","NEUTRAL":"⚪","SELL":"🟠","STRONG SELL":"🔴"}.get(r.signal, "⚪")
+    return {
+        "Symbol": r.symbol,
+        "Signal": f"{signal_emoji} {r.signal}",
+        "Score": f"{r.score:.0f}/100",
+        "Confidence": f"{r.confidence:.0f}%",
+        "IV %ile": f"{getattr(r, 'ivp', 0):.0f}%",
+        "PCR": f"{getattr(r, 'pcr', 0):.2f}",
+        "F&O Ban": "⚠️ YES" if getattr(r, 'fno_ban', False) else "No",
+        "DTE": str(getattr(r, 'dte', "?")),
+    }
+
+
+def _render_oc_result(r):
+    """Render detailed option chain result for a single stock."""
+    signal_map = {
+        "STRONG BUY": ("🟢", "success"),
+        "BUY": ("🟡", "info"),
+        "NEUTRAL": ("⚪", "info"),
+        "SELL": ("🟠", "warning"),
+        "STRONG SELL": ("🔴", "error"),
+    }
+    emoji, level = signal_map.get(r.signal, ("⚪", "info"))
+    getattr(st, level)(f"{emoji} **{r.symbol}** — {r.signal} | Score: {r.score:.0f}/100 | Confidence: {r.confidence:.0f}%")
+
+    if getattr(r, 'fno_ban', False):
+        st.error("⚠️ F&O BAN: This stock is at >95% MWPL. No new positions allowed.")
+
+    c1,c2,c3,c4,c5,c6 = st.columns(6)
+    with c1: pc("Composite Score", f"{r.score:.0f}")
+    with c2: pc("Confidence", f"{r.confidence:.0f}%")
+    with c3: pc("IV Percentile", f"{getattr(r, 'ivp', 0):.0f}%")
+    with c4: pc("PCR", f"{getattr(r, 'pcr', 0):.2f}")
+    with c5: pc("Max Pain", fp(getattr(r, 'max_pain', 0)))
+    with c6: pc("DTE", str(getattr(r, 'dte', "?")))
+
+    if hasattr(r, "components") and r.components:
+        with st.expander("📊 Factor Breakdown"):
+            comp_rows = []
+            for factor, score in r.components.items():
+                comp_rows.append({"Factor": factor, "Score": f"{score:.1f}/100"})
+            st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+
+    if hasattr(r, "reasons") and r.reasons:
+        st.markdown("**Why this signal:**")
+        for reason in r.reasons:
+            st.markdown(f"  • {reason}")
+
+
+# ============================================================================
+# IPO SCANNER PAGE — IPO Base Detection
+# ============================================================================
+def page_ipo_scanner():
+    st.markdown("# 🚀 IPO Scanner")
+    st.caption("Detects IPO base formations and breakout signals. "
+               "O'Neil study: 57% hit rate, +2.79% alpha on high-volume breakouts (≥150% of 50-day avg). "
+               "Tracks lock-up expiry alerts: Day 30/90/180/540.")
+
+    if not IPO_SCANNER_AVAILABLE:
+        st.error("ipo_scanner.py module not found.")
+        return
+
+    tab1, tab2, tab3 = st.tabs(["🔍 Scan IPO Universe", "⚠️ Lock-up Alerts", "📖 IPO Strategy Guide"])
+
+    with tab1:
+        c1, c2 = st.columns(2)
+        with c1:
+            st.caption("Scans recently listed IPOs for base formations and breakout signals.")
+            include_unlisted_year = st.slider("Include IPOs listed in last N months", 3, 36, 18)
+        with c2:
+            min_score = st.slider("Min Quality Score", 0, 80, 40)
+
+        if st.button("🔍 Scan IPO Universe", type="primary", key="ipo_scan"):
+            with st.spinner("Fetching IPO list and analyzing setups..."):
+                try:
+                    results = scan_ipo_universe(
+                        max_listing_months=include_unlisted_year,
+                        min_score=min_score,
+                        breeze_engine=st.session_state.breeze_engine
+                    )
+                    st.session_state.ipo_results = results
+                except Exception as e:
+                    st.error(f"IPO scan error: {e}")
+                    st.session_state.ipo_results = []
+
+            if st.session_state.ipo_results:
+                st.success(f"Found {len(st.session_state.ipo_results)} IPO setups")
+
+        results = st.session_state.get("ipo_results", [])
+        if results:
+            strong_buys = [r for r in results if r.score >= 80]
+            buys = [r for r in results if 60 <= r.score < 80]
+            watches = [r for r in results if 40 <= r.score < 60]
+
+            for label, subset, color in [
+                ("🟢 Strong Buy (Score ≥ 80)", strong_buys, "success"),
+                ("🟡 Buy (Score 60-79)", buys, "info"),
+                ("👀 Watch (Score 40-59)", watches, None),
+            ]:
+                if not subset: continue
+                st.markdown(f"### {label}")
+                rows = []
+                for r in sorted(subset, key=lambda x: -x.score):
+                    rows.append({
+                        "Symbol": r.symbol,
+                        "Score": f"{r.score:.0f}/100",
+                        "Signal": r.signal,
+                        "CMP": fp(getattr(r, "cmp", 0)),
+                        "Issue Price": fp(getattr(r, "issue_price", 0)),
+                        "Listing Date": str(getattr(r, "listing_date", "")),
+                        "Base Depth": f"{getattr(r, 'base_depth_pct', 0):.1f}%",
+                        "RS": str(getattr(r, "rs_rating", 0)),
+                        "QIB Sub": f"{getattr(r, 'qib_subscription', 0):.1f}x",
+                        "8W Hold": "✅" if getattr(r, "eight_week_hold", False) else "",
+                    })
+                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        else:
+            if not st.session_state.get("ipo_scan_run"):
+                st.info("Click 'Scan IPO Universe' to find IPO base formations.")
+
+    with tab2:
+        st.markdown("### ⚠️ Upcoming Lock-up Expiry Alerts")
+        st.caption("Lock-up expirations create significant supply events. Day 30 (anchor): 76% of stocks decline avg 2.6%.")
+        if st.button("🔍 Check Lock-up Events", key="lockup_scan"):
+            with st.spinner("Checking IPO lock-up calendar..."):
+                try:
+                    alerts = get_upcoming_lock_up_alerts(days_ahead=30)
+                    if alerts:
+                        st.warning(f"⚠️ {len(alerts)} lock-up events in next 30 days")
+                        rows = []
+                        for a in alerts:
+                            rows.append({
+                                "Symbol": a.get("symbol",""),
+                                "Event": a.get("event",""),
+                                "Date": str(a.get("date","")),
+                                "Days Until": str(a.get("days_until","")),
+                                "Action": a.get("action",""),
+                            })
+                        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    else:
+                        st.success("No major lock-up events in next 30 days.")
+                except Exception as e:
+                    st.error(f"Lock-up scan error: {e}")
+
+    with tab3:
+        st.markdown("""
+### 📖 IPO Base Strategy — Research Summary
+
+**What is an IPO Base?**
+After listing, IPOs typically consolidate 15-30% below their first-week high for 10-14 days minimum.
+This is the "IPO base" — a healthy pause before the next leg up.
+
+**Entry Rules (O'Neil methodology):**
+- Close > left-side high of the IPO base (the pivot)
+- Volume ≥ 150% of 50-day average on breakout day
+- RS Rating ≥ 80 (stock must outperform Nifty since listing)
+- Enter within 5% of the pivot (not extended)
+- Stop loss: 7-8% below entry
+
+**8-Week Hold Rule:**
+If the stock gains ≥20% within 3 weeks of breakout, hold for 8 full weeks minimum.
+This rule captures the biggest winners.
+
+**Indian Market Lock-up Calendar:**
+| Event | Day | Average Impact |
+|-------|-----|---------------|
+| Anchor investor unlock | 30 | -2.6% avg (76% of stocks decline) |
+| Public shareholder unlock | 90 | Supply increases 50% |
+| PE/VC investor unlock | 180 | -5 to -6% avg drag |
+| Promoter unlock | 540 | Largest supply event |
+
+**Risk Management:**
+- Max 0.75% portfolio risk per IPO trade
+- Max 5% position size per IPO
+- Max 25% total IPO allocation (3-5 positions max)
+
+**Win Rate:** 57% | **Average Winner:** +19.9% | **Average Loser:** -14.5% (favorable R:R)
+        """)
 
 
 # ============================================================================
@@ -1653,6 +2351,10 @@ page_map = {
     "📊 Dashboard": page_dashboard,
     "🔍 Scanner Hub": page_scanner_hub,
     "📈 Charts & RS": page_charts_rs,
+    "🔗 Option Chain": page_option_chain,
+    "🚀 IPO Scanner": page_ipo_scanner,
+    "🔎 Stock Lookup": page_stock_lookup,
+    "📜 Signal History": page_signal_history,
     "🧪 Backtest": page_backtest,
     "📋 Signal Log": page_signal_log,
     "📊 Tracker": page_tracker,

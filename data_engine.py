@@ -252,6 +252,105 @@ class BreezeEngine:
             logger.warning(f"Breeze intraday failed for {symbol}: {e}")
             return None
 
+    def fetch_volume_profile(self, symbol: str, days_back: int = 20,
+                             num_bins: int = 20) -> Optional[Dict]:
+        """Compute Volume-by-Price profile using Breeze intraday data.
+        Returns POC, VAH, VAL, HVN (high volume nodes), LVN (low volume nodes).
+        """
+        if not self.connected or self.breeze is None:
+            return None
+        try:
+            df = self.fetch_intraday(symbol, interval="5minute", days_back=days_back)
+            if df is None or len(df) < 50:
+                return None
+
+            price_min = df["low"].min()
+            price_max = df["high"].max()
+            if price_max <= price_min:
+                return None
+
+            bin_size = (price_max - price_min) / num_bins
+            bins = np.arange(price_min, price_max + bin_size, bin_size)
+            vol_profile = np.zeros(len(bins) - 1)
+            price_levels = (bins[:-1] + bins[1:]) / 2
+
+            for _, row in df.iterrows():
+                bar_low, bar_high, bar_vol = row["low"], row["high"], row["volume"]
+                if bar_vol <= 0 or bar_high <= bar_low:
+                    continue
+                for j in range(len(price_levels)):
+                    if bar_low <= price_levels[j] <= bar_high:
+                        vol_profile[j] += bar_vol / max(1, int((bar_high - bar_low) / bin_size))
+
+            if vol_profile.sum() == 0:
+                return None
+
+            poc_idx = np.argmax(vol_profile)
+            poc_price = round(float(price_levels[poc_idx]), 2)
+
+            # Value Area (70% of volume around POC)
+            total_vol = vol_profile.sum()
+            target_vol = total_vol * 0.70
+            cum_vol = vol_profile[poc_idx]
+            lo_idx, hi_idx = poc_idx, poc_idx
+            while cum_vol < target_vol:
+                expand_lo = vol_profile[lo_idx - 1] if lo_idx > 0 else 0
+                expand_hi = vol_profile[hi_idx + 1] if hi_idx < len(vol_profile) - 1 else 0
+                if expand_lo >= expand_hi and lo_idx > 0:
+                    lo_idx -= 1; cum_vol += vol_profile[lo_idx]
+                elif hi_idx < len(vol_profile) - 1:
+                    hi_idx += 1; cum_vol += vol_profile[hi_idx]
+                else:
+                    break
+
+            vah = round(float(price_levels[hi_idx]), 2)
+            val_ = round(float(price_levels[lo_idx]), 2)
+
+            avg_vol = vol_profile.mean()
+            hvn = [round(float(price_levels[i]), 2) for i in range(len(vol_profile)) if vol_profile[i] > avg_vol * 1.5]
+            lvn = [round(float(price_levels[i]), 2) for i in range(len(vol_profile)) if 0 < vol_profile[i] < avg_vol * 0.5]
+
+            return {
+                "price_levels": [round(float(p), 2) for p in price_levels],
+                "volumes": [round(float(v), 0) for v in vol_profile],
+                "poc": poc_price, "vah": vah, "val": val_,
+                "hvn": hvn[:5], "lvn": lvn[:5],
+                "total_bars": len(df), "days": days_back,
+            }
+        except Exception as e:
+            logger.warning(f"Volume profile {symbol}: {type(e).__name__}: {e}")
+            return None
+
+    def fetch_option_chain(self, symbol: str, expiry_date: str = None) -> Optional[Dict]:
+        """Fetch live option chain data from Breeze API for option_chain.py module."""
+        if not self.connected or self.breeze is None:
+            return None
+        try:
+            from datetime import date as ddate
+            if expiry_date is None:
+                # Get nearest Thursday expiry
+                today = ddate.today()
+                days_to_thu = (3 - today.weekday()) % 7
+                if days_to_thu == 0 and today.weekday() == 3:
+                    days_to_thu = 0
+                near_thu = today + timedelta(days=days_to_thu)
+                expiry_date = near_thu.strftime("%Y-%m-%d")
+
+            data = self.breeze.get_option_chain_quotes(
+                stock_code=symbol,
+                exchange_code="NFO",
+                product_type="options",
+                expiry_date=expiry_date,
+                right="others",
+                strike_price="0"
+            )
+            if data and "Success" in str(data.get("Status", "")) and data.get("Success"):
+                return {"raw": data["Success"], "symbol": symbol, "expiry": expiry_date}
+            return None
+        except Exception as e:
+            logger.warning(f"Option chain {symbol}: {type(e).__name__}: {e}")
+            return None
+
 
 # ============================================================================
 # INDICATOR CALCULATIONS

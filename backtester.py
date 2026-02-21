@@ -1,18 +1,66 @@
 """
-Backtesting Engine — v4
-========================
-Run any scanner against historical data. Walk-forward simulation.
-No lookahead bias — each day only sees data available up to that point.
+Backtesting Engine — v15 (NSE Scanner Pro)
+===========================================
+- Realistic Indian market cost model (slippage + STT + brokerage + GST)
+- Walk-forward validation (optional 70/30 train/test split)
+- No lookahead bias — each day only sees data available up to that point.
+- Both GROSS and NET P&L reported.
 """
 
 import pandas as pd
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 import json
 
 from data_engine import Indicators
+
+
+# ============================================================================
+# COST MODEL — Indian market realistic costs
+# ============================================================================
+
+@dataclass
+class CostModel:
+    """Realistic execution cost model for NSE trading."""
+    slippage_pct: float = 0.10       # 0.10% per side (market order slippage)
+    brokerage_per_order: float = 20  # ₹20 per order (Zerodha-style)
+    stt_pct: float = 0.025           # STT: 0.025% on sell side (delivery)
+    exchange_txn_pct: float = 0.00345  # NSE transaction charges
+    sebi_pct: float = 0.0001         # SEBI turnover fee
+    gst_pct: float = 18.0            # GST on brokerage + txn charges
+
+    def total_cost_pct(self, entry_price: float, exit_price: float,
+                       shares: int = 1) -> float:
+        """
+        Compute total round-trip cost as % of entry price.
+        Includes: slippage (both sides) + brokerage + STT + exchange + SEBI + GST
+        """
+        position_value = entry_price * shares
+
+        slippage = self.slippage_pct * 2
+
+        brokerage_total = self.brokerage_per_order * 2
+        brokerage_pct = (brokerage_total / position_value * 100) if position_value > 0 else 0
+
+        stt = self.stt_pct
+        exchange = self.exchange_txn_pct * 2
+        sebi = self.sebi_pct * 2
+
+        taxable = brokerage_pct + exchange
+        gst = taxable * (self.gst_pct / 100)
+
+        return slippage + brokerage_pct + stt + exchange + sebi + gst
+
+    def adjust_pnl(self, gross_pnl_pct: float, entry_price: float,
+                   shares: int = 100) -> float:
+        """Subtract costs from gross P&L."""
+        costs = self.total_cost_pct(entry_price, entry_price, shares)
+        return gross_pnl_pct - costs
+
+
+DEFAULT_COSTS = CostModel()
 
 
 @dataclass
@@ -28,14 +76,16 @@ class BacktestTrade:
     exit_date: str = ""
     exit_price: float = 0.0
     exit_reason: str = ""
-    pnl_pct: float = 0.0
+    pnl_pct: float = 0.0         # GROSS P&L
+    net_pnl_pct: float = 0.0     # NET P&L (after costs)
     pnl_abs: float = 0.0
     holding_days: int = 0
-    max_favorable: float = 0.0  # Best % during trade
-    max_adverse: float = 0.0    # Worst % during trade
+    max_favorable: float = 0.0
+    max_adverse: float = 0.0
+    cost_pct: float = 0.0        # Total cost for this trade
 
 
-@dataclass  
+@dataclass
 class BacktestResult:
     strategy: str
     symbol: str
@@ -44,21 +94,31 @@ class BacktestResult:
     wins: int
     losses: int
     win_rate: float
-    total_pnl_pct: float
-    avg_win_pct: float
-    avg_loss_pct: float
-    profit_factor: float
-    max_drawdown_pct: float
-    expectancy_pct: float
-    avg_holding_days: float
-    best_trade_pct: float
-    worst_trade_pct: float
-    trades: List[BacktestTrade]
-    equity_curve: List[dict]
+    total_pnl_pct: float         # GROSS
+    net_pnl_pct: float = 0.0    # NET (after costs)
+    avg_win_pct: float = 0.0
+    avg_loss_pct: float = 0.0
+    profit_factor: float = 0.0
+    net_profit_factor: float = 0.0
+    max_drawdown_pct: float = 0.0
+    expectancy_pct: float = 0.0
+    net_expectancy_pct: float = 0.0
+    avg_holding_days: float = 0.0
+    best_trade_pct: float = 0.0
+    worst_trade_pct: float = 0.0
+    total_costs_pct: float = 0.0
+    trades: List[BacktestTrade] = field(default_factory=list)
+    equity_curve: List[dict] = field(default_factory=list)
+    # Walk-forward fields
+    is_walk_forward: bool = False
+    train_win_rate: float = 0.0
+    test_win_rate: float = 0.0
+    overfit_warning: bool = False
 
 
 def backtest_strategy(df: pd.DataFrame, symbol: str, strategy: str,
-                      lookback_days: int = 500, max_hold: int = 30) -> Optional[BacktestResult]:
+                      lookback_days: int = 500, max_hold: int = 30,
+                      cost_model: CostModel = None) -> Optional[BacktestResult]:
     """
     Walk-forward backtest of a strategy on a single stock.
     
@@ -345,29 +405,47 @@ def _check_ath(df, latest, symbol):
     )
 
 
-def _compute_stats(trades: List[BacktestTrade], strategy: str, 
+def _compute_stats(trades: List[BacktestTrade], strategy: str,
                    symbol: str, lookback: int) -> BacktestResult:
-    """Compute backtest statistics from trades list."""
-    wins = [t for t in trades if t.pnl_pct > 0]
-    losses = [t for t in trades if t.pnl_pct <= 0]
-    
+    """Compute backtest statistics from trades list — includes gross + net P&L."""
+    # Apply costs if not already applied
+    for t in trades:
+        if t.net_pnl_pct == 0 and t.cost_pct == 0:
+            cost = DEFAULT_COSTS.total_cost_pct(t.entry_price, t.exit_price)
+            t.cost_pct = cost
+            t.net_pnl_pct = t.pnl_pct - cost
+
+    wins = [t for t in trades if t.net_pnl_pct > 0]
+    losses = [t for t in trades if t.net_pnl_pct <= 0]
+
     total_pnl = sum(t.pnl_pct for t in trades)
-    avg_win = np.mean([t.pnl_pct for t in wins]) if wins else 0
-    avg_loss = np.mean([abs(t.pnl_pct) for t in losses]) if losses else 0
-    pf = (sum(t.pnl_pct for t in wins) / abs(sum(t.pnl_pct for t in losses))) if losses and sum(t.pnl_pct for t in losses) != 0 else 0
-    
-    # Equity curve + max drawdown
+    net_pnl = sum(t.net_pnl_pct for t in trades)
+    total_costs = sum(t.cost_pct for t in trades)
+
+    avg_win = np.mean([t.pnl_pct for t in trades if t.pnl_pct > 0]) if any(t.pnl_pct > 0 for t in trades) else 0
+    avg_loss = np.mean([abs(t.pnl_pct) for t in trades if t.pnl_pct <= 0]) if any(t.pnl_pct <= 0 for t in trades) else 0
+
+    gross_wins_sum = sum(t.pnl_pct for t in trades if t.pnl_pct > 0)
+    gross_losses_sum = abs(sum(t.pnl_pct for t in trades if t.pnl_pct <= 0))
+    pf = (gross_wins_sum / gross_losses_sum) if gross_losses_sum > 0 else 0
+
+    net_wins_sum = sum(t.net_pnl_pct for t in wins)
+    net_losses_sum = abs(sum(t.net_pnl_pct for t in losses))
+    net_pf = (net_wins_sum / net_losses_sum) if net_losses_sum > 0 else 0
+
+    # Equity curve + max drawdown (NET)
     equity = []
     running = 0
     peak = 0
     max_dd = 0
     for t in trades:
-        running += t.pnl_pct
+        running += t.net_pnl_pct
         peak = max(peak, running)
         dd = peak - running
         max_dd = max(max_dd, dd)
-        equity.append({"date": t.exit_date, "equity": round(running, 2), "drawdown": round(dd, 2)})
-    
+        equity.append({"date": t.exit_date, "equity": round(running, 2),
+                       "drawdown": round(dd, 2)})
+
     return BacktestResult(
         strategy=strategy, symbol=symbol,
         period=f"Last {lookback} trading days",
@@ -375,36 +453,77 @@ def _compute_stats(trades: List[BacktestTrade], strategy: str,
         wins=len(wins), losses=len(losses),
         win_rate=round(len(wins) / len(trades) * 100, 1) if trades else 0,
         total_pnl_pct=round(total_pnl, 2),
+        net_pnl_pct=round(net_pnl, 2),
         avg_win_pct=round(avg_win, 2),
         avg_loss_pct=round(avg_loss, 2),
         profit_factor=round(pf, 2),
+        net_profit_factor=round(net_pf, 2),
         max_drawdown_pct=round(max_dd, 2),
         expectancy_pct=round(total_pnl / len(trades), 2) if trades else 0,
+        net_expectancy_pct=round(net_pnl / len(trades), 2) if trades else 0,
         avg_holding_days=round(np.mean([t.holding_days for t in trades]), 1),
-        best_trade_pct=round(max(t.pnl_pct for t in trades), 2),
-        worst_trade_pct=round(min(t.pnl_pct for t in trades), 2),
+        best_trade_pct=round(max(t.net_pnl_pct for t in trades), 2),
+        worst_trade_pct=round(min(t.net_pnl_pct for t in trades), 2),
+        total_costs_pct=round(total_costs, 2),
         trades=trades,
         equity_curve=equity,
     )
 
 
+def backtest_walk_forward(df: pd.DataFrame, symbol: str, strategy: str,
+                          train_pct: float = 0.70, max_hold: int = 30,
+                          cost_model: CostModel = None) -> Optional[BacktestResult]:
+    """
+    Walk-forward validation: split data into train (70%) and test (30%).
+    Run backtest on both, compare win rates to detect overfitting.
+    Returns the TEST period result with train/test comparison annotated.
+    """
+    if df is None or len(df) < 400:
+        return None
+
+    split_idx = int(len(df) * train_pct)
+    train_df = df.iloc[:split_idx]
+    test_df = df.iloc[split_idx - 200:]  # Overlap 200 bars for indicator warmup
+
+    train_result = backtest_strategy(train_df, symbol, strategy,
+                                     lookback_days=len(train_df), max_hold=max_hold,
+                                     cost_model=cost_model)
+    test_result = backtest_strategy(test_df, symbol, strategy,
+                                    lookback_days=len(test_df), max_hold=max_hold,
+                                    cost_model=cost_model)
+
+    if test_result is None:
+        return train_result
+
+    test_result.is_walk_forward = True
+    test_result.train_win_rate = train_result.win_rate if train_result else 0
+    test_result.test_win_rate = test_result.win_rate
+    test_result.period = f"Walk-Forward (Train {train_pct*100:.0f}% / Test {(1-train_pct)*100:.0f}%)"
+
+    # Overfit warning: train win rate > test by > 15%
+    if train_result and train_result.win_rate - test_result.win_rate > 15:
+        test_result.overfit_warning = True
+
+    return test_result
+
+
 def backtest_multi_stock(symbols: List[str], data_dict: Dict[str, pd.DataFrame],
                          strategy: str, lookback: int = 500,
-                         max_hold: int = 30) -> Optional[BacktestResult]:
+                         max_hold: int = 30,
+                         cost_model: CostModel = None) -> Optional[BacktestResult]:
     """Run backtest across multiple stocks, aggregate results."""
     all_trades = []
-    
+
     for symbol in symbols:
         if symbol not in data_dict:
             continue
-        result = backtest_strategy(data_dict[symbol], symbol, strategy, lookback, max_hold)
+        result = backtest_strategy(data_dict[symbol], symbol, strategy, lookback,
+                                   max_hold, cost_model)
         if result:
             all_trades.extend(result.trades)
-    
+
     if not all_trades:
         return None
-    
-    # Sort by entry date
+
     all_trades.sort(key=lambda t: t.entry_date)
-    
     return _compute_stats(all_trades, strategy, f"{len(symbols)} stocks", lookback)
