@@ -972,3 +972,94 @@ def scan_single_ipo(symbol: str, listing_date: str, issue_price: float,
     except Exception as e:
         logger.warning(f"scan_single_ipo({symbol}) failed: {e}")
         return None
+
+
+# ============================================================================
+# COMPATIBILITY WRAPPERS — functions expected by app.py
+# ============================================================================
+
+# IPOResult is just an alias for IPOBaseSignal
+IPOResult = IPOBaseSignal
+
+
+def fetch_nse_ipo_list() -> List[Dict]:
+    """Alias for scrape_nse_ipo_list() — expected by app.py."""
+    return scrape_nse_ipo_list()
+
+
+def get_upcoming_lock_up_alerts(days_ahead: int = 30) -> List[Dict]:
+    """
+    Scan all recently listed IPOs and return lock-up events
+    happening within the next `days_ahead` days.
+    Returns list of dicts with: symbol, event, date, days_until, action.
+    """
+    alerts: List[Dict] = []
+    try:
+        raw_ipos = scrape_nse_ipo_list()
+    except Exception:
+        return []
+
+    today = date.today()
+    cutoff = today + timedelta(days=days_ahead)
+
+    for raw in raw_ipos:
+        try:
+            meta = build_ipo_metadata(raw)
+            if meta is None:
+                continue
+            lockups = compute_lockup_alerts(meta)
+            for lk in lockups:
+                event_date_str = lk.get("date", "")
+                if not event_date_str:
+                    continue
+                try:
+                    event_date = datetime.strptime(event_date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                if today <= event_date <= cutoff:
+                    days_until = (event_date - today).days
+                    alerts.append({
+                        "symbol": meta.symbol,
+                        "event": lk.get("event", "Lock-up Expiry"),
+                        "date": event_date_str,
+                        "days_until": days_until,
+                        "action": lk.get("action", "Review position / tighten stop"),
+                    })
+        except Exception:
+            continue
+
+    alerts.sort(key=lambda x: x.get("days_until", 999))
+    return alerts
+
+
+def format_ipo_alert(result: IPOBaseSignal) -> str:
+    """Format IPO signal as a readable Telegram / display string."""
+    if result is None:
+        return "No IPO data."
+    score = getattr(result, "score", 0)
+    signal = getattr(result, "signal", "WATCH")
+    symbol = getattr(result, "symbol", "")
+    company = getattr(result, "company_name", symbol)
+    listing_date = getattr(result, "listing_date", "")
+    cmp = getattr(result, "cmp", 0)
+    issue_price = getattr(result, "issue_price", 0)
+    eight_week = getattr(result, "eight_week_hold", False)
+
+    icon_map = {"STRONG_BUY": "🟢", "BUY": "🔵", "WATCH": "🟡", "AVOID": "🔴"}
+    icon = icon_map.get(signal, "⚪")
+
+    lines = [
+        f"{icon} IPO Signal — {symbol} ({company})",
+        f"Score: {score:.0f}/100 | Signal: {signal}",
+        f"Listed: {listing_date} | CMP: ₹{cmp:,.0f} | Issue: ₹{issue_price:,.0f}",
+    ]
+    if eight_week:
+        lines.append("🔒 8-Week Hold Rule Active — do not sell early")
+
+    reasons = getattr(result, "reasons", [])
+    if reasons:
+        lines.append("Reasons: " + " | ".join(reasons[:3]))
+    warnings = getattr(result, "warnings", [])
+    if warnings:
+        lines.append("⚠️ Lock-ups: " + " | ".join(str(w) for w in warnings[:2]))
+    return "\n".join(lines)

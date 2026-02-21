@@ -662,3 +662,62 @@ def interpret_participant_data(fii_long: float, fii_short: float,
         "retail_contrarian_signal": retail_signal,
         "composite": fii_sentiment if fii_sentiment != "NEUTRAL" else retail_signal,
     }
+
+
+# ============================================================================
+# COMPATIBILITY WRAPPERS — functions expected by app.py
+# ============================================================================
+
+def analyze_option_chain(symbol: str, oc_data: Dict,
+                          price_df=None) -> Optional[OptionChainSignal]:
+    """
+    Wrapper expected by app.py.
+    Calls compute_option_chain_signal and injects symbol,
+    then adds a .score alias for composite_score so app.py r.score works.
+    """
+    result = compute_option_chain_signal(oc_data)
+    if result is None:
+        return None
+    # Patch symbol (compute_option_chain_signal reads it from oc_data header)
+    object.__setattr__(result, "symbol", symbol) if hasattr(result, "__dataclass_fields__") else None
+    try:
+        result.symbol = symbol
+    except Exception:
+        pass
+    # Add .score alias so app.py `r.score` works
+    result.score = result.composite_score
+    return result
+
+
+# OptionChainResult is just an alias for OptionChainSignal
+OptionChainResult = OptionChainSignal
+
+
+def format_oc_signal(result: OptionChainSignal) -> str:
+    """Format option chain result as a readable Telegram / display string."""
+    if result is None:
+        return "No option chain data available."
+    score = getattr(result, "composite_score", 0)
+    signal = getattr(result, "signal", "NEUTRAL")
+    confidence = getattr(result, "confidence", 0)
+    pcr = getattr(result, "pcr", 0)
+    oi_pattern = getattr(result, "oi_pattern", "")
+    max_pain = getattr(result, "max_pain", 0)
+    spot = getattr(result, "spot", 0)
+    dte = getattr(result, "dte", 0)
+    icon = getattr(result, "signal_icon", "⚪")
+    symbol = getattr(result, "symbol", "")
+
+    lines = [
+        f"{icon} Option Chain Signal — {symbol}",
+        f"Score: {score:.0f}/100 ({signal}) | Confidence: {confidence:.0f}%",
+        f"OI Pattern: {oi_pattern} | PCR: {pcr:.2f}",
+        f"Max Pain: ₹{max_pain:,.0f} | Spot: ₹{spot:,.0f} | DTE: {dte}",
+    ]
+    reasons = getattr(result, "reasons", [])
+    if reasons:
+        lines.append("Signals: " + ", ".join(reasons[:3]))
+    warnings = getattr(result, "warnings", [])
+    if warnings:
+        lines.append("⚠️ " + " | ".join(warnings[:2]))
+    return "\n".join(lines)
