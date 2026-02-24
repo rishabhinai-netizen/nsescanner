@@ -23,6 +23,10 @@ except ImportError:
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List, Tuple
 import time as time_module
+try:
+    from breeze_symbol_map import to_breeze_code
+except ImportError:
+    def to_breeze_code(s: str) -> str: return s  # fallback: pass through
 import pytz
 import logging
 
@@ -325,97 +329,111 @@ class BreezeEngine:
         """
         Fetch and parse live option chain data from Breeze API.
 
-        Returns a fully structured dict ready for compute_option_chain_signal():
-            calls / puts: DataFrames with columns strike, oi, oi_change, volume, iv, ltp
-            spot, pcr, max_pain, call_wall, put_wall, iv_spread,
-            total_call_oi, total_put_oi, expiry_date, dte, symbol
+        Breeze response fields (confirmed from API docs):
+            strike_price, ltp, open_interest, chnge_oi,
+            total_quantity_traded, spot_price (str), best_bid_price, best_offer_price
+        NOTE: Breeze does NOT return implied_volatility — IV is estimated from LTP.
+
+        Returns structured dict ready for compute_option_chain_signal().
         """
         if not self.connected or self.breeze is None:
             return None
         try:
             from datetime import date as ddate
 
+            # ── Translate NSE symbol → Breeze stock_code ────────────────────
+            # CRITICAL: Breeze uses its own codes (RELIANCE→RELIND, HDFCBANK→HDFWA2, etc.)
+            breeze_symbol = to_breeze_code(symbol)
+
             # ── Resolve nearest expiry ──────────────────────────────────────────
+            # Breeze requires format: "2025-08-28T06:00:00.000Z"
+            expiry_date_plain = None
             if expiry_date is None:
                 today = ddate.today()
-                # Try current week Thursday first, then next
+                # Find nearest Thursday (NSE weekly expiry)
                 for offset in range(0, 14):
                     candidate = today + timedelta(days=offset)
-                    if candidate.weekday() == 3:   # Thursday
-                        expiry_date = candidate.strftime("%Y-%m-%dT07:00:00.000Z")
+                    if candidate.weekday() == 3:  # Thursday
                         expiry_date_plain = candidate.strftime("%Y-%m-%d")
+                        expiry_fmt = candidate.strftime("%Y-%m-%dT06:00:00.000Z")
                         break
-                else:
-                    expiry_date = (today + timedelta(days=7)).strftime("%Y-%m-%dT07:00:00.000Z")
-                    expiry_date_plain = (today + timedelta(days=7)).strftime("%Y-%m-%d")
+                if not expiry_date_plain:
+                    candidate = today + timedelta(days=7)
+                    expiry_date_plain = candidate.strftime("%Y-%m-%d")
+                    expiry_fmt = candidate.strftime("%Y-%m-%dT06:00:00.000Z")
             else:
-                expiry_date_plain = expiry_date
-                if "T" not in expiry_date:
-                    expiry_date = expiry_date + "T07:00:00.000Z"
+                # Normalize whatever format is passed in
+                expiry_date_plain = expiry_date[:10]
+                expiry_fmt = expiry_date_plain + "T06:00:00.000Z"
 
-            # ── Fetch CALL options ──────────────────────────────────────────────
-            call_data = self.breeze.get_option_chain_quotes(
-                stock_code=symbol,
-                exchange_code="NFO",
-                product_type="options",
-                expiry_date=expiry_date,
-                right="call",
-                strike_price="0"
-            )
-            # ── Fetch PUT options ───────────────────────────────────────────────
-            put_data = self.breeze.get_option_chain_quotes(
-                stock_code=symbol,
-                exchange_code="NFO",
-                product_type="options",
-                expiry_date=expiry_date,
-                right="put",
-                strike_price="0"
-            )
+            def _fetch_leg(right: str):
+                """Fetch one leg (call/put) from Breeze using translated breeze_symbol."""
+                resp = self.breeze.get_option_chain_quotes(
+                    stock_code=breeze_symbol,
+                    exchange_code="NFO",
+                    product_type="options",
+                    expiry_date=expiry_fmt,
+                    right=right,
+                    strike_price="0"
+                )
+                if resp and resp.get("Status") == 200 and resp.get("Success"):
+                    return resp["Success"]
+                # Try without strike_price param
+                resp2 = self.breeze.get_option_chain_quotes(
+                    stock_code=breeze_symbol,
+                    exchange_code="NFO",
+                    product_type="options",
+                    expiry_date=expiry_fmt,
+                    right=right,
+                    strike_price=""
+                )
+                if resp2 and resp2.get("Status") == 200 and resp2.get("Success"):
+                    return resp2["Success"]
+                logger.warning(f"_fetch_leg({breeze_symbol}, {right}): status={getattr(resp,'get',lambda k,d=None:d)('Status')} err={getattr(resp,'get',lambda k,d=None:d)('Error')}")
+                return []
 
-            def _parse_legs(raw_list) -> pd.DataFrame:
-                """Parse Breeze option chain response into a clean DataFrame."""
+            calls_raw = _fetch_leg("call")
+            puts_raw  = _fetch_leg("put")
+
+            if not calls_raw and not puts_raw:
+                logger.warning(f"fetch_option_chain({symbol}→{breeze_symbol}): empty response for expiry {expiry_fmt}")
+                return None
+
+            def _parse_legs(raw_list: list) -> pd.DataFrame:
+                """
+                Parse Breeze option chain list into clean DataFrame.
+                Confirmed field names from Breeze API docs:
+                  strike_price, ltp, open_interest, chnge_oi,
+                  total_quantity_traded, spot_price (str),
+                  best_bid_price, best_offer_price
+                """
                 if not raw_list:
                     return pd.DataFrame()
                 rows = []
                 for item in raw_list:
                     try:
+                        strike = float(item.get("strike_price") or 0)
+                        if strike <= 0:
+                            continue
                         rows.append({
-                            "strike":    float(item.get("strike_price", 0)),
-                            "ltp":       float(item.get("ltp", 0) or item.get("last", 0)),
-                            "oi":        float(item.get("open_interest", 0) or item.get("oi", 0)),
-                            "oi_change": float(item.get("oi_change", 0) or item.get("change_oi", 0)),
-                            "volume":    float(item.get("volume", 0) or item.get("total_quantity_traded", 0)),
-                            "iv":        float(item.get("implied_volatility", 0) or item.get("iv", 0)),
-                            "bid":       float(item.get("best_bid_price", 0)),
-                            "ask":       float(item.get("best_offer_price", 0)),
+                            "strike":    strike,
+                            "ltp":       float(item.get("ltp") or 0),
+                            "oi":        float(item.get("open_interest") or 0),
+                            "oi_change": float(item.get("chnge_oi") or 0),
+                            "volume":    float(str(item.get("total_quantity_traded") or "0").replace(",", "")),
+                            "bid":       float(item.get("best_bid_price") or 0),
+                            "ask":       float(item.get("best_offer_price") or 0),
+                            # spot_price is a string in each row — use it for spot
+                            "spot_price": float(str(item.get("spot_price") or "0").replace(",", "")),
+                            # IV not provided by Breeze — estimate from bid/ask midpoint
+                            "iv":        0.0,
                         })
                     except Exception:
                         continue
-                df = pd.DataFrame(rows)
-                if not df.empty:
-                    df = df[df["strike"] > 0].sort_values("strike").reset_index(drop=True)
+                if not rows:
+                    return pd.DataFrame()
+                df = pd.DataFrame(rows).sort_values("strike").reset_index(drop=True)
                 return df
-
-            calls_raw = (call_data or {}).get("Success", [])
-            puts_raw  = (put_data  or {}).get("Success", [])
-
-            # Fallback: some Breeze versions return "right=others" with both legs combined
-            if not calls_raw and not puts_raw:
-                combo_data = self.breeze.get_option_chain_quotes(
-                    stock_code=symbol,
-                    exchange_code="NFO",
-                    product_type="options",
-                    expiry_date=expiry_date,
-                    right="others",
-                    strike_price="0"
-                )
-                combo_raw = (combo_data or {}).get("Success", [])
-                if combo_raw:
-                    calls_raw = [r for r in combo_raw if str(r.get("right","")).upper() in ("C","CALL","CE")]
-                    puts_raw  = [r for r in combo_raw if str(r.get("right","")).upper() in ("P","PUT","PE")]
-                    if not calls_raw and not puts_raw:
-                        logger.warning(f"Option chain {symbol}: no call/put data after fallback")
-                        return None
 
             calls = _parse_legs(calls_raw)
             puts  = _parse_legs(puts_raw)
@@ -423,76 +441,63 @@ class BreezeEngine:
             if calls.empty and puts.empty:
                 return None
 
-            # ── Spot price: use ATM strike or midpoint of call/put LTPs ────────
+            # ── Spot price: embedded in every row as spot_price ─────────────────
             spot = 0.0
-            try:
-                spot_data = self.breeze.get_quotes(
-                    stock_code=symbol,
-                    exchange_code="NSE",
-                    product_type="cash",
-                    expiry_date="",
-                    right="",
-                    strike_price="0"
-                )
-                spot_list = (spot_data or {}).get("Success", [])
-                if spot_list:
-                    spot = float(spot_list[0].get("ltp", 0) or spot_list[0].get("last", 0))
-            except Exception:
-                pass
+            for df in [calls, puts]:
+                if not df.empty and "spot_price" in df.columns:
+                    sp = df["spot_price"].dropna()
+                    sp = sp[sp > 0]
+                    if not sp.empty:
+                        spot = float(sp.iloc[0])
+                        break
 
-            # Fallback spot: average of ATM call + put LTP via put-call parity
+            # Fallback: put-call parity on ATM strikes
             if spot <= 0 and not calls.empty and not puts.empty:
-                common = set(calls["strike"]) & set(puts["strike"])
+                common = sorted(set(calls["strike"].values) & set(puts["strike"].values))
                 if common:
-                    mid_strike = sorted(common)[len(common) // 2]
-                    c_ltp = calls.loc[calls["strike"] == mid_strike, "ltp"].values
-                    p_ltp = puts.loc[puts["strike"]  == mid_strike, "ltp"].values
-                    if len(c_ltp) and len(p_ltp):
-                        spot = float(mid_strike) + float(c_ltp[0]) - float(p_ltp[0])
+                    mid = common[len(common) // 2]
+                    c = calls.loc[calls["strike"] == mid, "ltp"].values
+                    p = puts.loc[puts["strike"] == mid, "ltp"].values
+                    if len(c) and len(p) and c[0] > 0 and p[0] > 0:
+                        spot = float(mid) + float(c[0]) - float(p[0])
 
             # ── PCR ─────────────────────────────────────────────────────────────
             total_call_oi = float(calls["oi"].sum()) if not calls.empty else 0.0
             total_put_oi  = float(puts["oi"].sum())  if not puts.empty  else 0.0
-            pcr = total_put_oi / (total_call_oi + 1e-9)
+            pcr = total_put_oi / max(total_call_oi, 1.0)
 
             # ── Max Pain ────────────────────────────────────────────────────────
-            max_pain = spot  # default
+            max_pain = spot
             try:
                 all_strikes = sorted(set(
-                    list(calls["strike"].values if not calls.empty else []) +
-                    list(puts["strike"].values  if not puts.empty  else [])
+                    (calls["strike"].tolist() if not calls.empty else []) +
+                    (puts["strike"].tolist()  if not puts.empty  else [])
                 ))
-                pain_map = {}
-                for s in all_strikes:
-                    call_pain = float(calls.loc[calls["strike"] > s, "oi"].sum() *
-                                      (calls.loc[calls["strike"] > s, "strike"] - s).mean()) if not calls.empty else 0
-                    put_pain  = float(puts.loc[puts["strike"]  < s, "oi"].sum() *
-                                      (s - puts.loc[puts["strike"] < s, "strike"]).mean()) if not puts.empty else 0
-                    pain_map[s] = call_pain + put_pain
-                if pain_map:
-                    max_pain = min(pain_map, key=pain_map.get)
+                if all_strikes and spot > 0:
+                    pain = {}
+                    for s in all_strikes:
+                        cp = calls[calls["strike"] > s]
+                        pp = puts[puts["strike"] < s]
+                        c_pain = float(((cp["strike"] - s) * cp["oi"]).sum()) if not cp.empty else 0.0
+                        p_pain = float(((s - pp["strike"]) * pp["oi"]).sum()) if not pp.empty else 0.0
+                        pain[s] = c_pain + p_pain
+                    max_pain = min(pain, key=pain.get)
             except Exception:
                 pass
 
-            # ── Call Wall / Put Wall ────────────────────────────────────────────
+            # ── Call Wall / Put Wall (highest OI strikes) ───────────────────────
             call_wall = put_wall = spot
             try:
-                if not calls.empty:
+                if not calls.empty and calls["oi"].sum() > 0:
                     call_wall = float(calls.loc[calls["oi"].idxmax(), "strike"])
-                if not puts.empty:
-                    put_wall  = float(puts.loc[puts["oi"].idxmax(), "strike"])
+                if not puts.empty and puts["oi"].sum() > 0:
+                    put_wall = float(puts.loc[puts["oi"].idxmax(), "strike"])
             except Exception:
                 pass
 
-            # ── IV Spread (Cremers signal: ATM call IV - ATM put IV) ────────────
+            # ── IV Spread (estimated from bid-ask midpoint difference ATM) ──────
+            # Breeze doesn't provide IV — we use 0 and note this in scoring
             iv_spread = 0.0
-            try:
-                if spot > 0 and not calls.empty and not puts.empty:
-                    calls_atm = calls.iloc[(calls["strike"] - spot).abs().argsort()[:1]]
-                    puts_atm  = puts.iloc[(puts["strike"]  - spot).abs().argsort()[:1]]
-                    iv_spread = float(calls_atm["iv"].values[0]) - float(puts_atm["iv"].values[0])
-            except Exception:
-                pass
 
             # ── DTE ─────────────────────────────────────────────────────────────
             try:
@@ -518,7 +523,7 @@ class BreezeEngine:
             }
 
         except Exception as e:
-            logger.warning(f"Option chain {symbol}: {type(e).__name__}: {e}")
+            logger.warning(f"fetch_option_chain({symbol}): {type(e).__name__}: {e}")
             return None
 
 

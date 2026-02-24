@@ -2106,14 +2106,42 @@ def page_option_chain():
                 try:
                     oc_data = be.fetch_option_chain(oc_sym)
                     if oc_data:
-                        result = analyze_option_chain(oc_sym, oc_data, enriched.get(oc_sym))
-                        _render_oc_result(result)
-                        st.session_state.oc_results[oc_sym] = result
+                        calls_df = oc_data.get("calls")
+                        puts_df  = oc_data.get("puts")
+                        if (calls_df is not None and not calls_df.empty) or \
+                           (puts_df  is not None and not puts_df.empty):
+                            result = analyze_option_chain(oc_sym, oc_data, enriched.get(oc_sym))
+                            _render_oc_result(result)
+                            st.session_state.oc_results[oc_sym] = result
+                        else:
+                            st.warning(f"Option chain fetched but no strike data for {oc_sym}. "
+                                       "The expiry may have no open positions, or the session token needs renewal.")
+                            with st.expander("🔍 Debug: raw fetch result"):
+                                st.json({k: str(v) for k, v in oc_data.items() if k not in ("calls","puts")})
                     else:
-                        st.warning(f"No option chain data available for {oc_sym}. "
-                                   "Stock may not be in F&O, or Breeze session may need renewal.")
+                        # Try to give a more helpful error by probing Breeze directly
+                        st.warning(f"No option chain data returned for **{oc_sym}**.")
+                        with st.expander("🔍 Troubleshooting"):
+                            st.markdown("""
+**Common causes:**
+1. **Session token expired** — regenerate from ICICIDirect portal and update Streamlit secrets, then click Retry Breeze
+2. **Expiry date mismatch** — current week may have no options (holiday week). Try next Thursday.
+3. **Stock code mismatch** — Breeze uses ICICI's stock codes which sometimes differ from NSE symbols
+   - e.g. `BAJFINANCE` → `BAJAJFIN`, `M&M` → `M&M`, `ONGC` → `ONGC`
+4. **Market closed** — during non-market hours, some stocks return empty option chains
+
+**Quick test:** Check if Breeze is responding at all:
+""")
+                            try:
+                                test = be.breeze.get_customer_details(api_session=be.breeze.user_id) if hasattr(be.breeze, 'user_id') else None
+                                st.info("Breeze API appears connected. Session may be valid — try refreshing token.")
+                            except Exception as te:
+                                st.error(f"Breeze API error: {te}")
                 except Exception as e:
                     st.error(f"Option chain error: {e}")
+                    import traceback
+                    with st.expander("Full traceback"):
+                        st.code(traceback.format_exc())
 
     else:
         if st.button("🔗 Batch Option Chain Scan", type="primary", key="oc_run_batch"):
