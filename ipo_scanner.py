@@ -719,19 +719,24 @@ def scan_ipo_universe(
     max_weeks: int = 52,
     min_quality: float = 40,
     rrg_data: Dict = None,
+    # app.py aliases — map to internal params:
+    max_listing_months: Optional[int] = None,
+    min_score: Optional[float] = None,
+    breeze_engine=None,
 ) -> List[IPOBaseSignal]:
     """
     Scan all recent IPOs for base formations and breakout signals.
 
-    Args:
-        nifty_df: Nifty data for RS calculation
-        max_weeks: Only scan IPOs listed within this many weeks
-        min_quality: Minimum quality score to include (0-100)
-        rrg_data: RRG sector rotation data for sector scoring
-
-    Returns:
-        List of IPOBaseSignal, sorted by quality score descending.
+    Accepts both old-style (max_weeks, min_quality) and new-style
+    (max_listing_months, min_score, breeze_engine) keyword arguments
+    so app.py and direct callers both work.
     """
+    # Resolve aliases
+    if max_listing_months is not None:
+        max_weeks = int(max_listing_months * 4.33)   # months → approx weeks
+    if min_score is not None:
+        min_quality = float(min_score)
+    # breeze_engine is accepted but not used here (used in scan_single_ipo for intraday confirm)
     results = []
 
     # Get IPO list from NSE

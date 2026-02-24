@@ -322,31 +322,201 @@ class BreezeEngine:
             return None
 
     def fetch_option_chain(self, symbol: str, expiry_date: str = None) -> Optional[Dict]:
-        """Fetch live option chain data from Breeze API for option_chain.py module."""
+        """
+        Fetch and parse live option chain data from Breeze API.
+
+        Returns a fully structured dict ready for compute_option_chain_signal():
+            calls / puts: DataFrames with columns strike, oi, oi_change, volume, iv, ltp
+            spot, pcr, max_pain, call_wall, put_wall, iv_spread,
+            total_call_oi, total_put_oi, expiry_date, dte, symbol
+        """
         if not self.connected or self.breeze is None:
             return None
         try:
             from datetime import date as ddate
-            if expiry_date is None:
-                # Get nearest Thursday expiry
-                today = ddate.today()
-                days_to_thu = (3 - today.weekday()) % 7
-                if days_to_thu == 0 and today.weekday() == 3:
-                    days_to_thu = 0
-                near_thu = today + timedelta(days=days_to_thu)
-                expiry_date = near_thu.strftime("%Y-%m-%d")
 
-            data = self.breeze.get_option_chain_quotes(
+            # ── Resolve nearest expiry ──────────────────────────────────────────
+            if expiry_date is None:
+                today = ddate.today()
+                # Try current week Thursday first, then next
+                for offset in range(0, 14):
+                    candidate = today + timedelta(days=offset)
+                    if candidate.weekday() == 3:   # Thursday
+                        expiry_date = candidate.strftime("%Y-%m-%dT07:00:00.000Z")
+                        expiry_date_plain = candidate.strftime("%Y-%m-%d")
+                        break
+                else:
+                    expiry_date = (today + timedelta(days=7)).strftime("%Y-%m-%dT07:00:00.000Z")
+                    expiry_date_plain = (today + timedelta(days=7)).strftime("%Y-%m-%d")
+            else:
+                expiry_date_plain = expiry_date
+                if "T" not in expiry_date:
+                    expiry_date = expiry_date + "T07:00:00.000Z"
+
+            # ── Fetch CALL options ──────────────────────────────────────────────
+            call_data = self.breeze.get_option_chain_quotes(
                 stock_code=symbol,
                 exchange_code="NFO",
                 product_type="options",
                 expiry_date=expiry_date,
-                right="others",
+                right="call",
                 strike_price="0"
             )
-            if data and "Success" in str(data.get("Status", "")) and data.get("Success"):
-                return {"raw": data["Success"], "symbol": symbol, "expiry": expiry_date}
-            return None
+            # ── Fetch PUT options ───────────────────────────────────────────────
+            put_data = self.breeze.get_option_chain_quotes(
+                stock_code=symbol,
+                exchange_code="NFO",
+                product_type="options",
+                expiry_date=expiry_date,
+                right="put",
+                strike_price="0"
+            )
+
+            def _parse_legs(raw_list) -> pd.DataFrame:
+                """Parse Breeze option chain response into a clean DataFrame."""
+                if not raw_list:
+                    return pd.DataFrame()
+                rows = []
+                for item in raw_list:
+                    try:
+                        rows.append({
+                            "strike":    float(item.get("strike_price", 0)),
+                            "ltp":       float(item.get("ltp", 0) or item.get("last", 0)),
+                            "oi":        float(item.get("open_interest", 0) or item.get("oi", 0)),
+                            "oi_change": float(item.get("oi_change", 0) or item.get("change_oi", 0)),
+                            "volume":    float(item.get("volume", 0) or item.get("total_quantity_traded", 0)),
+                            "iv":        float(item.get("implied_volatility", 0) or item.get("iv", 0)),
+                            "bid":       float(item.get("best_bid_price", 0)),
+                            "ask":       float(item.get("best_offer_price", 0)),
+                        })
+                    except Exception:
+                        continue
+                df = pd.DataFrame(rows)
+                if not df.empty:
+                    df = df[df["strike"] > 0].sort_values("strike").reset_index(drop=True)
+                return df
+
+            calls_raw = (call_data or {}).get("Success", [])
+            puts_raw  = (put_data  or {}).get("Success", [])
+
+            # Fallback: some Breeze versions return "right=others" with both legs combined
+            if not calls_raw and not puts_raw:
+                combo_data = self.breeze.get_option_chain_quotes(
+                    stock_code=symbol,
+                    exchange_code="NFO",
+                    product_type="options",
+                    expiry_date=expiry_date,
+                    right="others",
+                    strike_price="0"
+                )
+                combo_raw = (combo_data or {}).get("Success", [])
+                if combo_raw:
+                    calls_raw = [r for r in combo_raw if str(r.get("right","")).upper() in ("C","CALL","CE")]
+                    puts_raw  = [r for r in combo_raw if str(r.get("right","")).upper() in ("P","PUT","PE")]
+                    if not calls_raw and not puts_raw:
+                        logger.warning(f"Option chain {symbol}: no call/put data after fallback")
+                        return None
+
+            calls = _parse_legs(calls_raw)
+            puts  = _parse_legs(puts_raw)
+
+            if calls.empty and puts.empty:
+                return None
+
+            # ── Spot price: use ATM strike or midpoint of call/put LTPs ────────
+            spot = 0.0
+            try:
+                spot_data = self.breeze.get_quotes(
+                    stock_code=symbol,
+                    exchange_code="NSE",
+                    product_type="cash",
+                    expiry_date="",
+                    right="",
+                    strike_price="0"
+                )
+                spot_list = (spot_data or {}).get("Success", [])
+                if spot_list:
+                    spot = float(spot_list[0].get("ltp", 0) or spot_list[0].get("last", 0))
+            except Exception:
+                pass
+
+            # Fallback spot: average of ATM call + put LTP via put-call parity
+            if spot <= 0 and not calls.empty and not puts.empty:
+                common = set(calls["strike"]) & set(puts["strike"])
+                if common:
+                    mid_strike = sorted(common)[len(common) // 2]
+                    c_ltp = calls.loc[calls["strike"] == mid_strike, "ltp"].values
+                    p_ltp = puts.loc[puts["strike"]  == mid_strike, "ltp"].values
+                    if len(c_ltp) and len(p_ltp):
+                        spot = float(mid_strike) + float(c_ltp[0]) - float(p_ltp[0])
+
+            # ── PCR ─────────────────────────────────────────────────────────────
+            total_call_oi = float(calls["oi"].sum()) if not calls.empty else 0.0
+            total_put_oi  = float(puts["oi"].sum())  if not puts.empty  else 0.0
+            pcr = total_put_oi / (total_call_oi + 1e-9)
+
+            # ── Max Pain ────────────────────────────────────────────────────────
+            max_pain = spot  # default
+            try:
+                all_strikes = sorted(set(
+                    list(calls["strike"].values if not calls.empty else []) +
+                    list(puts["strike"].values  if not puts.empty  else [])
+                ))
+                pain_map = {}
+                for s in all_strikes:
+                    call_pain = float(calls.loc[calls["strike"] > s, "oi"].sum() *
+                                      (calls.loc[calls["strike"] > s, "strike"] - s).mean()) if not calls.empty else 0
+                    put_pain  = float(puts.loc[puts["strike"]  < s, "oi"].sum() *
+                                      (s - puts.loc[puts["strike"] < s, "strike"]).mean()) if not puts.empty else 0
+                    pain_map[s] = call_pain + put_pain
+                if pain_map:
+                    max_pain = min(pain_map, key=pain_map.get)
+            except Exception:
+                pass
+
+            # ── Call Wall / Put Wall ────────────────────────────────────────────
+            call_wall = put_wall = spot
+            try:
+                if not calls.empty:
+                    call_wall = float(calls.loc[calls["oi"].idxmax(), "strike"])
+                if not puts.empty:
+                    put_wall  = float(puts.loc[puts["oi"].idxmax(), "strike"])
+            except Exception:
+                pass
+
+            # ── IV Spread (Cremers signal: ATM call IV - ATM put IV) ────────────
+            iv_spread = 0.0
+            try:
+                if spot > 0 and not calls.empty and not puts.empty:
+                    calls_atm = calls.iloc[(calls["strike"] - spot).abs().argsort()[:1]]
+                    puts_atm  = puts.iloc[(puts["strike"]  - spot).abs().argsort()[:1]]
+                    iv_spread = float(calls_atm["iv"].values[0]) - float(puts_atm["iv"].values[0])
+            except Exception:
+                pass
+
+            # ── DTE ─────────────────────────────────────────────────────────────
+            try:
+                exp_d = ddate.fromisoformat(expiry_date_plain)
+                dte = max(0, (exp_d - ddate.today()).days)
+            except Exception:
+                dte = 7
+
+            return {
+                "calls":         calls,
+                "puts":          puts,
+                "spot":          spot,
+                "pcr":           pcr,
+                "max_pain":      max_pain,
+                "call_wall":     call_wall,
+                "put_wall":      put_wall,
+                "iv_spread":     iv_spread,
+                "total_call_oi": total_call_oi,
+                "total_put_oi":  total_put_oi,
+                "expiry_date":   expiry_date_plain,
+                "dte":           dte,
+                "symbol":        symbol,
+            }
+
         except Exception as e:
             logger.warning(f"Option chain {symbol}: {type(e).__name__}: {e}")
             return None
