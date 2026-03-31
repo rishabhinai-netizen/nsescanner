@@ -1,30 +1,22 @@
 """
-Option Chain Analysis Module — NSE Scanner Pro v15
-====================================================
-7-factor composite scoring system backed by academic research.
+Option Chain Analysis Module v2 — NSE Scanner Pro
+===================================================
+FIX: Breeze API does not return implied volatility.
+When IV is unavailable (all zeros), the 3 IV-dependent factors are excluded
+and weights are redistributed to the 4 working factors.
 
-Research foundation:
-- Pan & Poteshman (2006): Options contain 40bps/day directional info
-- Cremers & Weinbaum (2010): IV spread predicts 50bps/week — most robust signal
-- Bondarenko & Muravyev (2022): PCR predictability died post-2009 for individual stocks
-  → PCR now used as CONTRARIAN only, not directional
-- Gamma positioning (GEX): predicts volatility regime, not direction
-- OI Change quadrant matrix: real-time positioning intelligence
+Without IV (typical):           With IV (if available):
+  OI Change: 25% → 38%          OI Change: 25%
+  UOA:       20% → 31%          UOA:       20%
+  PCR:       15% → 19%          PCR:       15%
+  Max Pain:  10% → 12%          Max Pain:  10%
+  IVP:        0%  (skipped)     IVP:       15%
+  Skew:       0%  (skipped)     Skew:       7.5%
+  IVS:        0%  (skipped)     IVS:        7.5%
+  Total: 100%                   Total: 100%
 
-Composite Score:
-  OI Change Pattern     25% — 4-quadrant Price+OI matrix (core directional)
-  Unusual Options Act.  20% — volume spike > 5x avg (smart money detection)
-  IV Percentile         15% — contrarian at extremes
-  PCR Contrarian        15% — NSE-specific thresholds (not US CBOE thresholds)
-  Max Pain Distance     10% — expiry proximity weighted (→ 20% if DTE ≤ 3)
-  IV Skew               7.5% — put vs call skew (panic/FOMO detector)
-  IV Spread             7.5% — call IV - put IV at ATM (Cremers signal)
-
-Signal:
-  > 75 = STRONG BUY | 60-75 = BUY | 45-60 = NEUTRAL
-  30-45 = SELL | < 30 = STRONG SELL
-
-Confidence = 100 - stddev(component scores) → high when all signals agree.
+The composite score label now shows "(4-factor)" vs "(7-factor)" so the user
+always knows exactly what data was used.
 """
 
 from dataclasses import dataclass
@@ -36,65 +28,37 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
-# CONFIGURATION — NSE-specific thresholds
-# ============================================================================
+# ============================================================
+# WEIGHTS — two sets
+# ============================================================
 
-OC_CONFIG = {
-    # Signal weights (sum = 1.0 for non-expiry)
-    "w_oi_change": 0.25,
-    "w_uoa": 0.20,
-    "w_ivp": 0.15,
-    "w_pcr": 0.15,
-    "w_max_pain": 0.10,
-    "w_skew": 0.075,
-    "w_ivs": 0.075,
-
-    # NSE/Nifty PCR thresholds (not US CBOE thresholds)
-    "pcr_extreme_bullish": 1.5,   # > 1.5 = extreme fear → contrarian BUY
-    "pcr_bullish": 1.2,
-    "pcr_neutral_high": 1.0,
-    "pcr_neutral_low": 0.8,
-    "pcr_bearish": 0.7,
-    "pcr_extreme_bearish": 0.5,   # < 0.5 = extreme complacency → contrarian SELL
-
-    # Decision thresholds
-    "strong_buy": 75,
-    "buy": 60,
-    "neutral_low": 45,
-    "sell": 30,
-
-    # Expiry proximity modifier
-    "dte_near": 3,    # Max Pain weight → 20% when DTE ≤ 3
-    "dte_far": 30,    # Max Pain weight → 5% when DTE > 30
-
-    # Liquidity filter (minimum for reliable signals)
-    "min_oi_contracts": 5000,
-    "min_daily_volume": 1000,
-
-    # Unusual options activity threshold
-    "uoa_volume_multiplier": 5,   # Volume > 5x avg = institutional activity
-    "uoa_sweep_threshold": 5,     # Large order detection threshold (lots)
-
-    # MWPL thresholds (F&O ban)
-    "mwpl_ban": 0.95,
-    "mwpl_caution": 0.80,
+WEIGHTS_7F = {   # Full 7-factor (when IV is available)
+    "oi_change": 0.25, "uoa": 0.20, "ivp": 0.15, "pcr": 0.15,
+    "max_pain":  0.10, "skew": 0.075, "ivs": 0.075,
+}
+WEIGHTS_4F = {   # 4-factor (when Breeze doesn't return IV)
+    "oi_change": 0.38, "uoa": 0.31, "pcr": 0.19,
+    "max_pain":  0.12, "ivp": 0.0, "skew": 0.0, "ivs": 0.0,
 }
 
+NSE_PCR = {
+    "extreme_bullish": 1.5, "bullish": 1.2,
+    "neutral_high": 1.0,    "neutral_low": 0.8,
+    "bearish": 0.7,         "extreme_bearish": 0.5,
+}
 
-# ============================================================================
-# RESULT DATACLASS
-# ============================================================================
+SIGNAL_THRESHOLDS = {"strong_buy": 75, "buy": 60, "neutral_low": 45, "sell": 30}
+
 
 @dataclass
 class OptionChainSignal:
-    """Complete option chain signal with all components."""
     symbol: str
-    signal: str                  # STRONG_BUY / BUY / NEUTRAL / SELL / STRONG_SELL
-    composite_score: float       # 0-100
-    confidence: float            # 0-100 (100 - stddev of components)
+    signal: str
+    composite_score: float
+    confidence: float
+    factors_used: int           # 4 or 7
+    iv_available: bool          # honest flag
 
-    # Component scores (0-100 each)
     oi_change_score: float
     uoa_score: float
     ivp_score: float
@@ -103,7 +67,6 @@ class OptionChainSignal:
     skew_score: float
     ivs_score: float
 
-    # Market data
     spot: float
     pcr: float
     max_pain: float
@@ -115,609 +78,293 @@ class OptionChainSignal:
     expiry_date: str
     dte: int
 
-    # Human-readable
     pcr_interpretation: str
-    oi_pattern: str              # "Long Buildup" / "Short Buildup" / "Short Covering" / "Long Unwinding"
+    oi_pattern: str
     signal_icon: str
     component_breakdown: str
     reasons: List[str]
     warnings: List[str]
-
-    # Setup type
-    setup_type: str              # "OI_COMPOSITE" / "UNUSUAL_ACTIVITY" / "EXPIRY_PLAY"
-
-    # For further display
+    setup_type: str
     is_fno_banned: bool = False
     liquidity_ok: bool = True
 
+    # Score alias used by app.py
+    score: float = 0.0
 
-# ============================================================================
-# MAIN SCORING ENGINE
-# ============================================================================
+    def __post_init__(self):
+        self.score = self.composite_score
+
+
+# ============================================================
+# IV DETECTION
+# ============================================================
+
+def _has_iv(calls: pd.DataFrame, puts: pd.DataFrame) -> bool:
+    """Returns True only if real IV data is present (not all zeros)."""
+    for df in [calls, puts]:
+        if df.empty or "iv" not in df.columns:
+            continue
+        iv_vals = pd.to_numeric(df["iv"], errors="coerce").dropna()
+        if (iv_vals > 0).any():
+            return True
+    return False
+
+
+# ============================================================
+# MAIN SCORING
+# ============================================================
 
 def compute_option_chain_signal(oc_data: Dict) -> Optional[OptionChainSignal]:
-    """
-    Compute composite 7-factor option chain signal from raw Breeze data.
-
-    Args:
-        oc_data: Dict from BreezeEngine.fetch_option_chain()
-
-    Returns:
-        OptionChainSignal or None if insufficient data.
-    """
     if not oc_data:
         return None
 
-    calls: pd.DataFrame = oc_data.get("calls", pd.DataFrame())
-    puts: pd.DataFrame = oc_data.get("puts", pd.DataFrame())
-    spot = float(oc_data.get("spot", 0))
-    pcr = float(oc_data.get("pcr", 1.0))
-    max_pain = float(oc_data.get("max_pain", 0))
-    call_wall = float(oc_data.get("call_wall", 0))
-    put_wall = float(oc_data.get("put_wall", 0))
-    iv_spread = float(oc_data.get("iv_spread", 0))
-    total_call_oi = float(oc_data.get("total_call_oi", 0))
-    total_put_oi = float(oc_data.get("total_put_oi", 0))
-    expiry_date = oc_data.get("expiry_date", "")
-    dte = int(oc_data.get("dte", 30))
-    symbol = oc_data.get("symbol", "")
+    calls          = oc_data.get("calls", pd.DataFrame())
+    puts           = oc_data.get("puts",  pd.DataFrame())
+    spot           = float(oc_data.get("spot", 0))
+    pcr            = float(oc_data.get("pcr", 1.0))
+    max_pain       = float(oc_data.get("max_pain", 0))
+    call_wall      = float(oc_data.get("call_wall", 0))
+    put_wall       = float(oc_data.get("put_wall", 0))
+    iv_spread      = float(oc_data.get("iv_spread", 0))
+    total_call_oi  = float(oc_data.get("total_call_oi", 0))
+    total_put_oi   = float(oc_data.get("total_put_oi", 0))
+    expiry_date    = oc_data.get("expiry_date", "")
+    dte            = int(oc_data.get("dte", 30))
+    symbol         = oc_data.get("symbol", "")
 
-    reasons = []
+    reasons  = []
     warnings = []
 
-    # ── Liquidity Check ──
-    liquidity_ok = (
-        total_call_oi >= OC_CONFIG["min_oi_contracts"] or
-        total_put_oi >= OC_CONFIG["min_oi_contracts"]
-    )
+    # ── Liquidity check ──
+    liquidity_ok = (total_call_oi >= 5000 or total_put_oi >= 5000)
     if not liquidity_ok:
-        warnings.append(f"Low OI ({total_call_oi:.0f} calls, {total_put_oi:.0f} puts) — signals unreliable")
+        warnings.append(f"Low OI ({total_call_oi:.0f} calls / {total_put_oi:.0f} puts) — unreliable signals")
 
-    # ── COMPONENT 1: OI Change Pattern (25%) ──
-    # The 4-quadrant matrix: Price + OI direction
-    oi_change_score, oi_pattern = _score_oi_change_pattern(calls, puts, spot)
-    reasons.append(f"OI Pattern: {oi_pattern}")
+    # ── Detect IV availability ──
+    iv_avail = _has_iv(calls, puts)
+    weights  = WEIGHTS_7F if iv_avail else WEIGHTS_4F
+    factors  = 7 if iv_avail else 4
 
-    # ── COMPONENT 2: Unusual Options Activity (20%) ──
-    uoa_score, uoa_desc = _score_unusual_activity(calls, puts)
-    if uoa_desc:
-        reasons.append(uoa_desc)
+    if not iv_avail:
+        warnings.append(
+            "Breeze API does not provide IV data — scoring on 4 factors (OI, UOA, PCR, Max Pain). "
+            "IV-based signals (IVP, Skew, IV Spread) are excluded."
+        )
 
-    # ── COMPONENT 3: IV Percentile (15%) ──
-    ivp_score, ivp_desc = _score_iv_percentile(calls, puts)
-    reasons.append(ivp_desc)
+    # ── Component scores ──
+    oi_score,   oi_pattern        = _score_oi_change(calls, puts, spot)
+    uoa_score,  uoa_desc          = _score_unusual_activity(calls, puts)
+    ivp_score,  ivp_desc          = _score_iv_percentile(calls, puts) if iv_avail else (50.0, "IV unavailable")
+    pcr_score,  pcr_interpretation= _score_pcr_contrarian(pcr)
+    mp_score,   mp_desc           = _score_max_pain(spot, max_pain, dte)
+    skew_score, skew_desc         = _score_iv_skew(calls, puts, spot) if iv_avail else (50.0, "IV unavailable")
+    ivs_score,  ivs_desc          = _score_iv_spread(iv_spread) if iv_avail else (50.0, "IV unavailable")
 
-    # ── COMPONENT 4: PCR Contrarian (15%) ──
-    # NSE-specific thresholds — PCR is CONTRARIAN not directional for individual stocks
-    pcr_score, pcr_interpretation = _score_pcr_contrarian(pcr)
+    reasons.append(f"OI: {oi_pattern}")
+    if uoa_desc: reasons.append(uoa_desc)
     reasons.append(f"PCR {pcr:.2f}: {pcr_interpretation}")
+    if mp_desc:  reasons.append(mp_desc)
+    if iv_avail:
+        reasons.append(ivp_desc)
+        reasons.append(skew_desc)
+        reasons.append(ivs_desc)
+    if call_wall > 0: reasons.append(f"Call wall (resistance): ₹{call_wall:,.0f}")
+    if put_wall  > 0: reasons.append(f"Put wall (support): ₹{put_wall:,.0f}")
 
-    # ── COMPONENT 5: Max Pain Distance (10%, adjustable) ──
-    # Higher weight near expiry (DTE ≤ 3 → weight becomes 20%)
-    max_pain_score, max_pain_desc = _score_max_pain(spot, max_pain, dte)
-    if max_pain_desc:
-        reasons.append(max_pain_desc)
+    # ── Composite (expiry-adjusted weights) ──
+    w = _expiry_adjusted_weights(weights, dte)
 
-    # ── COMPONENT 6: IV Skew (7.5%) ──
-    skew_score, skew_desc = _score_iv_skew(calls, puts, spot)
-    reasons.append(skew_desc)
-
-    # ── COMPONENT 7: IV Spread / Parity (7.5%) ──
-    # Cremers & Weinbaum: ATM call IV - put IV, 50bps/week predictability
-    ivs_score, ivs_desc = _score_iv_spread(iv_spread)
-    reasons.append(ivs_desc)
-
-    # ── Apply Expiry Proximity Modifier ──
-    weights = _get_weights_with_expiry_mod(dte)
-
-    # ── Composite Score ──
-    components = [oi_change_score, uoa_score, ivp_score, pcr_score,
-                  max_pain_score, skew_score, ivs_score]
-    w = [weights["w_oi_change"], weights["w_uoa"], weights["w_ivp"],
-         weights["w_pcr"], weights["w_max_pain"], weights["w_skew"], weights["w_ivs"]]
-
-    composite = sum(c * wt for c, wt in zip(components, w))
+    composite = (
+        w["oi_change"] * oi_score  +
+        w["uoa"]       * uoa_score +
+        w["ivp"]       * ivp_score +
+        w["pcr"]       * pcr_score +
+        w["max_pain"]  * mp_score  +
+        w["skew"]      * skew_score+
+        w["ivs"]       * ivs_score
+    )
     composite = round(min(max(composite, 0), 100), 1)
 
-    # ── Confidence = 100 - stddev of components ──
-    # Low stddev = all signals agree = high confidence
-    stddev = float(np.std(components))
-    confidence = round(max(0, 100 - stddev), 1)
+    # ── Confidence = 100 - stddev of ACTIVE components ──
+    active_scores = [oi_score, uoa_score, pcr_score, mp_score]
+    if iv_avail:
+        active_scores += [ivp_score, skew_score, ivs_score]
+    confidence = round(max(0, 100 - float(np.std(active_scores))), 1)
 
-    # ── Signal Classification ──
-    if composite >= OC_CONFIG["strong_buy"]:
-        signal = "STRONG_BUY"
-        signal_icon = "🟢🟢"
-    elif composite >= OC_CONFIG["buy"]:
-        signal = "BUY"
-        signal_icon = "🟢"
-    elif composite >= OC_CONFIG["neutral_low"]:
-        signal = "NEUTRAL"
-        signal_icon = "⚪"
-    elif composite >= OC_CONFIG["sell"]:
-        signal = "SELL"
-        signal_icon = "🔴"
-    else:
-        signal = "STRONG_SELL"
-        signal_icon = "🔴🔴"
+    # ── Signal ──
+    if   composite >= SIGNAL_THRESHOLDS["strong_buy"]:  signal, icon = "STRONG BUY",  "🟢🟢"
+    elif composite >= SIGNAL_THRESHOLDS["buy"]:          signal, icon = "BUY",         "🟢"
+    elif composite >= SIGNAL_THRESHOLDS["neutral_low"]:  signal, icon = "NEUTRAL",     "⚪"
+    elif composite >= SIGNAL_THRESHOLDS["sell"]:         signal, icon = "SELL",        "🔴"
+    else:                                                 signal, icon = "STRONG SELL", "🔴🔴"
 
-    # ── Setup Type ──
-    if uoa_score >= 80:
-        setup_type = "UNUSUAL_ACTIVITY"
-    elif dte <= 3:
-        setup_type = "EXPIRY_PLAY"
-    else:
-        setup_type = "OI_COMPOSITE"
+    setup_type = "UNUSUAL_ACTIVITY" if uoa_score >= 80 else ("EXPIRY_PLAY" if dte <= 3 else "OI_COMPOSITE")
+    factor_tag = f"{'7' if iv_avail else '4'}-factor"
 
-    # ── Key Levels Description ──
-    if call_wall > 0 and spot > 0:
-        reasons.append(f"Call Wall (Resistance): ₹{call_wall:,.0f}")
-    if put_wall > 0 and spot > 0:
-        reasons.append(f"Put Wall (Support): ₹{put_wall:,.0f}")
-    if max_pain > 0 and spot > 0:
-        mp_dist = ((spot - max_pain) / max_pain * 100) if max_pain > 0 else 0
-        reasons.append(f"Max Pain: ₹{max_pain:,.0f} (Spot {mp_dist:+.1f}% away)")
-
-    component_breakdown = (
-        f"OI:{oi_change_score:.0f} UOA:{uoa_score:.0f} IVP:{ivp_score:.0f} "
-        f"PCR:{pcr_score:.0f} MP:{max_pain_score:.0f} Skew:{skew_score:.0f} IVS:{ivs_score:.0f}"
+    breakdown = (
+        f"[{factor_tag}] OI:{oi_score:.0f} UOA:{uoa_score:.0f} "
+        f"PCR:{pcr_score:.0f} MP:{mp_score:.0f}"
+        + (f" IVP:{ivp_score:.0f} Skew:{skew_score:.0f} IVS:{ivs_score:.0f}" if iv_avail else "")
     )
 
     return OptionChainSignal(
-        symbol=symbol,
-        signal=signal,
-        composite_score=composite,
-        confidence=confidence,
-        oi_change_score=oi_change_score,
-        uoa_score=uoa_score,
-        ivp_score=ivp_score,
-        pcr_score=pcr_score,
-        max_pain_score=max_pain_score,
-        skew_score=skew_score,
-        ivs_score=ivs_score,
-        spot=spot,
-        pcr=pcr,
-        max_pain=max_pain,
-        call_wall=call_wall,
-        put_wall=put_wall,
-        iv_spread=iv_spread,
-        total_call_oi=total_call_oi,
-        total_put_oi=total_put_oi,
-        expiry_date=expiry_date,
-        dte=dte,
-        pcr_interpretation=pcr_interpretation,
-        oi_pattern=oi_pattern,
-        signal_icon=signal_icon,
-        component_breakdown=component_breakdown,
-        reasons=reasons,
-        warnings=warnings,
-        setup_type=setup_type,
-        liquidity_ok=liquidity_ok,
+        symbol=symbol, signal=signal, composite_score=composite, confidence=confidence,
+        factors_used=factors, iv_available=iv_avail,
+        oi_change_score=oi_score, uoa_score=uoa_score, ivp_score=ivp_score,
+        pcr_score=pcr_score, max_pain_score=mp_score, skew_score=skew_score, ivs_score=ivs_score,
+        spot=spot, pcr=pcr, max_pain=max_pain, call_wall=call_wall, put_wall=put_wall,
+        iv_spread=iv_spread, total_call_oi=total_call_oi, total_put_oi=total_put_oi,
+        expiry_date=expiry_date, dte=dte,
+        pcr_interpretation=pcr_interpretation, oi_pattern=oi_pattern,
+        signal_icon=icon, component_breakdown=breakdown,
+        reasons=reasons, warnings=warnings,
+        setup_type=setup_type, liquidity_ok=liquidity_ok,
+        score=composite,
     )
 
 
-# ============================================================================
+# ============================================================
 # COMPONENT SCORERS
-# ============================================================================
+# ============================================================
 
-def _score_oi_change_pattern(calls: pd.DataFrame, puts: pd.DataFrame, spot: float) -> tuple:
-    """
-    Score based on the 4-quadrant OI-Price matrix:
-    Price↑ + OI↑ = Long Buildup (bullish) → 90-95
-    Price↓ + OI↑ = Short Buildup (bearish) → 10-15
-    Price↑ + OI↓ = Short Covering (temporary bullish) → 70
-    Price↓ + OI↓ = Long Unwinding (temporary bearish) → 30
-    """
-    if calls.empty or puts.empty:
-        return 50.0, "Insufficient OI data"
-
-    try:
-        # Near-money OI changes (±10% of spot)
-        atm_calls = calls[(calls["strike"] >= spot * 0.9) & (calls["strike"] <= spot * 1.1)]
-        atm_puts = puts[(puts["strike"] >= spot * 0.9) & (puts["strike"] <= spot * 1.1)]
-
-        call_oi_change = atm_calls["oi_change"].sum() if not atm_calls.empty else 0
-        put_oi_change = atm_puts["oi_change"].sum() if not atm_puts.empty else 0
-
-        # Net OI direction
-        # Call OI up + Put OI down = bullish (long buildup + put unwinding)
-        # Call OI down + Put OI up = bearish (short buildup + put covering)
-        net_call = call_oi_change  # Positive = more calls being bought
-        net_put = put_oi_change    # Positive = more puts being bought
-
-        if net_call > 0 and net_put < 0:
-            # Classic long buildup
-            strength = min(abs(net_call) + abs(net_put), 1e6) / 1e6
-            score = min(90 + strength * 5, 95)
-            pattern = "Long Buildup 📈"
-        elif net_call < 0 and net_put > 0:
-            # Classic short buildup
-            strength = min(abs(net_call) + abs(net_put), 1e6) / 1e6
-            score = max(10 - strength * 5, 5)
-            pattern = "Short Buildup 📉"
-        elif net_call > 0 and net_put > 0:
-            # Both OI increasing — two-sided positioning (expiry hedging)
-            score = 50
-            pattern = "Dual OI Increase (Hedging)"
-        elif net_call < 0 and net_put < 0:
-            # Both OI decreasing — unwinding
-            score = 45
-            pattern = "OI Unwinding (Liquidation)"
-        elif net_call > 0:
-            # Short covering on calls (bearish to neutral reversal)
-            score = 65
-            pattern = "Short Covering (Call OI Up)"
-        elif net_put > 0:
-            # Long unwinding on puts
-            score = 35
-            pattern = "Long Unwinding (Put OI Up)"
-        else:
-            score = 50
-            pattern = "Neutral OI"
-
-        return round(score, 1), pattern
-
-    except Exception as e:
-        logger.debug(f"OI change score failed: {e}")
-        return 50.0, "OI data processing error"
-
-
-def _score_unusual_activity(calls: pd.DataFrame, puts: pd.DataFrame) -> tuple:
-    """
-    Detect unusual options activity: volume > 5x average on specific contracts.
-    High call UOA = smart money buying upside → bullish.
-    High put UOA = protection/hedge buying → bearish.
-    """
-    if calls.empty and puts.empty:
-        return 50.0, ""
-
-    try:
-        threshold = OC_CONFIG["uoa_volume_multiplier"]
-
-        call_vol = calls["volume"].sum() if not calls.empty else 0
-        put_vol = puts["volume"].sum() if not puts.empty else 0
-
-        call_avg = calls["volume"].mean() if not calls.empty else 1
-        put_avg = puts["volume"].mean() if not puts.empty else 1
-
-        # Check for unusual spikes on individual strikes
-        unusual_calls = (calls["volume"] > call_avg * threshold).sum() if not calls.empty else 0
-        unusual_puts = (puts["volume"] > put_avg * threshold).sum() if not puts.empty else 0
-
-        call_vol_ratio = call_vol / (put_vol + 1)  # > 1 = more call activity
-
-        if unusual_calls > unusual_puts and unusual_calls > 0:
-            score = min(80 + unusual_calls * 5, 95)
-            desc = f"🔥 Unusual call activity ({unusual_calls} strikes > {threshold}x avg) — smart money bullish"
-        elif unusual_puts > unusual_calls and unusual_puts > 0:
-            score = max(20 - unusual_puts * 5, 5)
-            desc = f"⚠️ Unusual put activity ({unusual_puts} strikes > {threshold}x avg) — protection buying"
-        elif call_vol_ratio > 2:
-            score = 72
-            desc = f"Call volume {call_vol_ratio:.1f}x put volume — call-heavy positioning"
-        elif call_vol_ratio < 0.5:
-            score = 30
-            desc = f"Put volume {1/call_vol_ratio:.1f}x call volume — put-heavy positioning"
-        else:
-            score = 50
-            desc = "Normal options activity"
-
-        return round(score, 1), desc
-
-    except Exception:
-        return 50.0, "Volume data unavailable"
-
-
-def _score_iv_percentile(calls: pd.DataFrame, puts: pd.DataFrame) -> tuple:
-    """
-    IV Percentile score. Works as contrarian at extremes:
-    IVP > 90% = excessive fear → contrarian bullish (score 80)
-    IVP < 10% = complacency → neutral (score 40)
-    IVP 40-70% = normal range → directionally neutral (score 55)
-    """
-    if calls.empty and puts.empty:
-        return 55.0, "IV data unavailable"
-
-    try:
-        all_ivs = []
-        if not calls.empty and "iv" in calls.columns:
-            all_ivs.extend(calls["iv"].dropna().tolist())
-        if not puts.empty and "iv" in puts.columns:
-            all_ivs.extend(puts["iv"].dropna().tolist())
-
-        if not all_ivs:
-            return 55.0, "IV data empty"
-
-        # We don't have historical IV for real percentile calculation
-        # Use absolute IV level as proxy (IV > 50% = elevated, < 20% = suppressed)
-        avg_iv = np.mean(all_ivs)
-
-        if avg_iv > 60:
-            score = 80  # High fear → contrarian bullish
-            desc = f"IV elevated ({avg_iv:.1f}%) — fear excessive, contrarian bullish signal"
-        elif avg_iv > 40:
-            score = 65
-            desc = f"IV above normal ({avg_iv:.1f}%) — moderate fear"
-        elif avg_iv > 20:
-            score = 55
-            desc = f"IV normal ({avg_iv:.1f}%) — no edge from volatility"
-        elif avg_iv > 10:
-            score = 40
-            desc = f"IV suppressed ({avg_iv:.1f}%) — complacency, expect move"
-        else:
-            score = 35
-            desc = f"IV very low ({avg_iv:.1f}%) — extreme complacency"
-
-        return round(score, 1), desc
-
-    except Exception:
-        return 55.0, "IV calculation error"
-
-
-def _score_pcr_contrarian(pcr: float) -> tuple:
-    """
-    PCR as contrarian indicator — NSE-specific thresholds.
-    Post-2009, PCR directional edge lost. Use as sentiment extreme indicator.
-    NSE Nifty PCR historically oscillates 0.8-1.3.
-    """
-    cfg = OC_CONFIG
-
-    if pcr >= cfg["pcr_extreme_bullish"]:
-        score = 90
-        interpretation = f"Extreme fear (PCR {pcr:.2f} > 1.5) → contrarian STRONG BUY"
-    elif pcr >= cfg["pcr_bullish"]:
-        score = 78
-        interpretation = f"High fear (PCR {pcr:.2f}) → contrarian bullish"
-    elif pcr >= cfg["pcr_neutral_high"]:
-        score = 65
-        interpretation = f"Slightly bearish sentiment (PCR {pcr:.2f})"
-    elif pcr >= cfg["pcr_neutral_low"]:
-        score = 50
-        interpretation = f"Neutral (PCR {pcr:.2f})"
-    elif pcr >= cfg["pcr_bearish"]:
-        score = 40
-        interpretation = f"Complacency (PCR {pcr:.2f})"
-    elif pcr >= cfg["pcr_extreme_bearish"]:
-        score = 25
-        interpretation = f"High complacency (PCR {pcr:.2f}) → contrarian bearish"
-    else:
-        score = 15
-        interpretation = f"Extreme complacency (PCR {pcr:.2f} < 0.5) → contrarian STRONG SELL"
-
-    return round(score, 1), interpretation
-
-
-def _score_max_pain(spot: float, max_pain: float, dte: int) -> tuple:
-    """
-    Max Pain theory: spot tends to drift toward max pain near expiry.
-    Effect strongest in last 5 trading days. Valid mainly for small/illiquid stocks.
-    """
-    if max_pain <= 0 or spot <= 0:
-        return 50.0, ""
-
-    dist_pct = (spot - max_pain) / max_pain * 100
-
-    # Above max pain → expect drift down → slightly bearish
-    # Below max pain → expect drift up → slightly bullish
-    if dist_pct < -5:
-        score = 75  # Well below max pain → bullish drift expected
-        desc = f"Spot {dist_pct:.1f}% below Max Pain ₹{max_pain:,.0f} → drift up expected"
-    elif dist_pct < -2:
-        score = 65
-        desc = f"Spot {dist_pct:.1f}% below Max Pain ₹{max_pain:,.0f}"
-    elif dist_pct < 2:
-        score = 55  # Near max pain → likely to stay
-        desc = f"Spot near Max Pain ₹{max_pain:,.0f} (diff: {dist_pct:+.1f}%)"
-    elif dist_pct < 5:
-        score = 40
-        desc = f"Spot {dist_pct:.1f}% above Max Pain ₹{max_pain:,.0f}"
-    else:
-        score = 30
-        desc = f"Spot {dist_pct:.1f}% above Max Pain ₹{max_pain:,.0f} → drift down expected"
-
-    # Reduce confidence if DTE > 10 (max pain loses predictive power far from expiry)
-    if dte > 10:
-        score = 50 + (score - 50) * 0.5  # Half the signal away from expiry
-
-    return round(score, 1), desc
-
-
-def _score_iv_skew(calls: pd.DataFrame, puts: pd.DataFrame, spot: float) -> tuple:
-    """
-    IV Skew: compare OTM put IV vs OTM call IV.
-    Steep put skew = panic protection buying → contrarian bullish (market bottoming).
-    Call skew = speculative FOMO → contrarian bearish.
-    """
+def _score_oi_change(calls: pd.DataFrame, puts: pd.DataFrame, spot: float):
     if calls.empty or puts.empty or spot <= 0:
-        return 50.0, "IV skew unavailable"
-
+        return 50.0, "Insufficient OI data"
     try:
-        # OTM puts: strikes 5-15% below spot
-        otm_puts = puts[(puts["strike"] < spot * 0.97) & (puts["strike"] > spot * 0.85)]
-        # OTM calls: strikes 3-15% above spot
-        otm_calls = calls[(calls["strike"] > spot * 1.03) & (calls["strike"] < spot * 1.15)]
+        atm_c = calls[(calls["strike"] >= spot*0.90) & (calls["strike"] <= spot*1.10)]
+        atm_p = puts[ (puts["strike"]  >= spot*0.90) & (puts["strike"]  <= spot*1.10)]
+        nc = float(atm_c["oi_change"].sum()) if not atm_c.empty else 0
+        np_ = float(atm_p["oi_change"].sum()) if not atm_p.empty else 0
 
-        otm_put_iv = otm_puts["iv"].mean() if not otm_puts.empty and "iv" in otm_puts else 0
-        otm_call_iv = otm_calls["iv"].mean() if not otm_calls.empty and "iv" in otm_calls else 0
-
-        if otm_put_iv <= 0 and otm_call_iv <= 0:
-            return 50.0, "OTM IV data unavailable"
-
-        # Skew = put IV - call IV
-        skew = otm_put_iv - otm_call_iv
-
-        if skew > 20:
-            score = 72  # Steep put skew = panic = contrarian bullish
-            desc = f"Put skew steep ({skew:.1f}) — panic buying puts, contrarian bullish"
-        elif skew > 10:
-            score = 63
-            desc = f"Moderate put skew ({skew:.1f}) — elevated protection demand"
-        elif skew > 0:
-            score = 55
-            desc = f"Normal put skew ({skew:.1f}) — market healthy"
-        elif skew > -10:
-            score = 45
-            desc = f"Call skew developing ({skew:.1f}) — speculative call buying"
-        else:
-            score = 35  # Call skew = FOMO = contrarian bearish
-            desc = f"Call skew ({skew:.1f}) — FOMO-driven call buying, caution"
-
-        return round(score, 1), desc
-
-    except Exception:
-        return 50.0, "IV skew calculation error"
+        if nc > 0 and np_ < 0:  return min(92, 90 + min(abs(nc)+abs(np_),1e6)/1e6*5), "Long Buildup 📈"
+        if nc < 0 and np_ > 0:  return max(8,  10 - min(abs(nc)+abs(np_),1e6)/1e6*5), "Short Buildup 📉"
+        if nc > 0 and np_ > 0:  return 50.0, "Dual OI Increase (Hedging)"
+        if nc < 0 and np_ < 0:  return 45.0, "OI Unwinding"
+        if nc > 0:               return 65.0, "Short Covering"
+        if np_ > 0:              return 35.0, "Long Unwinding"
+        return 50.0, "Neutral OI"
+    except Exception: return 50.0, "OI processing error"
 
 
-def _score_iv_spread(iv_spread: float) -> tuple:
-    """
-    IV Spread = ATM Call IV - ATM Put IV.
-    Cremers & Weinbaum (2010): Most robust option chain signal.
-    IVS > +2% = calls expensive relative to puts = informed bullish flow → 80 score
-    IVS < -2% = puts expensive = informed bearish flow → 20 score
-    """
-    if iv_spread > 5:
-        score = 85
-        desc = f"IV Spread +{iv_spread:.1f}% — calls very expensive, strong informed buying"
-    elif iv_spread > 2:
-        score = 78
-        desc = f"IV Spread +{iv_spread:.1f}% — calls premium, bullish (Cremers signal)"
-    elif iv_spread > 0.5:
-        score = 62
-        desc = f"IV Spread +{iv_spread:.1f}% — slight call premium"
-    elif iv_spread > -0.5:
-        score = 52
-        desc = f"IV Spread {iv_spread:.1f}% — near parity, neutral"
-    elif iv_spread > -2:
-        score = 40
-        desc = f"IV Spread {iv_spread:.1f}% — slight put premium"
-    elif iv_spread > -5:
-        score = 25
-        desc = f"IV Spread {iv_spread:.1f}% — puts expensive, bearish (Cremers signal)"
-    else:
-        score = 15
-        desc = f"IV Spread {iv_spread:.1f}% — puts very expensive, strong informed selling"
+def _score_unusual_activity(calls: pd.DataFrame, puts: pd.DataFrame):
+    if calls.empty and puts.empty: return 50.0, ""
+    try:
+        threshold   = 5
+        c_avg       = calls["volume"].mean() if not calls.empty else 1
+        p_avg       = puts["volume"].mean()  if not puts.empty  else 1
+        unc = int((calls["volume"] > c_avg * threshold).sum()) if not calls.empty else 0
+        unp = int((puts["volume"]  > p_avg * threshold).sum()) if not puts.empty  else 0
+        if unc > unp > 0: return min(95, 80 + unc*5), f"🔥 Unusual calls ({unc} strikes > {threshold}x)"
+        if unp > unc > 0: return max(5,  20 - unp*5), f"⚠️ Unusual puts  ({unp} strikes > {threshold}x)"
+        cv = calls["volume"].sum() if not calls.empty else 0
+        pv = puts["volume"].sum()  if not puts.empty  else 0
+        ratio = cv / (pv + 1)
+        if ratio > 2: return 72.0, f"Call vol {ratio:.1f}x put vol"
+        if ratio < 0.5: return 30.0, f"Put vol {1/ratio:.1f}x call vol"
+        return 50.0, "Normal activity"
+    except Exception: return 50.0, ""
 
+
+def _score_iv_percentile(calls: pd.DataFrame, puts: pd.DataFrame):
+    try:
+        ivs = []
+        for df in [calls, puts]:
+            if not df.empty and "iv" in df.columns:
+                ivs.extend(pd.to_numeric(df["iv"], errors="coerce").dropna().tolist())
+        if not ivs: return 55.0, "IV data empty"
+        avg = np.mean(ivs)
+        if avg > 60:  return 80.0, f"IV elevated ({avg:.0f}%) — contrarian bullish"
+        if avg > 40:  return 65.0, f"IV above normal ({avg:.0f}%)"
+        if avg > 20:  return 55.0, f"IV normal ({avg:.0f}%)"
+        if avg > 10:  return 40.0, f"IV suppressed ({avg:.0f}%) — complacency"
+        return 35.0, f"IV very low ({avg:.0f}%)"
+    except Exception: return 55.0, "IV calculation error"
+
+
+def _score_pcr_contrarian(pcr: float):
+    cfg = NSE_PCR
+    if pcr >= cfg["extreme_bullish"]: return 90.0, f"Extreme fear PCR {pcr:.2f} → contrarian BUY"
+    if pcr >= cfg["bullish"]:         return 78.0, f"High fear PCR {pcr:.2f} → bullish"
+    if pcr >= cfg["neutral_high"]:    return 65.0, f"Slightly bearish PCR {pcr:.2f}"
+    if pcr >= cfg["neutral_low"]:     return 50.0, f"Neutral PCR {pcr:.2f}"
+    if pcr >= cfg["bearish"]:         return 40.0, f"Complacency PCR {pcr:.2f}"
+    if pcr >= cfg["extreme_bearish"]: return 25.0, f"High complacency PCR {pcr:.2f}"
+    return 15.0, f"Extreme complacency PCR {pcr:.2f} → contrarian SELL"
+
+
+def _score_max_pain(spot: float, max_pain: float, dte: int):
+    if max_pain <= 0 or spot <= 0: return 50.0, ""
+    dist = (spot - max_pain) / max_pain * 100
+    if dist < -5:   score, desc = 75.0, f"Spot {dist:.1f}% below Max Pain ₹{max_pain:,.0f} → drift up"
+    elif dist < -2: score, desc = 65.0, f"Spot {dist:.1f}% below Max Pain ₹{max_pain:,.0f}"
+    elif dist < 2:  score, desc = 55.0, f"Spot near Max Pain ₹{max_pain:,.0f} ({dist:+.1f}%)"
+    elif dist < 5:  score, desc = 40.0, f"Spot {dist:.1f}% above Max Pain ₹{max_pain:,.0f}"
+    else:           score, desc = 30.0, f"Spot {dist:.1f}% above Max Pain ₹{max_pain:,.0f} → drift down"
+    if dte > 10:
+        score = 50 + (score - 50) * 0.5
     return round(score, 1), desc
 
 
-def _get_weights_with_expiry_mod(dte: int) -> Dict[str, float]:
-    """
-    Adjust weights based on days to expiry.
-    Near expiry (DTE ≤ 3): Max Pain weight → 20%, others proportionally reduced.
-    Far expiry (DTE > 30): Max Pain weight → 5%, others proportionally increased.
-    """
-    base = {
-        "w_oi_change": 0.25,
-        "w_uoa": 0.20,
-        "w_ivp": 0.15,
-        "w_pcr": 0.15,
-        "w_max_pain": 0.10,
-        "w_skew": 0.075,
-        "w_ivs": 0.075,
-    }
-
-    if dte <= OC_CONFIG["dte_near"]:
-        # Boost Max Pain to 20%, reduce others proportionally
-        extra = 0.10  # 20% - 10% = extra 10% going to Max Pain
-        ratio = (1 - 0.20) / (1 - 0.10)  # Scale others down
-        weights = {k: round(v * ratio, 4) for k, v in base.items()}
-        weights["w_max_pain"] = 0.20
-    elif dte > OC_CONFIG["dte_far"]:
-        # Reduce Max Pain to 5%, distribute to OI and UOA
-        savings = 0.05  # 10% - 5% saved from Max Pain
-        weights = base.copy()
-        weights["w_max_pain"] = 0.05
-        weights["w_oi_change"] += savings * 0.5
-        weights["w_uoa"] += savings * 0.5
-    else:
-        weights = base.copy()
-
-    # Normalize to sum = 1.0
-    total = sum(weights.values())
-    return {k: round(v / total, 4) for k, v in weights.items()}
+def _score_iv_skew(calls: pd.DataFrame, puts: pd.DataFrame, spot: float):
+    try:
+        otm_puts  = puts[ (puts["strike"]  < spot*0.97) & (puts["strike"]  > spot*0.85)] if not puts.empty  else pd.DataFrame()
+        otm_calls = calls[(calls["strike"] > spot*1.03) & (calls["strike"] < spot*1.15)] if not calls.empty else pd.DataFrame()
+        pp = float(otm_puts["iv"].mean())  if not otm_puts.empty  and "iv" in otm_puts.columns  else 0
+        cp = float(otm_calls["iv"].mean()) if not otm_calls.empty and "iv" in otm_calls.columns else 0
+        if pp <= 0 and cp <= 0: return 50.0, "OTM IV unavailable"
+        skew = pp - cp
+        if skew > 20: return 72.0, f"Steep put skew ({skew:.0f}) — panic buying"
+        if skew > 10: return 63.0, f"Moderate put skew ({skew:.0f})"
+        if skew > 0:  return 55.0, f"Normal put skew ({skew:.0f})"
+        if skew > -10:return 45.0, f"Call skew developing ({skew:.0f})"
+        return 35.0, f"Call skew ({skew:.0f}) — FOMO"
+    except Exception: return 50.0, "IV skew error"
 
 
-# ============================================================================
-# PARTICIPANT ANALYSIS — FII/DII/Retail (NSE official data)
-# ============================================================================
-
-def interpret_participant_data(fii_long: float, fii_short: float,
-                                retail_long: float, retail_short: float) -> Dict:
-    """
-    Analyze NSE participant-wise F&O data.
-    FII long/short ratio > 1 = bullish, < 1 = bearish.
-    Retail is contrarian — when retail is heavily long, often signals top.
-    """
-    fii_ratio = fii_long / (fii_short + 1)
-    retail_ratio = retail_long / (retail_short + 1)
-
-    fii_sentiment = "BULLISH" if fii_ratio > 1.1 else ("BEARISH" if fii_ratio < 0.9 else "NEUTRAL")
-    # Retail is contrarian
-    retail_signal = "BEARISH" if retail_ratio > 1.2 else ("BULLISH" if retail_ratio < 0.8 else "NEUTRAL")
-
-    return {
-        "fii_ratio": round(fii_ratio, 2),
-        "fii_sentiment": fii_sentiment,
-        "retail_ratio": round(retail_ratio, 2),
-        "retail_contrarian_signal": retail_signal,
-        "composite": fii_sentiment if fii_sentiment != "NEUTRAL" else retail_signal,
-    }
+def _score_iv_spread(iv_spread: float):
+    if iv_spread > 5:   return 85.0, f"IV Spread +{iv_spread:.1f}% — strong informed buying"
+    if iv_spread > 2:   return 78.0, f"IV Spread +{iv_spread:.1f}% — calls premium (Cremers)"
+    if iv_spread > 0.5: return 62.0, f"IV Spread +{iv_spread:.1f}% — slight call premium"
+    if iv_spread > -0.5:return 52.0, f"IV Spread {iv_spread:.1f}% — parity"
+    if iv_spread > -2:  return 40.0, f"IV Spread {iv_spread:.1f}% — slight put premium"
+    if iv_spread > -5:  return 25.0, f"IV Spread {iv_spread:.1f}% — puts expensive (Cremers)"
+    return 15.0, f"IV Spread {iv_spread:.1f}% — strong informed selling"
 
 
-# ============================================================================
-# COMPATIBILITY WRAPPERS — functions expected by app.py
-# ============================================================================
+def _expiry_adjusted_weights(base: dict, dte: int) -> dict:
+    w = dict(base)
+    if dte <= 3:
+        # Boost Max Pain to 20% near expiry (only matters in last 3 days)
+        extra = 0.10
+        ratio = (1 - 0.20) / max(1 - base.get("max_pain", 0.10), 0.01)
+        w = {k: round(v * ratio, 4) for k, v in w.items()}
+        w["max_pain"] = 0.20
+    # Normalise to sum = 1.0
+    total = sum(w.values())
+    return {k: round(v / total, 4) for k, v in w.items()}
+
+
+# ============================================================
+# COMPATIBILITY WRAPPERS (app.py interface)
+# ============================================================
 
 def analyze_option_chain(symbol: str, oc_data: Dict,
                           price_df=None) -> Optional[OptionChainSignal]:
-    """
-    Wrapper expected by app.py.
-    Calls compute_option_chain_signal and injects symbol,
-    then adds a .score alias for composite_score so app.py r.score works.
-    """
-    result = compute_option_chain_signal(oc_data)
-    if result is None:
-        return None
-    # Patch symbol (compute_option_chain_signal reads it from oc_data header)
-    object.__setattr__(result, "symbol", symbol) if hasattr(result, "__dataclass_fields__") else None
-    try:
-        result.symbol = symbol
-    except Exception:
-        pass
-    # Add .score alias so app.py `r.score` works
-    result.score = result.composite_score
-    return result
+    oc_data["symbol"] = symbol
+    return compute_option_chain_signal(oc_data)
 
 
-# OptionChainResult is just an alias for OptionChainSignal
 OptionChainResult = OptionChainSignal
 
 
 def format_oc_signal(result: OptionChainSignal) -> str:
-    """Format option chain result as a readable Telegram / display string."""
-    if result is None:
-        return "No option chain data available."
-    score = getattr(result, "composite_score", 0)
-    signal = getattr(result, "signal", "NEUTRAL")
-    confidence = getattr(result, "confidence", 0)
-    pcr = getattr(result, "pcr", 0)
-    oi_pattern = getattr(result, "oi_pattern", "")
-    max_pain = getattr(result, "max_pain", 0)
-    spot = getattr(result, "spot", 0)
-    dte = getattr(result, "dte", 0)
-    icon = getattr(result, "signal_icon", "⚪")
-    symbol = getattr(result, "symbol", "")
-
-    lines = [
-        f"{icon} Option Chain Signal — {symbol}",
-        f"Score: {score:.0f}/100 ({signal}) | Confidence: {confidence:.0f}%",
-        f"OI Pattern: {oi_pattern} | PCR: {pcr:.2f}",
-        f"Max Pain: ₹{max_pain:,.0f} | Spot: ₹{spot:,.0f} | DTE: {dte}",
-    ]
-    reasons = getattr(result, "reasons", [])
-    if reasons:
-        lines.append("Signals: " + ", ".join(reasons[:3]))
-    warnings = getattr(result, "warnings", [])
-    if warnings:
-        lines.append("⚠️ " + " | ".join(warnings[:2]))
-    return "\n".join(lines)
+    if result is None: return "No option chain data."
+    factor_tag = f"{'7' if result.iv_available else '4'}-factor"
+    return (
+        f"{result.signal_icon} OC Signal ({factor_tag}) — {result.symbol}\n"
+        f"Score: {result.composite_score:.0f}/100 ({result.signal}) | "
+        f"Confidence: {result.confidence:.0f}%\n"
+        f"OI: {result.oi_pattern} | PCR: {result.pcr:.2f}\n"
+        f"Max Pain: ₹{result.max_pain:,.0f} | Spot: ₹{result.spot:,.0f} | DTE: {result.dte}"
+        + ("\nNote: IV data unavailable — using 4-factor model" if not result.iv_available else "")
+    )
