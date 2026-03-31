@@ -1,269 +1,548 @@
 """
-Signal Tracker — Read signal logs, track outcomes, generate reports.
-Used by both the app (display) and auto_scanner (update).
+Signal Tracker v2 — Supabase primary, CSV fallback
+===================================================
+All signal writes go to Supabase first.
+CSV files remain as a local cache / offline fallback.
+Works in both GitHub Actions and Streamlit Cloud environments.
 """
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from datetime import date, datetime, timedelta
-from typing import Optional, Dict, List, Tuple
-import os
+from typing import Optional, Dict, List
+import os, logging, json
 
+logger = logging.getLogger(__name__)
 
 SIGNALS_DIR = Path(__file__).parent / "signals"
 
+# ============================================================
+# SUPABASE CLIENT — lazy init, graceful degradation
+# ============================================================
 
-def get_signal_dates() -> List[str]:
-    """Get all dates that have signal files."""
+_supabase_client = None
+
+def _get_supabase():
+    """Return a Supabase client if credentials are available, else None."""
+    global _supabase_client
+    if _supabase_client is not None:
+        return _supabase_client
+    try:
+        url = _get_secret("SUPABASE_URL")
+        key = _get_secret("SUPABASE_SERVICE_KEY") or _get_secret("SUPABASE_ANON_KEY")
+        if not url or not key:
+            return None
+        from supabase import create_client
+        _supabase_client = create_client(url, key)
+        return _supabase_client
+    except Exception as e:
+        logger.debug(f"Supabase init failed: {e}")
+        return None
+
+
+def _get_secret(key: str) -> str:
+    """Read from Streamlit secrets or environment variables."""
+    try:
+        import streamlit as st
+        val = st.secrets.get(key, "")
+        if val:
+            return val
+    except Exception:
+        pass
+    return os.environ.get(key, "")
+
+
+# ============================================================
+# WRITE — save signals to Supabase + local CSV
+# ============================================================
+
+def save_signals_today(signals_list: list, regime: dict = None) -> int:
+    """Save scan signals. Writes to Supabase (primary) and CSV (fallback cache)."""
     SIGNALS_DIR.mkdir(exist_ok=True)
-    files = sorted(SIGNALS_DIR.glob("*_signals.csv"), reverse=True)
-    dates = []
-    for f in files:
-        name = f.stem.replace("_signals", "")
-        dates.append(name)
-    return dates
+    today = date.today().isoformat()
+    now_str = datetime.now().strftime("%H:%M")
+    regime_name = regime.get("regime", "") if regime else ""
+    regime_score = regime.get("score", 0) if regime else 0
 
+    new_rows = []
+    for r in signals_list:
+        row = {
+            "date":          today,
+            "time":          now_str,
+            "strategy":      getattr(r, "strategy", ""),
+            "strategy_name": getattr(r, "strategy", ""),
+            "symbol":        r.symbol,
+            "signal":        r.signal,
+            "cmp":           round(r.cmp, 2),
+            "entry":         round(r.entry, 2),
+            "sl":            round(r.stop_loss, 2),
+            "t1":            round(r.target_1, 2),
+            "t2":            round(r.target_2, 2),
+            "rr":            round(r.risk_reward, 1),
+            "confidence":    int(r.confidence),
+            "rs":            round(r.rs_rating, 1),
+            "sqi":           round(getattr(r, "sqi", 0), 1),
+            "sqi_grade":     getattr(r, "sqi_grade", ""),
+            "sector":        getattr(r, "sector", ""),
+            "regime":        regime_name,
+            "regime_score":  int(regime_score),
+            "regime_fit":    getattr(r, "regime_fit", ""),
+            "status":        "OPEN",
+        }
+        new_rows.append(row)
+
+    if not new_rows:
+        return 0
+
+    saved = 0
+
+    # --- Supabase write (upsert — ignores duplicates via UNIQUE constraint) ---
+    sb = _get_supabase()
+    if sb:
+        try:
+            sb.table("signals").upsert(new_rows, on_conflict="date,strategy,symbol").execute()
+            saved = len(new_rows)
+            logger.info(f"Supabase: saved {saved} signals for {today}")
+        except Exception as e:
+            logger.warning(f"Supabase write failed: {e} — falling back to CSV")
+
+    # --- CSV write (always, as local cache) ---
+    today_file = SIGNALS_DIR / f"{today}_signals.csv"
+    existing_keys = set()
+    df_old = pd.DataFrame()
+    if today_file.exists():
+        try:
+            df_old = pd.read_csv(today_file)
+            for _, row in df_old.iterrows():
+                existing_keys.add(f"{row.get('strategy','')}_{row.get('symbol','')}")
+        except Exception:
+            pass
+
+    csv_rows = []
+    for row in new_rows:
+        key = f"{row['strategy']}_{row['symbol']}"
+        if key not in existing_keys:
+            csv_rows.append({
+                "Date":         row["date"],
+                "Time":         row["time"],
+                "Strategy":     row["strategy"],
+                "Strategy_Name":row["strategy_name"],
+                "Symbol":       row["symbol"],
+                "Signal":       row["signal"],
+                "CMP":          row["cmp"],
+                "Entry":        row["entry"],
+                "SL":           row["sl"],
+                "T1":           row["t1"],
+                "T2":           row["t2"],
+                "RR":           row["rr"],
+                "Confidence":   row["confidence"],
+                "RS":           row["rs"],
+                "SQI":          row["sqi"],
+                "SQI_Grade":    row["sqi_grade"],
+                "Sector":       row["sector"],
+                "Regime":       row["regime"],
+                "Regime_Score": row["regime_score"],
+                "Regime_Fit":   row["regime_fit"],
+                "Status":       "OPEN",
+                "Exit_Date":    "",
+                "Exit_Price":   "",
+                "Exit_Reason":  "",
+                "PnL_Pct":      "",
+            })
+
+    if csv_rows:
+        df_new = pd.DataFrame(csv_rows)
+        combined = pd.concat([df_old, df_new], ignore_index=True) if not df_old.empty else df_new
+        combined.to_csv(today_file, index=False)
+        if saved == 0:
+            saved = len(csv_rows)
+
+    return saved
+
+
+# ============================================================
+# READ — signals
+# ============================================================
 
 def load_signals(date_str: str = None) -> Optional[pd.DataFrame]:
-    """Load signals for a specific date, or all if date_str is None."""
+    """Load signals for a date (or all). Tries Supabase first, CSV fallback."""
+    sb = _get_supabase()
+
+    if sb:
+        try:
+            q = sb.table("signals").select("*").order("created_at", desc=False)
+            if date_str:
+                q = q.eq("date", date_str)
+            resp = q.execute()
+            if resp.data:
+                df = pd.DataFrame(resp.data)
+                # Normalize column names to match legacy code expectations
+                rename = {
+                    "sl": "SL", "t1": "T1", "t2": "T2", "rr": "RR",
+                    "date": "Date", "time": "Time", "strategy": "Strategy",
+                    "strategy_name": "Strategy_Name", "symbol": "Symbol",
+                    "signal": "Signal", "cmp": "CMP", "entry": "Entry",
+                    "confidence": "Confidence", "rs": "RS", "sqi": "SQI",
+                    "sqi_grade": "SQI_Grade", "sector": "Sector",
+                    "regime": "Regime", "regime_score": "Regime_Score",
+                    "regime_fit": "Regime_Fit", "status": "Status",
+                    "exit_date": "Exit_Date", "exit_price": "Exit_Price",
+                    "exit_reason": "Exit_Reason", "pnl_pct": "PnL_Pct",
+                }
+                df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+                return df
+        except Exception as e:
+            logger.warning(f"Supabase read failed: {e}")
+
+    # CSV fallback
     SIGNALS_DIR.mkdir(exist_ok=True)
-    
     if date_str:
         filepath = SIGNALS_DIR / f"{date_str}_signals.csv"
         if filepath.exists():
             return pd.read_csv(filepath)
         return None
-    
-    # Load all
+
     files = sorted(SIGNALS_DIR.glob("*_signals.csv"))
     if not files:
         return None
-    
     frames = []
     for f in files:
         try:
             frames.append(pd.read_csv(f))
-        except:
+        except Exception:
             continue
-    
-    if not frames:
-        return None
-    return pd.concat(frames, ignore_index=True)
+    return pd.concat(frames, ignore_index=True) if frames else None
 
+
+def get_signal_dates() -> List[str]:
+    """Get all distinct dates that have signals."""
+    sb = _get_supabase()
+    if sb:
+        try:
+            resp = sb.table("signals").select("date").execute()
+            if resp.data:
+                dates = sorted(set(r["date"] for r in resp.data), reverse=True)
+                return dates
+        except Exception:
+            pass
+
+    SIGNALS_DIR.mkdir(exist_ok=True)
+    files = sorted(SIGNALS_DIR.glob("*_signals.csv"), reverse=True)
+    return [f.stem.replace("_signals", "") for f in files]
+
+
+# ============================================================
+# TRACKER — outcome tracking (SL/T1 hit)
+# ============================================================
 
 def load_tracker() -> Optional[pd.DataFrame]:
-    """Load the consolidated tracker."""
-    tracker = SIGNALS_DIR / "tracker.csv"
-    if tracker.exists():
-        return pd.read_csv(tracker)
-    # Fallback: build from individual files
-    return load_signals()
+    """Load all signals with status info (the tracker view)."""
+    return load_signals()  # Same table — status column tracks outcomes
 
 
-def save_signals_today(signals_list: list, regime: dict = None):
-    """Save signals from an in-app scan to today's CSV."""
-    SIGNALS_DIR.mkdir(exist_ok=True)
+def update_open_signals_live(data_dict: dict) -> int:
+    """
+    Check OPEN signals against current prices in data_dict.
+    Updates Supabase + CSV. Returns count of updated signals.
+    """
     today = date.today().isoformat()
-    today_file = SIGNALS_DIR / f"{today}_signals.csv"
-    now_str = datetime.now().strftime("%H:%M")
-    
-    # Load existing for dedup
-    existing = set()
-    if today_file.exists():
-        try:
-            df_old = pd.read_csv(today_file)
-            for _, row in df_old.iterrows():
-                existing.add(f"{row['Strategy']}_{row['Symbol']}")
-        except:
-            df_old = pd.DataFrame()
-    else:
-        df_old = pd.DataFrame()
-    
-    new_rows = []
-    for r in signals_list:
-        key = f"{r.strategy}_{r.symbol}"
-        if key in existing:
-            continue
-        
-        new_rows.append({
-            "Date": today,
-            "Time": now_str,
-            "Strategy": getattr(r, 'strategy', ''),
-            "Strategy_Name": getattr(r, 'strategy_name', getattr(r, 'strategy', '')),
-            "Symbol": r.symbol,
-            "Signal": r.signal,
-            "CMP": round(r.cmp, 2),
-            "Entry": round(r.entry, 2),
-            "SL": round(r.stop_loss, 2),
-            "T1": round(r.target_1, 2),
-            "T2": round(r.target_2, 2),
-            "RR": round(r.risk_reward, 1),
-            "Confidence": r.confidence,
-            "RS": round(r.rs_rating, 0),
-            "Sector": getattr(r, 'sector', ''),
-            "Regime": regime.get("regime", "") if regime else "",
-            "Regime_Score": regime.get("score", 0) if regime else 0,
-            "Regime_Fit": getattr(r, 'regime_fit', ''),
-            "Status": "OPEN",
-            "Exit_Date": "",
-            "Exit_Price": "",
-            "Exit_Reason": "",
-            "PnL_Pct": "",
-        })
-    
-    if new_rows:
-        df_new = pd.DataFrame(new_rows)
-        combined = pd.concat([df_old, df_new], ignore_index=True) if not df_old.empty else df_new
-        combined.to_csv(today_file, index=False)
-        return len(new_rows)
-    return 0
+    all_signals = load_signals()
+    if all_signals is None or all_signals.empty:
+        return 0
 
+    open_mask = all_signals.get("Status", all_signals.get("status", pd.Series())) == "OPEN"
+    open_signals = all_signals[open_mask]
+    if open_signals.empty:
+        return 0
+
+    updated = 0
+    updates_for_sb = []
+
+    for _, row in open_signals.iterrows():
+        sym = row.get("Symbol", row.get("symbol", ""))
+        if sym not in data_dict:
+            continue
+
+        stock_df = data_dict[sym]
+        if stock_df is None or stock_df.empty:
+            continue
+
+        recent = stock_df.iloc[-5:]
+        recent_high = float(recent["high"].max()) if "high" in recent.columns else 0
+        recent_low  = float(recent["low"].min())  if "low"  in recent.columns else 0
+        close       = float(stock_df.iloc[-1].get("close", 0))
+
+        try:
+            entry  = float(row.get("Entry", row.get("entry", 0)) or 0)
+            sl     = float(row.get("SL",    row.get("sl",    0)) or 0)
+            t1     = float(row.get("T1",    row.get("t1",    0)) or 0)
+            signal = row.get("Signal", row.get("signal", "BUY"))
+        except (ValueError, TypeError):
+            continue
+
+        if entry <= 0:
+            continue
+
+        update = None
+        if signal == "BUY":
+            if recent_low <= sl > 0:
+                update = dict(status="STOPPED", exit_date=today,
+                              exit_price=round(sl, 2),
+                              exit_reason="Stop Loss Hit",
+                              pnl_pct=round((sl / entry - 1) * 100, 2))
+            elif recent_high >= t1 > 0:
+                update = dict(status="TARGET", exit_date=today,
+                              exit_price=round(t1, 2),
+                              exit_reason="Target 1 Hit",
+                              pnl_pct=round((t1 / entry - 1) * 100, 2))
+        elif signal == "SHORT":
+            if recent_high >= sl > 0:
+                update = dict(status="STOPPED", exit_date=today,
+                              exit_price=round(sl, 2),
+                              exit_reason="Stop Loss Hit",
+                              pnl_pct=round((entry / sl - 1) * 100, 2))
+            elif recent_low <= t1 > 0:
+                update = dict(status="TARGET", exit_date=today,
+                              exit_price=round(t1, 2),
+                              exit_reason="Target 1 Hit",
+                              pnl_pct=round((entry / t1 - 1) * 100, 2))
+
+        if update:
+            sig_date = str(row.get("Date", row.get("date", today)))
+            strategy = row.get("Strategy", row.get("strategy", ""))
+            updates_for_sb.append({"date": sig_date, "strategy": strategy,
+                                   "symbol": sym, **update})
+            updated += 1
+
+    # Write updates to Supabase
+    sb = _get_supabase()
+    if sb and updates_for_sb:
+        for upd in updates_for_sb:
+            try:
+                sb.table("signals").update({
+                    "status":       upd["status"],
+                    "exit_date":    upd["exit_date"],
+                    "exit_price":   upd["exit_price"],
+                    "exit_reason":  upd["exit_reason"],
+                    "pnl_pct":      upd["pnl_pct"],
+                }).eq("date", upd["date"]).eq("strategy", upd["strategy"]).eq("symbol", upd["symbol"]).execute()
+            except Exception as e:
+                logger.warning(f"Supabase update failed for {upd['symbol']}: {e}")
+
+    # Also update CSV files
+    _update_csv_outcomes(updates_for_sb)
+
+    return updated
+
+
+def _update_csv_outcomes(updates: list):
+    """Sync outcome updates back to CSV files."""
+    if not updates:
+        return
+    for upd in updates:
+        sig_date = upd.get("date", date.today().isoformat())
+        filepath = SIGNALS_DIR / f"{sig_date}_signals.csv"
+        if not filepath.exists():
+            continue
+        try:
+            df = pd.read_csv(filepath)
+            mask = (df.get("Strategy", df.get("strategy", pd.Series())) == upd.get("strategy", "")) & \
+                   (df.get("Symbol",   df.get("symbol",   pd.Series())) == upd.get("symbol", ""))
+            if mask.any():
+                df.loc[mask, "Status"]       = upd["status"]
+                df.loc[mask, "Exit_Date"]    = upd["exit_date"]
+                df.loc[mask, "Exit_Price"]   = upd["exit_price"]
+                df.loc[mask, "Exit_Reason"]  = upd["exit_reason"]
+                df.loc[mask, "PnL_Pct"]      = upd["pnl_pct"]
+                df.to_csv(filepath, index=False)
+        except Exception:
+            pass
+
+
+# ============================================================
+# STATS
+# ============================================================
 
 def compute_tracker_stats(df: pd.DataFrame = None) -> Dict:
-    """Compute summary statistics from tracker data."""
+    """Compute forward-test statistics."""
     if df is None:
         df = load_tracker()
     if df is None or df.empty:
         return {}
-    
-    total = len(df)
-    targets = len(df[df["Status"] == "TARGET"])
-    stopped = len(df[df["Status"] == "STOPPED"])
-    open_count = len(df[df["Status"] == "OPEN"])
-    expired = len(df[df["Status"] == "EXPIRED"])
-    
-    # Win rate (excluding OPEN and EXPIRED)
-    closed = targets + stopped
+
+    status_col = "Status" if "Status" in df.columns else "status"
+    total    = len(df)
+    targets  = len(df[df[status_col] == "TARGET"])
+    stopped  = len(df[df[status_col] == "STOPPED"])
+    open_c   = len(df[df[status_col] == "OPEN"])
+    expired  = len(df[df[status_col] == "EXPIRED"])
+    closed   = targets + stopped
+
     win_rate = round(targets / closed * 100, 1) if closed > 0 else 0
-    
-    # P&L stats
-    pnl_col = pd.to_numeric(df["PnL_Pct"], errors="coerce")
-    closed_pnl = pnl_col[df["Status"].isin(["TARGET", "STOPPED"])].dropna()
-    
-    total_pnl = round(closed_pnl.sum(), 2) if len(closed_pnl) > 0 else 0
-    avg_win = round(closed_pnl[closed_pnl > 0].mean(), 2) if len(closed_pnl[closed_pnl > 0]) > 0 else 0
-    avg_loss = round(closed_pnl[closed_pnl < 0].mean(), 2) if len(closed_pnl[closed_pnl < 0]) > 0 else 0
-    
-    # Strategy breakdown
+
+    pnl_col_name = "PnL_Pct" if "PnL_Pct" in df.columns else "pnl_pct"
+    pnl = pd.to_numeric(df.get(pnl_col_name, pd.Series()), errors="coerce")
+    closed_pnl = pnl[df[status_col].isin(["TARGET", "STOPPED"])].dropna()
+
+    strat_col = "Strategy" if "Strategy" in df.columns else "strategy"
     strategy_stats = {}
-    for strat in df["Strategy"].unique():
-        sdf = df[df["Strategy"] == strat]
-        s_closed = sdf[sdf["Status"].isin(["TARGET", "STOPPED"])]
-        s_targets = len(sdf[sdf["Status"] == "TARGET"])
-        s_stopped = len(sdf[sdf["Status"] == "STOPPED"])
-        s_total = s_targets + s_stopped
+    for strat in df[strat_col].unique():
+        sdf  = df[df[strat_col] == strat]
+        t_c  = len(sdf[sdf[status_col] == "TARGET"])
+        s_c  = len(sdf[sdf[status_col] == "STOPPED"])
+        tot  = t_c + s_c
         strategy_stats[strat] = {
-            "total": len(sdf),
-            "open": len(sdf[sdf["Status"] == "OPEN"]),
-            "targets": s_targets,
-            "stopped": s_stopped,
-            "win_rate": round(s_targets / s_total * 100, 1) if s_total > 0 else 0,
+            "total":    len(sdf),
+            "open":     len(sdf[sdf[status_col] == "OPEN"]),
+            "targets":  t_c,
+            "stopped":  s_c,
+            "win_rate": round(t_c / tot * 100, 1) if tot > 0 else 0,
         }
-    
-    # Date range
-    dates = pd.to_datetime(df["Date"], errors="coerce").dropna()
-    
+
+    dates = pd.to_datetime(df.get("Date", df.get("date", pd.Series())), errors="coerce").dropna()
+
     return {
-        "total": total,
-        "targets": targets,
-        "stopped": stopped,
-        "open": open_count,
-        "expired": expired,
-        "closed": closed,
-        "win_rate": win_rate,
-        "total_pnl": total_pnl,
-        "avg_win": avg_win,
-        "avg_loss": avg_loss,
+        "total":          total,
+        "targets":        targets,
+        "stopped":        stopped,
+        "open":           open_c,
+        "expired":        expired,
+        "closed":         closed,
+        "win_rate":       win_rate,
+        "total_pnl":      round(float(closed_pnl.sum()), 2),
+        "avg_win":        round(float(closed_pnl[closed_pnl > 0].mean()), 2) if (closed_pnl > 0).any() else 0,
+        "avg_loss":       round(float(closed_pnl[closed_pnl < 0].mean()), 2) if (closed_pnl < 0).any() else 0,
         "strategy_stats": strategy_stats,
-        "first_date": dates.min().strftime("%Y-%m-%d") if len(dates) > 0 else "",
-        "last_date": dates.max().strftime("%Y-%m-%d") if len(dates) > 0 else "",
-        "trading_days": len(df["Date"].unique()),
+        "first_date":     dates.min().strftime("%Y-%m-%d") if len(dates) > 0 else "",
+        "last_date":      dates.max().strftime("%Y-%m-%d") if len(dates) > 0 else "",
+        "trading_days":   len(df.get("Date", df.get("date", pd.Series())).unique()),
     }
 
 
-def update_open_signals_live(data_dict: dict) -> int:
-    """Update OPEN signals with current prices from loaded data. Returns count of updates."""
-    SIGNALS_DIR.mkdir(exist_ok=True)
-    signal_files = sorted(SIGNALS_DIR.glob("*_signals.csv"))
-    if not signal_files:
-        return 0
-    
-    updated = 0
-    today = date.today().isoformat()
-    
-    for filepath in signal_files:
-        try:
-            df = pd.read_csv(filepath)
-        except:
-            continue
-        
-        changed = False
-        for idx, row in df.iterrows():
-            if row["Status"] != "OPEN":
-                continue
-            
-            sym = row["Symbol"]
-            if sym not in data_dict:
-                continue
-            
-            stock_df = data_dict[sym]
-            if stock_df is None or stock_df.empty:
-                continue
-            
-            latest = stock_df.iloc[-1]
-            entry = float(row["Entry"])
-            sl = float(row["SL"])
-            t1 = float(row["T1"])
-            
-            # Get recent high/low for SL/T1 check
-            recent = stock_df.iloc[-5:]  # last 5 days
-            recent_high = recent["high"].max() if "high" in recent.columns else recent["High"].max()
-            recent_low = recent["low"].min() if "low" in recent.columns else recent["Low"].min()
-            
-            close = latest.get("close", latest.get("Close", 0))
-            
-            if row["Signal"] == "BUY":
-                if recent_low <= sl:
-                    df.at[idx, "Status"] = "STOPPED"
-                    df.at[idx, "Exit_Date"] = today
-                    df.at[idx, "Exit_Price"] = round(sl, 2)
-                    df.at[idx, "Exit_Reason"] = "Stop Loss Hit"
-                    df.at[idx, "PnL_Pct"] = round((sl / entry - 1) * 100, 2)
-                    changed = True; updated += 1
-                elif recent_high >= t1:
-                    df.at[idx, "Status"] = "TARGET"
-                    df.at[idx, "Exit_Date"] = today
-                    df.at[idx, "Exit_Price"] = round(t1, 2)
-                    df.at[idx, "Exit_Reason"] = "Target 1 Hit"
-                    df.at[idx, "PnL_Pct"] = round((t1 / entry - 1) * 100, 2)
-                    changed = True; updated += 1
-            
-            elif row["Signal"] == "SHORT":
-                if recent_high >= sl:
-                    df.at[idx, "Status"] = "STOPPED"
-                    df.at[idx, "Exit_Date"] = today
-                    df.at[idx, "Exit_Price"] = round(sl, 2)
-                    df.at[idx, "Exit_Reason"] = "Stop Loss Hit"
-                    df.at[idx, "PnL_Pct"] = round((entry / sl - 1) * 100, 2)
-                    changed = True; updated += 1
-                elif recent_low <= t1:
-                    df.at[idx, "Status"] = "TARGET"
-                    df.at[idx, "Exit_Date"] = today
-                    df.at[idx, "Exit_Price"] = round(t1, 2)
-                    df.at[idx, "Exit_Reason"] = "Target 1 Hit"
-                    df.at[idx, "PnL_Pct"] = round((entry / t1 - 1) * 100, 2)
-                    changed = True; updated += 1
-        
-        if changed:
-            df.to_csv(filepath, index=False)
-    
-    return updated
-
-
 def generate_csv_download() -> Optional[bytes]:
-    """Generate full tracker CSV as bytes for download."""
     df = load_tracker()
     if df is None or df.empty:
         return None
     return df.to_csv(index=False).encode("utf-8")
+
+
+# ============================================================
+# PORTFOLIO helpers — open position tracking
+# ============================================================
+
+def save_position(position: dict) -> bool:
+    """Save an open position to Supabase portfolio table."""
+    sb = _get_supabase()
+    if sb:
+        try:
+            sb.table("portfolio").insert(position).execute()
+            return True
+        except Exception as e:
+            logger.warning(f"Portfolio save failed: {e}")
+    return False
+
+
+def load_portfolio() -> Optional[pd.DataFrame]:
+    """Load open portfolio positions from Supabase."""
+    sb = _get_supabase()
+    if sb:
+        try:
+            resp = sb.table("portfolio").select("*").eq("status", "OPEN").order("entry_date", desc=True).execute()
+            if resp.data:
+                return pd.DataFrame(resp.data)
+            return pd.DataFrame()
+        except Exception as e:
+            logger.warning(f"Portfolio load failed: {e}")
+    return pd.DataFrame()
+
+
+def close_position(position_id: str, exit_price: float, exit_reason: str = "Manual") -> bool:
+    """Close a portfolio position."""
+    sb = _get_supabase()
+    if sb:
+        try:
+            resp = sb.table("portfolio").select("*").eq("id", position_id).execute()
+            if resp.data:
+                pos = resp.data[0]
+                entry = float(pos.get("entry_price", 0))
+                qty   = int(pos.get("qty", 1))
+                pnl_pct = round((exit_price / entry - 1) * 100, 2) if entry > 0 else 0
+                if pos.get("signal") == "SHORT":
+                    pnl_pct = round((entry / exit_price - 1) * 100, 2) if exit_price > 0 else 0
+                pnl_abs = round((exit_price - entry) * qty, 2)
+
+                sb.table("portfolio").update({
+                    "status":       "CLOSED",
+                    "exit_price":   round(exit_price, 2),
+                    "exit_date":    date.today().isoformat(),
+                    "exit_reason":  exit_reason,
+                    "pnl":          pnl_abs,
+                    "pnl_pct":      pnl_pct,
+                }).eq("id", position_id).execute()
+                return True
+        except Exception as e:
+            logger.warning(f"Close position failed: {e}")
+    return False
+
+
+def get_portfolio_pnl(data_dict: dict) -> dict:
+    """Compute live P&L for all open positions using current prices."""
+    portfolio_df = load_portfolio()
+    if portfolio_df is None or portfolio_df.empty:
+        return {"positions": [], "total_pnl": 0, "total_pnl_pct": 0, "heat_pct": 0}
+
+    positions = []
+    total_pnl = 0.0
+    total_invested = 0.0
+
+    for _, pos in portfolio_df.iterrows():
+        sym        = pos.get("symbol", "")
+        entry      = float(pos.get("entry_price", 0) or 0)
+        qty        = int(pos.get("qty", 1) or 1)
+        sl         = float(pos.get("stop_loss", 0) or 0)
+        signal     = pos.get("signal", "BUY")
+
+        cmp = entry  # fallback
+        if sym in data_dict and not data_dict[sym].empty:
+            cmp = float(data_dict[sym].iloc[-1].get("close", entry))
+
+        if signal == "BUY":
+            pnl_pct = round((cmp / entry - 1) * 100, 2) if entry > 0 else 0
+        else:
+            pnl_pct = round((entry / cmp - 1) * 100, 2) if cmp > 0 else 0
+
+        pnl_abs = round((cmp - entry) * qty, 2) if signal == "BUY" else round((entry - cmp) * qty, 2)
+        total_pnl += pnl_abs
+
+        position_value = entry * qty
+        total_invested += position_value
+
+        risk_per_share = abs(entry - sl) if sl > 0 else entry * 0.05
+        risk_amount = risk_per_share * qty
+
+        positions.append({
+            "id":            str(pos.get("id", "")),
+            "symbol":        sym,
+            "strategy":      pos.get("strategy", ""),
+            "signal":        signal,
+            "entry":         entry,
+            "cmp":           cmp,
+            "sl":            sl,
+            "target1":       float(pos.get("target1", 0) or 0),
+            "qty":           qty,
+            "pnl_pct":       pnl_pct,
+            "pnl_abs":       pnl_abs,
+            "position_value":position_value,
+            "risk_amount":   round(risk_amount, 2),
+            "entry_date":    str(pos.get("entry_date", "")),
+            "sector":        pos.get("sector", ""),
+        })
+
+    return {
+        "positions":      positions,
+        "total_pnl":      round(total_pnl, 2),
+        "total_pnl_pct":  round((total_pnl / total_invested * 100), 2) if total_invested > 0 else 0,
+        "total_invested": round(total_invested, 2),
+        "position_count": len(positions),
+    }
