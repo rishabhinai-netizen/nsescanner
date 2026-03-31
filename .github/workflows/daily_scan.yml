@@ -1,0 +1,83 @@
+name: Daily NSE Scanner
+
+on:
+  schedule:
+    - cron: '0 11 * * 1-5'
+    - cron: '30 13 * * 1-5'
+    - cron: '0 9 * * 0'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'eod, intraday, or autolearn'
+        required: false
+        default: 'eod'
+      universe:
+        description: 'nifty50, nifty200, or nifty500'
+        required: false
+        default: 'nifty500'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: EOD scan (4:30 PM IST slot)
+        if: >
+          (github.event_name == 'schedule' && github.event.schedule == '0 11 * * 1-5') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'eod')
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BREEZE_API_KEY: ${{ secrets.BREEZE_API_KEY }}
+          BREEZE_API_SECRET: ${{ secrets.BREEZE_API_SECRET }}
+          BREEZE_SESSION_TOKEN: ${{ secrets.BREEZE_SESSION_TOKEN }}
+        run: python auto_scanner.py --mode eod --universe nifty200
+
+      - name: Full scan + tracker (7:00 PM IST slot)
+        if: >
+          github.event_name == 'schedule' &&
+          github.event.schedule == '30 13 * * 1-5'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BREEZE_API_KEY: ${{ secrets.BREEZE_API_KEY }}
+          BREEZE_API_SECRET: ${{ secrets.BREEZE_API_SECRET }}
+          BREEZE_SESSION_TOKEN: ${{ secrets.BREEZE_SESSION_TOKEN }}
+        run: |
+          python auto_scanner.py --mode eod --universe nifty500
+          python auto_scanner.py --track
+
+      - name: Weekly auto-learning (Sunday)
+        if: >
+          (github.event_name == 'schedule' && github.event.schedule == '0 9 * * 0') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'autolearn')
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python auto_learner.py
+
+      - name: Commit signal CSV cache
+        if: always()
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'signals/'
+          message: 'chore: scan signals ${{ github.run_id }}'
+          default_actor: github_actions
+        continue-on-error: true
