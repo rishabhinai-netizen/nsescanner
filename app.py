@@ -65,9 +65,14 @@ from signal_tracker import (
     load_signals, load_tracker, save_signals_today,
     compute_tracker_stats, update_open_signals_live,
     generate_csv_download, get_signal_dates,
+    save_position, load_portfolio, close_position, get_portfolio_pnl,
+    _get_supabase,
 )
 from fno_list import is_fno, get_fno_tag
-from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REGIME_PF
+from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REGIME_PF, reset_pf_cache
+
+# v16 additions
+from app_additions import page_performance, page_portfolio, render_supabase_status
 from fundamental_gate import check_fundamental_quality, batch_fundamental_check
 from basket_export import generate_zerodha_basket, generate_generic_basket
 
@@ -445,7 +450,7 @@ PAGES = [
     "📊 Dashboard", "🔍 Scanner Hub", "📈 Charts & RS",
     "🔗 Option Chain", "🚀 IPO Scanner",
     "🔎 Stock Lookup", "📜 Signal History",
-    "🧪 Backtest", "📋 Signal Log", "📊 Tracker",
+    "🧪 Backtest", "📊 Performance", "💼 Portfolio",
     "📐 Trade Planner", "⭐ Watchlist", "📓 Journal", "⚙️ Settings"
 ]
 
@@ -457,7 +462,7 @@ if default_page not in PAGES:
 
 with st.sidebar:
     st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v15 — Full Suite: RRG + OC + IPO + SQI + Costs")
+    st.caption("v16 — Supabase + Alerts + Auto-Learning + Portfolio")
     st.markdown("---")
     page = st.radio("Navigation", PAGES,
                     index=PAGES.index(default_page),
@@ -498,6 +503,15 @@ with st.sidebar:
             st.session_state.breeze_connected = False
             try_breeze()
             st.rerun()
+
+    # v16: Supabase status
+    render_supabase_status()
+
+    # v16: PF cache refresh
+    if st.button("🧠 Refresh Live PF", key="refresh_pf", use_container_width=True,
+                 help="Reload profit factors from Supabase after auto-learning runs"):
+        reset_pf_cache()
+        st.toast("✅ PF cache refreshed — next scan uses latest data")
     
     # v5.2: Fundamental filter toggle
     st.session_state.fundamental_filter = st.checkbox(
@@ -1827,6 +1841,20 @@ def page_settings():
     | 🔴 PANIC | 15% | 1% | 0.5% | Shorts only — protect capital |
     """)
 
+    st.markdown("### 🗄️ Supabase (Data Persistence)")
+    sb = _get_supabase()
+    if sb:
+        st.success("✅ Supabase Connected — signals, portfolio, and auto-learning are active")
+    else:
+        st.warning("⚠️ Supabase not configured. Add to Streamlit Secrets:")
+        st.code('SUPABASE_URL = "https://aiebaqvclyzxajigvkfd.supabase.co"\nSUPABASE_SERVICE_KEY = "your_service_role_key"', language="toml")
+        st.markdown("""
+**Your project is already created:**
+- URL: `https://aiebaqvclyzxajigvkfd.supabase.co`
+- Get the service_role key from: supabase.com → nse-scanner-pro → Project Settings → API
+- Paste both in Streamlit Cloud → App Settings → Secrets
+        """)
+
     st.markdown("### 💹 Telegram Setup")
     st.caption("Alerts are sent via Telegram when scans run. Set in Streamlit Secrets:")
     st.code('TELEGRAM_BOT_TOKEN = "your_bot_token"\nTELEGRAM_CHAT_ID = "your_chat_id"', language="toml")
@@ -2384,8 +2412,8 @@ page_map = {
     "🔎 Stock Lookup": page_stock_lookup,
     "📜 Signal History": page_signal_history,
     "🧪 Backtest": page_backtest,
-    "📋 Signal Log": page_signal_log,
-    "📊 Tracker": page_tracker,
+    "📊 Performance": page_performance,
+    "💼 Portfolio": page_portfolio,
     "📐 Trade Planner": page_trade_planner,
     "⭐ Watchlist": page_watchlist,
     "📓 Journal": page_journal,
