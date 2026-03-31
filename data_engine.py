@@ -162,6 +162,69 @@ def fetch_nifty_data(period: str = "1y") -> Optional[pd.DataFrame]:
 # ICICI BREEZE API ENGINE — reads from Streamlit Secrets
 # ============================================================================
 
+def _get_breeze_token_from_supabase() -> str:
+    """
+    Read BREEZE_SESSION_TOKEN from Supabase app_config table.
+    Returns empty string if Supabase not configured or key not found.
+    """
+    try:
+        import os
+        url = ""
+        key = ""
+        try:
+            url = st.secrets.get("SUPABASE_URL", "")
+            key = st.secrets.get("SUPABASE_SERVICE_KEY", "") or st.secrets.get("SUPABASE_ANON_KEY", "")
+        except Exception:
+            pass
+        if not url:
+            url = os.environ.get("SUPABASE_URL", "")
+        if not key:
+            key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+        if not url or not key:
+            return ""
+        from supabase import create_client
+        sb = create_client(url, key)
+        resp = sb.table("app_config").select("value").eq("key", "BREEZE_SESSION_TOKEN").execute()
+        if resp.data:
+            token = resp.data[0].get("value", "")
+            if token and token != "placeholder":
+                return token
+        return ""
+    except Exception:
+        return ""
+
+
+def update_breeze_token_in_supabase(new_token: str) -> bool:
+    """
+    Write a new BREEZE_SESSION_TOKEN to Supabase app_config.
+    Called from Settings page when user updates the token.
+    """
+    try:
+        import os
+        url = ""
+        key = ""
+        try:
+            url = st.secrets.get("SUPABASE_URL", "")
+            key = st.secrets.get("SUPABASE_SERVICE_KEY", "")
+        except Exception:
+            pass
+        if not url: url = os.environ.get("SUPABASE_URL", "")
+        if not key: key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+        if not url or not key:
+            return False
+        from supabase import create_client
+        sb = create_client(url, key)
+        sb.table("app_config").upsert({
+            "key":        "BREEZE_SESSION_TOKEN",
+            "value":      new_token.strip(),
+            "updated_at": "now()",
+            "updated_by": "settings_page",
+        }, on_conflict="key").execute()
+        return True
+    except Exception:
+        return False
+
+
 class BreezeEngine:
     """
     ICICI Breeze API integration.
@@ -175,18 +238,28 @@ class BreezeEngine:
         self.connection_message = ""
     
     def connect_from_secrets(self) -> Tuple[bool, str]:
-        """Connect using credentials stored in Streamlit secrets."""
+        """
+        Connect using credentials.
+        Session token priority: Supabase app_config → Streamlit secrets
+        API key/secret: always from Streamlit secrets (permanent credentials)
+        """
         try:
-            api_key = st.secrets.get("BREEZE_API_KEY", "")
+            api_key    = st.secrets.get("BREEZE_API_KEY", "")
             api_secret = st.secrets.get("BREEZE_API_SECRET", "")
-            session_token = st.secrets.get("BREEZE_SESSION_TOKEN", "")
-            
-            if not api_key or not api_secret or not session_token:
-                return False, "Breeze credentials not found in Streamlit secrets. Add them in Settings > Secrets."
-            
+
+            if not api_key or not api_secret:
+                return False, "BREEZE_API_KEY / BREEZE_API_SECRET missing from Streamlit secrets."
             if api_key == "your_api_key_here":
-                return False, "Breeze credentials are placeholder values. Update them with real credentials."
-            
+                return False, "Breeze credentials are placeholder values. Update them in Streamlit secrets."
+
+            # Session token: try Supabase first (user can update via Settings page),
+            # then fall back to Streamlit secrets
+            session_token = _get_breeze_token_from_supabase()
+            if not session_token:
+                session_token = st.secrets.get("BREEZE_SESSION_TOKEN", "")
+            if not session_token:
+                return False, "BREEZE_SESSION_TOKEN missing. Update it in Settings → Breeze Token."
+
             return self.connect(api_key, api_secret, session_token)
         except Exception as e:
             return False, f"Error reading secrets: {str(e)}"
