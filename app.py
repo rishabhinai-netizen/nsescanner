@@ -41,7 +41,8 @@ import pytz, json, os, logging
 from stock_universe import get_stock_universe, get_sector, NIFTY_50
 from data_engine import (
     fetch_batch_daily, fetch_nifty_data,
-    Indicators, BreezeEngine, now_ist, IST
+    Indicators, BreezeEngine, now_ist, IST,
+    update_breeze_token_in_supabase, _get_breeze_token_from_supabase
 )
 from scanners import (
     STRATEGY_PROFILES, DAILY_SCANNERS, INTRADAY_SCANNERS,
@@ -1796,24 +1797,73 @@ def page_settings():
         if st.session_state.breeze_msg:
             msg_lower = st.session_state.breeze_msg.lower()
             if "session" in msg_lower or "token" in msg_lower or "expired" in msg_lower:
-                st.error("🔑 Breeze session token expired! Generate a new one from ICICI Direct and update Streamlit secrets.")
+                st.error("🔑 Breeze session token expired — update it below (no Streamlit secrets needed).")
             else:
                 st.error(st.session_state.breeze_msg)
         st.markdown("**Without Breeze:** ORB, VWAP, Lunch Low, Option Chain, Volume Profile are **disabled**. "
                      "VCP, EMA21, 52WH, Short, ATH work fine with daily data.")
-        st.warning("⚠️ Paste ONLY these lines in Streamlit Settings → Secrets:")
-        st.code('BREEZE_API_KEY = "your_key"\nBREEZE_API_SECRET = "your_secret"\nBREEZE_SESSION_TOKEN = "daily_token"', language="toml")
-        st.info("⚠️ Session Token expires daily. Regenerate each morning from ICICI Direct portal.")
-        with st.expander("Manual Connect"):
-            with st.form("bf"):
-                ak = st.text_input("Key", type="password")
-                asc = st.text_input("Secret", type="password")
-                st_ = st.text_input("Token", type="password")
-                if st.form_submit_button("Connect"):
-                    if ak and asc and st_:
-                        e = BreezeEngine(); ok, msg = e.connect(ak, asc, st_)
-                        if ok: st.success(msg); st.session_state.breeze_connected=True; st.session_state.breeze_engine=e
-                        else: st.error(msg)
+
+    # ── Daily token update — THE ONLY THING YOU DO EACH MORNING ──────────
+    st.markdown("#### 🔑 Update Session Token (do this each morning)")
+    st.caption(
+        "Generate a new token from ICICIDirect.com → My Profile → API → Generate Token. "
+        "Paste it here — no Streamlit secrets update needed, no GitHub secrets needed."
+    )
+    current_token = _get_breeze_token_from_supabase()
+    with st.form("token_update_form"):
+        new_token = st.text_input(
+            "New Session Token",
+            value="",
+            placeholder="Paste today's token here (e.g. 55163439)",
+            type="password",
+            help="Get from ICICIDirect → My Profile → Generate Session Token"
+        )
+        submitted = st.form_submit_button("✅ Update Token & Reconnect", type="primary", use_container_width=True)
+        if submitted:
+            if new_token.strip():
+                ok = update_breeze_token_in_supabase(new_token.strip())
+                if ok:
+                    st.success("✅ Token saved to Supabase. Reconnecting Breeze...")
+                    st.session_state.breeze_connected = False
+                    try_breeze()
+                    st.rerun()
+                else:
+                    # Supabase not connected yet — fall back to direct connect
+                    e = BreezeEngine()
+                    api_key = ""
+                    api_secret = ""
+                    try:
+                        api_key    = st.secrets.get("BREEZE_API_KEY", "")
+                        api_secret = st.secrets.get("BREEZE_API_SECRET", "")
+                    except Exception:
+                        pass
+                    if api_key and api_secret:
+                        ok2, msg = e.connect(api_key, api_secret, new_token.strip())
+                        if ok2:
+                            st.success("✅ Breeze connected! (Supabase not set up yet — token only saved locally for this session)")
+                            st.session_state.breeze_connected = True
+                            st.session_state.breeze_engine = e
+                            st.rerun()
+                        else:
+                            st.error(f"Token rejected: {msg}")
+                    else:
+                        st.error("BREEZE_API_KEY and BREEZE_API_SECRET must be in Streamlit secrets.")
+            else:
+                st.warning("Please paste a token before submitting.")
+
+    if current_token:
+        st.caption(f"Current token in Supabase: {current_token[:4]}••••{current_token[-4:] if len(current_token)>4 else ''} (last updated via this form)")
+
+    with st.expander("🔧 Advanced — Manual Connect with custom credentials"):
+        with st.form("bf"):
+            ak = st.text_input("Key", type="password")
+            asc = st.text_input("Secret", type="password")
+            st_ = st.text_input("Token", type="password")
+            if st.form_submit_button("Connect"):
+                if ak and asc and st_:
+                    e = BreezeEngine(); ok, msg = e.connect(ak, asc, st_)
+                    if ok: st.success(msg); st.session_state.breeze_connected=True; st.session_state.breeze_engine=e
+                    else: st.error(msg)
 
     st.session_state.universe_size = st.selectbox("Universe", ["nifty50","nifty200","nifty500"],
         index=["nifty50","nifty200","nifty500"].index(st.session_state.universe_size))
