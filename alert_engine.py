@@ -277,7 +277,7 @@ def check_entry_alerts(data_dict: dict, nifty_df, regime: dict) -> int:
         for r in signals:
             # Only fire for STRONG/ELITE SQI signals
             sqi_val = getattr(r, "sqi", 50)
-            if sqi_val < 60:
+            if sqi_val < 50:
                 continue
             if already_alerted(r.symbol, strategy, "TRIGGER"):
                 continue
@@ -315,14 +315,14 @@ def run_market_hours_scan():
     syms = get_stock_universe(universe)
     log.info(f"Fetching {len(syms)} stocks...")
 
-    data_dict = fetch_batch_daily(syms, "3mo")
+    data_dict = fetch_batch_daily(syms, "1y")
     if not data_dict:
         log.error("No data fetched — aborting")
         return
 
     log.info(f"Loaded {len(data_dict)} stocks")
 
-    nifty_df = fetch_nifty_data("3mo")
+    nifty_df = fetch_nifty_data("1y")
 
     # Enrich
     enriched = {}
@@ -344,14 +344,21 @@ def run_market_hours_scan():
     entries = check_entry_alerts(enriched, nifty_df, regime)
     log.info(f"Entry alerts fired: {entries}")
 
-    # 3. Send heartbeat summary if nothing fired (once per day, at open)
-    if exits + entries == 0 and dtime(9, 15) <= t <= dtime(9, 30):
+    # 3. Daily heartbeat at market open (9:15-9:30 AM IST) — always fires once per day
+    if dtime(9, 15) <= t <= dtime(9, 30):
+        regime_display = regime.get("regime_display", "Unknown") if regime else "Unknown"
+        nifty_close = regime.get("nifty_close", 0) if regime else 0
+        nifty_str = f"₹{nifty_close:,.0f}" if nifty_close else "—"
+        if exits + entries == 0:
+            signal_line = "🔍 Watching for setups — no signals yet"
+        else:
+            signal_line = f"✅ {entries} entry + {exits} exit alert(s) fired this window"
         send_telegram(
-            f"✅ <b>NSE Scanner Active</b>\n"
-            f"🕐 {now_ist.strftime('%d %b %H:%M IST')}\n"
-            f"📊 Regime: {regime.get('regime_display', 'Loading...')}\n"
+            f"🌅 <b>NSE Scanner — Market Open</b>\n"
+            f"📅 {now_ist.strftime('%d %b %Y, %I:%M %p IST')}\n"
+            f"📊 Regime: <b>{regime_display}</b> | Nifty: {nifty_str}\n"
             f"🔭 Watching {len(enriched)} stocks\n"
-            f"No signals yet — market just opened"
+            f"{signal_line}"
         )
 
     log.info(f"Alert engine done. Fired: exits={exits} entries={entries}")
