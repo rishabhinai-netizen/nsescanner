@@ -281,33 +281,42 @@ if st.session_state.journal is None:
 
 # Breeze auto-connect — uses threading (cross-platform, no SIGALRM)
 def try_breeze():
+    """
+    Auto-connect Breeze using connect_from_secrets().
+    Session token priority: Supabase app_config → Streamlit secrets.
+    API key/secret always come from Streamlit secrets.
+    Threading keeps the 20-second timeout for cross-platform safety.
+    """
     if st.session_state.breeze_connected: return
     try:
-        ak = st.secrets.get("BREEZE_API_KEY","")
-        asc = st.secrets.get("BREEZE_API_SECRET","")
-        st_ = st.secrets.get("BREEZE_SESSION_TOKEN","")
-        if ak and asc and st_ and "your_" not in ak:
-            import threading
-            result = {"ok": False, "msg": "Breeze connection timed out (20s)"}
-            def _connect():
-                try:
-                    e = BreezeEngine()
-                    ok, msg = e.connect(ak, asc, st_)
-                    result["ok"] = ok
-                    result["msg"] = msg
-                    if ok:
-                        result["engine"] = e
-                except Exception as ex:
-                    result["msg"] = f"Breeze: {type(ex).__name__}: {str(ex)[:80]}"
-            t = threading.Thread(target=_connect, daemon=True)
-            t.start()
-            t.join(timeout=20)
-            st.session_state.breeze_connected = result.get("ok", False)
-            st.session_state.breeze_msg = result.get("msg", "")
-            if result.get("ok"):
-                st.session_state.breeze_engine = result.get("engine")
-        else:
-            st.session_state.breeze_msg = "Breeze credentials not configured"
+        ak = ""
+        try:
+            ak = st.secrets.get("BREEZE_API_KEY", "")
+        except Exception:
+            pass
+        if not ak or "your_" in ak:
+            st.session_state.breeze_msg = "BREEZE_API_KEY not set in Streamlit secrets."
+            return
+
+        import threading
+        result = {"ok": False, "msg": "Breeze connection timed out (20s)"}
+        def _connect():
+            try:
+                e = BreezeEngine()
+                ok, msg = e.connect_from_secrets()
+                result["ok"] = ok
+                result["msg"] = msg
+                if ok:
+                    result["engine"] = e
+            except Exception as ex:
+                result["msg"] = f"Breeze: {type(ex).__name__}: {str(ex)[:80]}"
+        t = threading.Thread(target=_connect, daemon=True)
+        t.start()
+        t.join(timeout=20)
+        st.session_state.breeze_connected = result.get("ok", False)
+        st.session_state.breeze_msg = result.get("msg", "")
+        if result.get("ok"):
+            st.session_state.breeze_engine = result.get("engine")
     except Exception as ex:
         st.session_state.breeze_msg = f"Breeze init: {type(ex).__name__}: {str(ex)[:80]}"
 try_breeze()
