@@ -188,9 +188,12 @@ def _get_breeze_token_from_supabase() -> str:
         if resp.data:
             token = resp.data[0].get("value", "")
             if token and token != "placeholder":
+                logger.info(f"Breeze token loaded from Supabase: {token[:4]}****")
                 return token
+        logger.warning("Breeze token not found in Supabase app_config")
         return ""
-    except Exception:
+    except Exception as e:
+        logger.warning(f"_get_breeze_token_from_supabase failed: {type(e).__name__}: {e}")
         return ""
 
 
@@ -217,7 +220,6 @@ def update_breeze_token_in_supabase(new_token: str) -> bool:
         sb.table("app_config").upsert({
             "key":        "BREEZE_SESSION_TOKEN",
             "value":      new_token.strip(),
-            "updated_at": "now()",
             "updated_by": "settings_page",
         }, on_conflict="key").execute()
         return True
