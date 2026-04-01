@@ -1895,7 +1895,52 @@ def page_settings():
                 st.warning("Please paste a token before submitting.")
 
     if current_token:
-        st.caption(f"Current token in Supabase: {current_token[:4]}••••{current_token[-4:] if len(current_token)>4 else ''} (last updated via this form)")
+        st.caption(f"Current token in Supabase: {current_token[:4]}••••{current_token[-4:] if len(current_token) > 4 else ''}")
+    else:
+        st.warning("⚠️ No token found in Supabase. Paste one above and click Update.")
+
+    # ── Diagnostic test (collapsible) ──────────────────────────────────────
+    with st.expander("🔍 Diagnose connection (tap if Breeze not connecting)"):
+        if st.button("Run diagnostic", key="breeze_diag"):
+            st.markdown("**Step 1** — Reading token from Supabase...")
+            diag_token = _get_breeze_token_from_supabase()
+            if diag_token:
+                st.success(f"✅ Supabase returned token: {diag_token[:4]}••••{diag_token[-4:]}")
+            else:
+                st.error("❌ Supabase returned empty token. Check SUPABASE_URL and SUPABASE_SERVICE_KEY are in Streamlit secrets.")
+            
+            st.markdown("**Step 2** — Reading API key/secret from Streamlit secrets...")
+            try:
+                _ak = st.secrets.get("BREEZE_API_KEY", "")
+                _as = st.secrets.get("BREEZE_API_SECRET", "")
+                if _ak and _as:
+                    st.success(f"✅ API Key: {_ak[:6]}•••• | Secret: {_as[:6]}••••")
+                else:
+                    st.error("❌ BREEZE_API_KEY or BREEZE_API_SECRET missing from Streamlit secrets")
+                    _ak, _as = "", ""
+            except Exception as ex:
+                st.error(f"❌ Cannot read secrets: {ex}")
+                _ak, _as = "", ""
+            
+            if diag_token and _ak and _as:
+                st.markdown("**Step 3** — Attempting Breeze connection...")
+                try:
+                    e_test = BreezeEngine()
+                    ok_test, msg_test = e_test.connect(_ak, _as, diag_token)
+                    if ok_test:
+                        st.success(f"✅ Breeze connected! Setting session state...")
+                        st.session_state.breeze_connected = True
+                        st.session_state.breeze_engine = e_test
+                        st.session_state.breeze_msg = "Connected via diagnostic"
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Connection failed: {msg_test}")
+                        if "session" in msg_test.lower() or "invalid" in msg_test.lower():
+                            st.info("💡 This means the token itself is wrong or expired. Get a fresh token from ICICIDirect → My Profile → API → Generate Token")
+                        elif "key" in msg_test.lower():
+                            st.info("💡 API key or secret seems wrong. Double-check them in Streamlit secrets.")
+                except Exception as ex:
+                    st.error(f"❌ Exception during connect: {type(ex).__name__}: {ex}")
 
     with st.expander("🔧 Advanced — Manual Connect with custom credentials"):
         with st.form("bf"):
