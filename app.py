@@ -279,31 +279,55 @@ for k, v in {
 if st.session_state.journal is None:
     st.session_state.journal = load_journal()
 
-# Breeze auto-connect — uses threading (cross-platform, no SIGALRM)
+# Breeze auto-connect — reads all credentials in MAIN thread, connects in worker thread
 def try_breeze():
     """
-    Auto-connect Breeze using connect_from_secrets().
+    Auto-connect Breeze.
+    KEY FIX: st.secrets and Supabase are accessed in the MAIN thread before
+    the worker thread starts. This avoids silent failures with st.secrets and
+    supabase client inside threading.Thread contexts.
+
     Session token priority: Supabase app_config → Streamlit secrets.
-    API key/secret always come from Streamlit secrets.
-    Threading keeps the 20-second timeout for cross-platform safety.
     """
     if st.session_state.breeze_connected: return
     try:
-        ak = ""
+        # ── Step 1: Read ALL credentials in the MAIN thread ──────────────
+        api_key    = ""
+        api_secret = ""
         try:
-            ak = st.secrets.get("BREEZE_API_KEY", "")
+            api_key    = st.secrets.get("BREEZE_API_KEY", "")
+            api_secret = st.secrets.get("BREEZE_API_SECRET", "")
         except Exception:
             pass
-        if not ak or "your_" in ak:
+
+        if not api_key or "your_" in api_key:
             st.session_state.breeze_msg = "BREEZE_API_KEY not set in Streamlit secrets."
             return
+        if not api_secret:
+            st.session_state.breeze_msg = "BREEZE_API_SECRET not set in Streamlit secrets."
+            return
 
+        # ── Step 2: Get session token (main thread — Supabase first) ─────
+        session_token = _get_breeze_token_from_supabase()   # reads Supabase in main thread
+        if not session_token:
+            try:
+                session_token = st.secrets.get("BREEZE_SESSION_TOKEN", "")
+            except Exception:
+                pass
+        if not session_token:
+            st.session_state.breeze_msg = (
+                "Breeze session token not found. "
+                "Paste today's token in Settings → Update Session Token."
+            )
+            return
+
+        # ── Step 3: Connect in worker thread (only network I/O now) ──────
         import threading
         result = {"ok": False, "msg": "Breeze connection timed out (20s)"}
         def _connect():
             try:
                 e = BreezeEngine()
-                ok, msg = e.connect_from_secrets()
+                ok, msg = e.connect(api_key, api_secret, session_token)
                 result["ok"] = ok
                 result["msg"] = msg
                 if ok:
@@ -511,6 +535,8 @@ with st.sidebar:
         st.markdown('<div class="bb bb-off">⚪ Breeze Off — intraday disabled</div>', unsafe_allow_html=True)
         if st.button("🔄 Retry Breeze", key="retry_breeze", use_container_width=True):
             st.session_state.breeze_connected = False
+            st.session_state.breeze_msg = ""
+            st.session_state.breeze_engine = None
             try_breeze()
             st.rerun()
 
@@ -1832,9 +1858,17 @@ def page_settings():
             if new_token.strip():
                 ok = update_breeze_token_in_supabase(new_token.strip())
                 if ok:
-                    st.success("✅ Token saved to Supabase. Reconnecting Breeze...")
+                    st.success("✅ Token saved. Reconnecting...")
+                    # Reset state so try_breeze() runs fresh
                     st.session_state.breeze_connected = False
+                    st.session_state.breeze_msg = ""
+                    st.session_state.breeze_engine = None
                     try_breeze()
+                    if st.session_state.breeze_connected:
+                        st.success("✅ Breeze connected successfully!")
+                    else:
+                        st.error(f"Connection failed: {st.session_state.breeze_msg}")
+                        st.info("The token was saved. Try clicking 'Retry Breeze' in the sidebar, or check the token is today's value.")
                     st.rerun()
                 else:
                     # Supabase not connected yet — fall back to direct connect
