@@ -549,12 +549,31 @@ with st.sidebar:
         reset_pf_cache()
         st.toast("✅ PF cache refreshed — next scan uses latest data")
     
-    # v5.2: Fundamental filter toggle
+    # Fundamental filter toggle with clear explanation
     st.session_state.fundamental_filter = st.checkbox(
         "🔬 Fundamental Filter",
         value=st.session_state.fundamental_filter,
         key="sidebar_fund_toggle",
-        help="When enabled, checks EPS growth, revenue, PE ratio, debt/equity for each signal and adds quality grades.")
+        help=(
+            "Adds a grade (A/B/C/F) to each scan signal based on:
+"
+            "• EPS growth > 0% (company earning more)
+"
+            "• Revenue growth > 0% (business expanding)
+"
+            "• PE ratio < 100 (not extreme speculation)
+"
+            "• Debt/Equity < 2x (not over-leveraged)
+
+"
+            "Grade A/B = fundamentals support the trade.
+"
+            "Grade C/F = technical signal but weak fundamentals — trade with caution or skip.
+
+"
+            "Data comes from Yahoo Finance and may lag by 1-2 quarters. "
+            "Slows down scan slightly. Best for positional trades (VCP, 52WH)."
+        ))
     
     # v5.2: Strategy Health Status
     tracker_for_health = load_tracker()
@@ -1259,6 +1278,22 @@ def page_charts_rs():
 # ============================================================================
 def page_trade_planner():
     st.markdown("# 📐 Trade Planner")
+    st.caption("Calculate exact position size, stop loss, and targets for any trade signal.")
+    with st.expander("💡 How to use Trade Planner", expanded=False):
+        st.markdown("""
+**Workflow:**
+1. Run a scan in Scanner Hub → a signal appears (e.g. VCP on ASHOKLEY, Entry ₹220, SL ₹207)
+2. Come to Trade Planner → select that signal from the dropdown
+3. The planner automatically fills Entry and SL from the scan
+4. It shows: **how many shares to buy**, **exact ₹ risk**, **T1/T2/T3 targets**
+5. It also shows if your total portfolio risk is within safe limits
+
+**The formula:**  
+Shares = (Capital × Risk%) ÷ (Entry - Stop Loss)  
+Example: ₹5,00,000 × 1.5% = ₹7,500 risk ÷ ₹13 per share = 576 shares
+
+**Regime adjustment:** In PANIC market, position size is automatically reduced to 15%.
+        """)
     c1,c2 = st.columns(2)
     with c1:
         capital = st.number_input("Capital (₹)", value=st.session_state.capital, step=50000, min_value=10000)
@@ -1306,6 +1341,17 @@ def page_trade_planner():
 # ============================================================================
 def page_watchlist():
     st.markdown("# ⭐ Watchlist")
+    st.caption("Save stocks from Scanner Hub to track, plus see which setups are 'almost triggering'.")
+    with st.expander("💡 How to use Watchlist", expanded=False):
+        st.markdown("""
+**Two sections:**
+
+**⭐ Manual Watchlist:** Stocks you've saved from Scanner Hub by clicking ⭐ Watch. Shows entry, SL, target for each.
+
+**👀 Approaching Setups:** Stocks that are 50–95% through a setup but haven't triggered yet. These are your "get ready" stocks. Example: a VCP setup that's 85% compressed — it may break out tomorrow. Set a price alert on these stocks so you're ready when they trigger.
+
+**How to add stocks:** In Scanner Hub, expand any signal and click ⭐ Watch.
+        """)
     
     tab1, tab2 = st.tabs(["⭐ Manual Watchlist", "👀 Approaching Setups"])
     
@@ -1364,6 +1410,21 @@ def page_watchlist():
 # ============================================================================
 def page_journal():
     st.markdown("# 📓 Trade Journal")
+    st.caption("Record every trade you take, track your P&L, and see your equity curve over time.")
+    with st.expander("💡 How to use Journal", expanded=False):
+        st.markdown("""
+**Why journal?** Most traders lose money because they don't know which of their trades are actually profitable. The journal tells you.
+
+**Workflow:**
+1. When you take a trade from Scanner Hub, click 📓 Journal button on that signal — it pre-fills entry/SL/target
+2. When you exit the trade, come to Journal, find the open trade, enter the exit price → it calculates your P&L
+3. Over time the **equity curve** shows if you're actually making money
+
+**Key stats to watch:**
+- **Win Rate > 50%** with R:R of 1:2 = you're profitable
+- **Profit Factor > 1.3** = every ₹1 lost, you make ₹1.30+ in wins
+- If your actual results are worse than backtest → you're overriding signals or entering late
+        """)
     journal = st.session_state.journal
     analytics = compute_journal_analytics(journal)
     if analytics and analytics.get("closed_trades", 0) > 0:
@@ -1435,12 +1496,30 @@ def page_journal():
 # ============================================================================
 def page_backtest():
     st.markdown("# 🧪 Backtest Engine")
-    
+    st.caption("Tests how a strategy would have performed on historical data. Use to validate a strategy before trading real money.")
+
+    with st.expander("💡 How to use Backtest", expanded=False):
+        st.markdown("""
+**What it does:** Simulates a strategy on past NSE data and shows win rate, profit factor, and equity curve.
+
+**Typical workflow:**
+1. Load data from Dashboard (Nifty 200 or 500)
+2. Select a strategy (e.g. VCP) and a stock
+3. Run backtest → check **Net Profit Factor** (PF > 1.3 = has edge)
+4. Run **Portfolio Backtest** to see strategy performance across 200+ stocks
+5. Use results to decide which strategies to focus on in Scanner Hub
+
+**Key numbers to look at:**
+- **Net PF > 1.3** = strategy has real edge after costs
+- **Win Rate > 45%** = acceptable (high R:R strategies win less often but still profit)
+- **Max Drawdown < 20%** = survivable worst case
+- **Avg Hold < 25 days** = signals resolve quickly
+        """)
+
     if not st.session_state.data_loaded:
         st.warning("Load data from Dashboard first.")
         return
     
-    # === CLEAR EXPLANATION ===
     with st.expander("ℹ️ How does backtesting work?", expanded=False):
         st.markdown(f"""
 **What it does:** Simulates running a strategy on historical data to see how it would have performed.
@@ -2232,15 +2311,14 @@ def page_signal_history():
 # ============================================================================
 def page_option_chain():
     st.markdown("# 🔗 Option Chain Analysis")
-    st.caption("7-factor composite scoring for F&O stocks via Breeze API. "
-               "Academic foundation: Cremers & Weinbaum (2010) IV Spread signal, NSE-specific PCR thresholds.")
+    st.caption("7-factor composite scoring for F&O stocks via Breeze API.")
 
     if not OPTION_CHAIN_AVAILABLE:
-        st.error("option_chain.py module not found. Please ensure it's in your app directory.")
+        st.error("option_chain.py module not found.")
         return
 
     if not st.session_state.breeze_connected:
-        st.warning("🔌 Option Chain requires Breeze API. Connect Breeze in Settings.")
+        st.warning("🔌 Option Chain requires Breeze API. Connect Breeze in Settings → Update Session Token.")
         return
 
     be = st.session_state.breeze_engine
@@ -2248,12 +2326,32 @@ def page_option_chain():
         st.error("Breeze engine not initialized.")
         return
 
-    # Get F&O stock list
+    # Market hours check — option chain data is only live during trading hours
+    _ist_now = now_ist()
+    from datetime import time as _dtime
+    _market_open  = _dtime(9, 15)
+    _market_close = _dtime(15, 30)
+    _is_market    = _market_open <= _ist_now.time() <= _market_close and _ist_now.weekday() < 5
+
+    if not _is_market:
+        st.warning(
+            f"⏰ **Market is closed** ({_ist_now.strftime('%I:%M %p IST')}).  "
+            f"Option chain data from Breeze is only available during trading hours "
+            f"(9:15 AM – 3:30 PM IST, Mon–Fri).  "
+            f"You can still try — Breeze may return last-seen data for some stocks."
+        )
+
+    # Allow using any F&O symbol by typing — don't require data load first
     enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
-    fno_stocks = sorted([s for s in enriched.keys() if is_fno(s)])
+    fno_stocks_loaded = sorted([s for s in enriched.keys() if is_fno(s)])
+
+    # Build the complete F&O list (don't require data load)
+    from fno_list import FNO_STOCKS
+    all_fno = sorted(FNO_STOCKS)
+    fno_stocks = fno_stocks_loaded if fno_stocks_loaded else all_fno
 
     if not fno_stocks:
-        st.info("Load data from Dashboard first to see F&O stocks.")
+        st.info("No F&O stocks available. Load data from Dashboard or the full list will appear here.")
         return
 
     c1, c2, c3 = st.columns(3)
