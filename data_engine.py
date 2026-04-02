@@ -425,17 +425,30 @@ class BreezeEngine:
             expiry_date_plain = None
             if expiry_date is None:
                 today = ddate.today()
-                # Find nearest Thursday (NSE weekly expiry)
-                for offset in range(0, 14):
+                now_time = datetime.now().time()
+                import time as _time_mod
+                # If today is Thursday AND market has closed (after 3:30 PM IST),
+                # options have expired — use next Thursday
+                is_expiry_day = today.weekday() == 3
+                market_closed = now_time.hour > 15 or (now_time.hour == 15 and now_time.minute >= 30)
+                start_offset = 7 if (is_expiry_day and market_closed) else 0
+
+                # Build list of next 3 expiry candidates to try
+                expiry_candidates = []
+                for offset in range(start_offset, start_offset + 21):
                     candidate = today + timedelta(days=offset)
                     if candidate.weekday() == 3:  # Thursday
-                        expiry_date_plain = candidate.strftime("%Y-%m-%d")
-                        expiry_fmt = candidate.strftime("%Y-%m-%dT06:00:00.000Z")
+                        expiry_candidates.append(candidate)
+                    if len(expiry_candidates) >= 3:
                         break
-                if not expiry_date_plain:
-                    candidate = today + timedelta(days=7)
-                    expiry_date_plain = candidate.strftime("%Y-%m-%d")
-                    expiry_fmt = candidate.strftime("%Y-%m-%dT06:00:00.000Z")
+
+                if not expiry_candidates:
+                    expiry_candidates = [today + timedelta(days=7)]
+
+                # Use nearest expiry as primary; we'll try others if this fails
+                primary = expiry_candidates[0]
+                expiry_date_plain = primary.strftime("%Y-%m-%d")
+                expiry_fmt        = primary.strftime("%Y-%m-%dT06:00:00.000Z")
             else:
                 # Normalize whatever format is passed in
                 expiry_date_plain = expiry_date[:10]
@@ -470,8 +483,19 @@ class BreezeEngine:
             calls_raw = _fetch_leg("call")
             puts_raw  = _fetch_leg("put")
 
+            # If primary expiry returns nothing, try next Thursday automatically
+            if not calls_raw and not puts_raw and len(expiry_candidates) > 1:
+                for next_exp in expiry_candidates[1:]:
+                    expiry_date_plain = next_exp.strftime("%Y-%m-%d")
+                    expiry_fmt        = next_exp.strftime("%Y-%m-%dT06:00:00.000Z")
+                    logger.info(f"Retrying with next expiry: {expiry_date_plain}")
+                    calls_raw = _fetch_leg("call")
+                    puts_raw  = _fetch_leg("put")
+                    if calls_raw or puts_raw:
+                        break
+
             if not calls_raw and not puts_raw:
-                logger.warning(f"fetch_option_chain({symbol}→{breeze_symbol}): empty response for expiry {expiry_fmt}")
+                logger.warning(f"fetch_option_chain({symbol}→{breeze_symbol}): empty response for all expiries tried")
                 return None
 
             def _parse_legs(raw_list: list) -> pd.DataFrame:
