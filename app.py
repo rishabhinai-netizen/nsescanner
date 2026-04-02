@@ -549,31 +549,13 @@ with st.sidebar:
         reset_pf_cache()
         st.toast("✅ PF cache refreshed — next scan uses latest data")
     
-    # Fundamental filter toggle with clear explanation
+    # Fundamental filter toggle
     st.session_state.fundamental_filter = st.checkbox(
         "🔬 Fundamental Filter",
         value=st.session_state.fundamental_filter,
         key="sidebar_fund_toggle",
-        help=(
-            "Adds a grade (A/B/C/F) to each scan signal based on:
-"
-            "• EPS growth > 0% (company earning more)
-"
-            "• Revenue growth > 0% (business expanding)
-"
-            "• PE ratio < 100 (not extreme speculation)
-"
-            "• Debt/Equity < 2x (not over-leveraged)
+        help="Adds grade A/B/C/F to each signal: EPS growth, Revenue growth, PE < 100, D/E < 2x. A/B = trade with confidence. C/F = weak fundamentals, use caution. Best for swing trades.")
 
-"
-            "Grade A/B = fundamentals support the trade.
-"
-            "Grade C/F = technical signal but weak fundamentals — trade with caution or skip.
-
-"
-            "Data comes from Yahoo Finance and may lag by 1-2 quarters. "
-            "Slows down scan slightly. Best for positional trades (VCP, 52WH)."
-        ))
     
     # v5.2: Strategy Health Status
     tracker_for_health = load_tracker()
@@ -2326,19 +2308,15 @@ def page_option_chain():
         st.error("Breeze engine not initialized.")
         return
 
-    # Market hours check — option chain data is only live during trading hours
+    # Market hours note — Breeze returns last available data even after hours
     _ist_now = now_ist()
     from datetime import time as _dtime
-    _market_open  = _dtime(9, 15)
-    _market_close = _dtime(15, 30)
-    _is_market    = _market_open <= _ist_now.time() <= _market_close and _ist_now.weekday() < 5
-
+    _is_market = _dtime(9,15) <= _ist_now.time() <= _dtime(15,30) and _ist_now.weekday() < 5
     if not _is_market:
-        st.warning(
-            f"⏰ **Market is closed** ({_ist_now.strftime('%I:%M %p IST')}).  "
-            f"Option chain data from Breeze is only available during trading hours "
-            f"(9:15 AM – 3:30 PM IST, Mon–Fri).  "
-            f"You can still try — Breeze may return last-seen data for some stocks."
+        st.info(
+            f"Market closed ({_ist_now.strftime('%I:%M %p IST')}). "
+            f"Showing last available option chain data. OI and PCR figures reflect closing positions — "
+            f"useful for planning next session's trades."
         )
 
     # Allow using any F&O symbol by typing — don't require data load first
@@ -2521,19 +2499,22 @@ def page_ipo_scanner():
     tab1, tab2, tab3 = st.tabs(["🔍 Scan IPO Universe", "⚠️ Lock-up Alerts", "📖 IPO Strategy Guide"])
 
     with tab1:
-        c1, c2 = st.columns(2)
+        c1, c2, c3 = st.columns(3)
         with c1:
-            st.caption("Scans recently listed IPOs for base formations and breakout signals.")
-            include_unlisted_year = st.slider("Include IPOs listed in last N months", 3, 36, 18)
+            st.caption("Scans Mainboard + SME IPOs for base formations and breakout signals.")
+            include_months = st.slider("Months of history", 3, 36, 24)
         with c2:
-            min_score = st.slider("Min Quality Score", 0, 80, 40)
+            min_score = st.slider("Min Quality Score", 0, 80, 0)
+        with c3:
+            seg_filter = st.selectbox("Segment", ["All", "Mainboard", "SME"])
 
         if st.button("🔍 Scan IPO Universe", type="primary", key="ipo_scan"):
-            with st.spinner("Fetching IPO list and analyzing setups..."):
+            with st.spinner("Analyzing IPOs (uses yfinance — no NSE scraping needed)..."):
                 try:
                     results = scan_ipo_universe(
-                        max_listing_months=include_unlisted_year,
+                        max_listing_months=include_months,
                         min_score=min_score,
+                        segment_filter=seg_filter,
                         breeze_engine=st.session_state.breeze_engine
                     )
                     st.session_state.ipo_results = results
@@ -2561,15 +2542,16 @@ def page_ipo_scanner():
                 for r in sorted(subset, key=lambda x: -x.score):
                     rows.append({
                         "Symbol": r.symbol,
+                        "Company": r.company_name[:20] if hasattr(r,'company_name') else "",
+                        "Segment": getattr(r, "segment", ""),
                         "Score": f"{r.score:.0f}/100",
                         "Signal": r.signal,
                         "CMP": fp(getattr(r, "cmp", 0)),
                         "Issue Price": fp(getattr(r, "issue_price", 0)),
+                        "Gain%": f"{getattr(r,'gain_since_listing',0):+.1f}%",
                         "Listing Date": str(getattr(r, "listing_date", "")),
-                        "Base Depth": f"{getattr(r, 'base_depth_pct', 0):.1f}%",
+                        "Base": f"{getattr(r,'base_depth_pct',0):.0f}%d/{getattr(r,'base_days',0)}d",
                         "RS": str(getattr(r, "rs_rating", 0)),
-                        "QIB Sub": f"{getattr(r, 'qib_subscription', 0):.1f}x",
-                        "8W Hold": "✅" if getattr(r, "eight_week_hold", False) else "",
                     })
                 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
         else:
