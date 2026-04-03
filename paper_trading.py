@@ -379,11 +379,15 @@ def render_paper_trading_page():
     st.progress(xp_progress, text=f"{xp - xp_start} / {xp_next - xp_start} XP to Level {level_num + 1}")
     st.divider()
 
+    open_trades_check = get_open_paper_trades()
+    default_tab = 3 if not open_trades_check else 0
     tabs = st.tabs(["📋 Open Positions", "📜 History", "🏆 Achievements", "⚡ Take a Trade"])
+    if default_tab == 3:
+        st.info("👆 No open positions yet. Click **⚡ Take a Trade** tab above to accept a signal and start playing.")
 
     # ── OPEN POSITIONS ────────────────────────────────────────────────────────
     with tabs[0]:
-        open_trades = get_open_paper_trades()
+        open_trades = open_trades_check  # already fetched above
         if not open_trades:
             st.info("No open paper positions. Go to 'Take a Trade' to accept a signal.")
         for t in open_trades:
