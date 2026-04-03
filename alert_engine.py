@@ -33,6 +33,14 @@ from scanners import (
 from signal_tracker import _get_secret, _get_supabase, load_signals, update_open_signals_live
 from fno_list import get_fno_tag
 
+# Optional: Perplexity news enrichment
+try:
+    from perplexity_enrichment import enrich_telegram_alert
+    PERPLEXITY_ENABLED = bool(os.environ.get("PERPLEXITY_API_KEY", ""))
+except ImportError:
+    PERPLEXITY_ENABLED = False
+    def enrich_telegram_alert(msg, symbol, strategy, direction): return msg
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
@@ -282,6 +290,9 @@ def check_entry_alerts(data_dict: dict, nifty_df, regime: dict) -> int:
             if already_alerted(r.symbol, strategy, "TRIGGER"):
                 continue
             msg = fmt_entry_alert(r)
+            # Enrich with Perplexity news context for ELITE/STRONG signals only (cost control)
+            if PERPLEXITY_ENABLED and getattr(r, 'sqi_grade', '') in ('ELITE', 'STRONG'):
+                msg = enrich_telegram_alert(msg, r.symbol, r.strategy, r.signal)
             if send_telegram(msg):
                 mark_alerted(r.symbol, strategy, "TRIGGER", r.entry)
                 fired += 1
