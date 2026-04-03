@@ -73,7 +73,7 @@ from fno_list import is_fno, get_fno_tag
 from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REGIME_PF, reset_pf_cache
 
 # v16 additions
-from app_additions import page_performance, page_portfolio, render_supabase_status
+from app_additions import page_performance, render_supabase_status
 
 # v17 additions
 try:
@@ -497,8 +497,8 @@ PAGES = [
     "📊 Dashboard", "🔍 Scanner Hub", "📈 Charts & RS",
     "🔗 Option Chain", "🚀 IPO Scanner",
     "🔎 Stock Lookup", "📜 Signal History",
-    "🧪 Backtest", "📊 Performance", "💼 Portfolio",
-    "📐 Trade Planner", "⭐ Watchlist", "📓 Journal", "🎮 Virtual Game", "⚙️ Settings"
+    "🧪 Backtest", "📊 Performance",
+    "🎮 Virtual Game", "⚙️ Settings"
 ]
 
 # Persist page selection in URL query params
@@ -2711,9 +2711,6 @@ page_map = {
     "🧪 Backtest": page_backtest,
     "📊 Performance": page_performance,
     "💼 Portfolio": page_portfolio,
-    "📐 Trade Planner": page_trade_planner,
-    "⭐ Watchlist": page_watchlist,
-    "📓 Journal": page_journal,
     "🎮 Virtual Game": (render_paper_trading_page if PAPER_TRADING_AVAILABLE else lambda: st.warning("paper_trading.py not found in repo")),
     "⚙️ Settings": page_settings,
 }
