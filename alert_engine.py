@@ -36,7 +36,7 @@ from fno_list import get_fno_tag
 # Optional: Perplexity news enrichment
 try:
     from perplexity_enrichment import enrich_telegram_alert
-    PERPLEXITY_ENABLED = bool(os.environ.get("PERPLEXITY_API_KEY", ""))
+    PERPLEXITY_ENABLED = bool(os.environ.get("GEMINI_API_KEY", ""))
 except ImportError:
     PERPLEXITY_ENABLED = False
     def enrich_telegram_alert(msg, symbol, strategy, direction): return msg
@@ -290,8 +290,8 @@ def check_entry_alerts(data_dict: dict, nifty_df, regime: dict) -> int:
             if already_alerted(r.symbol, strategy, "TRIGGER"):
                 continue
             msg = fmt_entry_alert(r)
-            # Enrich with Perplexity news context for ELITE/STRONG signals only (cost control)
-            if PERPLEXITY_ENABLED and getattr(r, 'sqi_grade', '') in ('ELITE', 'STRONG'):
+            # Enrich with Gemini news context for all signals with SQI >= 50
+            if PERPLEXITY_ENABLED and sqi_val >= 50:
                 msg = enrich_telegram_alert(msg, r.symbol, r.strategy, r.signal)
             if send_telegram(msg):
                 mark_alerted(r.symbol, strategy, "TRIGGER", r.entry)
