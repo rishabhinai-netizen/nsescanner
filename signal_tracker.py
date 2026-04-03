@@ -97,13 +97,45 @@ def save_signals_today(signals_list: list, regime: dict = None) -> int:
 
     saved = 0
 
-    # --- Supabase write (upsert — ignores duplicates via UNIQUE constraint) ---
+    # --- Supabase write (smart upsert: preserves first_seen_ist, increments scan_count) ---
     sb = _get_supabase()
     if sb:
         try:
-            sb.table("signals").upsert(new_rows, on_conflict="date,strategy,symbol").execute()
-            saved = len(new_rows)
-            logger.info(f"Supabase: saved {saved} signals for {today}")
+            from datetime import datetime
+            import pytz
+            IST = pytz.timezone('Asia/Kolkata')
+            ist_now = datetime.now(IST).isoformat()
+
+            # Fetch existing signals for today to know which are new vs re-detected
+            existing_res = sb.table("signals").select("id,symbol,strategy,scan_count").eq("date", today).execute()
+            existing_map = {(r["symbol"], r["strategy"]): r for r in (existing_res.data or [])}
+
+            new_inserts, updates = [], []
+            for row in new_rows:
+                key = (row["symbol"], row["strategy"])
+                if key in existing_map:
+                    # Signal seen before today — update CMP and tracking fields only
+                    updates.append({
+                        "id":           existing_map[key]["id"],
+                        "cmp":          row["cmp"],
+                        "scan_count":   (existing_map[key].get("scan_count") or 1) + 1,
+                        "last_seen_ist": ist_now,
+                    })
+                else:
+                    # Brand new signal — set first_seen and last_seen
+                    row["first_seen_ist"] = ist_now
+                    row["last_seen_ist"]  = ist_now
+                    row["scan_count"]     = 1
+                    new_inserts.append(row)
+
+            if new_inserts:
+                sb.table("signals").insert(new_inserts).execute()
+                saved += len(new_inserts)
+            for upd in updates:
+                _id = upd.pop("id")
+                sb.table("signals").update(upd).eq("id", _id).execute()
+
+            logger.info(f"Supabase: {len(new_inserts)} new + {len(updates)} re-detected signals for {today}")
         except Exception as e:
             logger.warning(f"Supabase write failed: {e} — falling back to CSV")
 
