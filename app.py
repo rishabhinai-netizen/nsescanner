@@ -2710,7 +2710,6 @@ page_map = {
     "📜 Signal History": page_signal_history,
     "🧪 Backtest": page_backtest,
     "📊 Performance": page_performance,
-    "💼 Portfolio": page_portfolio,
     "🎮 Virtual Game": (render_paper_trading_page if PAPER_TRADING_AVAILABLE else lambda: st.warning("paper_trading.py not found in repo")),
     "⚙️ Settings": page_settings,
 }
