@@ -73,7 +73,7 @@ NIFTY_NEXT_50 = [
     "HAL", "HAVELLS", "ICICIPRULI", "IDEA", "INDIGO",
     "IOC", "IRCTC", "IRFC", "JIOFIN", "JINDALSTEL",
     "LICI", "LODHA", "LUPIN", "MARICO", "MOTHERSON",
-    "NAUKRI", "NHPC", "OBEROIRLTY", "PEL", "PERSISTENT",
+    "NAUKRI", "NHPC", "OBEROIRLTY", "PIRAMALPHARM", "PERSISTENT",
     "PIDILITIND", "PIIND", "PNB", "POLYCAB", "RECLTD",
     "SBICARD", "SIEMENS", "SRF", "TATAPOWER", "TORNTPHARM",
 ]
@@ -88,7 +88,7 @@ NIFTY_MIDCAP_100_PARTIAL = [
     "IEX", "INDHOTEL", "INDUSTOWER", "IREDA", "JKCEMENT",
     "JSL", "JUBLFOOD", "KANSAINER", "KEI", "LAURUSLABS",
     "LICHSGFIN", "LINDEINDIA", "LTTS", "M&MFIN", "MANAPPURAM",
-    "MCDOWELL-N", "METROPOLIS", "MFSL", "MSUMI", "MUTHOOTFIN",
+    "UNITDSPR", "METROPOLIS", "MFSL", "MSUMI", "MUTHOOTFIN",
     "NAM-INDIA", "NATIONALUM", "NAVINFLUOR", "NIACL", "NMDC",
     "OFSS", "PAGEIND", "PATANJALI", "PETRONET", "PHOENIXLTD",
     "PFC", "PRESTIGE", "PVRINOX", "RAJESHEXPO", "RAMCOCEM",
@@ -116,7 +116,7 @@ HARDCODED_SECTOR_MAP = {
     # Finance
     "BAJFINANCE": "Finance", "BAJAJFINSV": "Finance", "HDFCLIFE": "Finance", "SBILIFE": "Finance",
     "CHOLAFIN": "Finance", "ICICIPRULI": "Finance", "SHRIRAMFIN": "Finance", "SBICARD": "Finance",
-    "JIOFIN": "Finance", "RECLTD": "Finance", "PEL": "Finance", "LICI": "Finance",
+    "JIOFIN": "Finance", "RECLTD": "Finance", "PIRAMALPHARM": "Finance", "LICI": "Finance",
     "HDFCAMC": "Finance", "MFSL": "Finance", "MUTHOOTFIN": "Finance", "MANAPPURAM": "Finance",
     "PFC": "Finance", "IRFC": "Finance", "ABCAPITAL": "Finance", "M&MFIN": "Finance",
     "LICHSGFIN": "Finance", "CANFINHOME": "Finance", "STARHEALTH": "Finance", "IREDA": "Finance",
@@ -132,7 +132,7 @@ HARDCODED_SECTOR_MAP = {
     # FMCG
     "HINDUNILVR": "FMCG", "ITC": "FMCG", "NESTLEIND": "FMCG", "TATACONSUM": "FMCG",
     "BRITANNIA": "FMCG", "COLPAL": "FMCG", "DABUR": "FMCG", "GODREJCP": "FMCG",
-    "MARICO": "FMCG", "UNITDSPR": "FMCG", "UBL": "FMCG", "MCDOWELL-N": "FMCG",
+    "MARICO": "FMCG", "UNITDSPR": "FMCG", "UBL": "FMCG", "UNITDSPR": "FMCG",
     "PATANJALI": "FMCG",
     # Metals
     "JSWSTEEL": "Metals", "TATASTEEL": "Metals", "HINDALCO": "Metals", "VEDL": "Metals",
