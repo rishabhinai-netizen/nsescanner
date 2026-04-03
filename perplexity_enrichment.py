@@ -1,11 +1,11 @@
 """
-perplexity_enrichment.py — News Context Layer for NSE Scanner Pro
-==================================================================
-Uses Google Gemini Flash (FREE) with Google Search grounding.
-Prompt engineered for genuine NSE price catalysts, not generic summaries.
+perplexity_enrichment.py — News & Fundamental Context for NSE Scanner Pro
+=========================================================================
+Uses Google Gemini API for stock analysis. Two modes:
+  - With SEARCH GROUNDING: Live news from Google Search (Gemini 2.0 Flash)
+  - FALLBACK: Training-data based fundamental analysis (always works)
 
-FREE TIER: gemini-2.0-flash — 15 RPM, 1,000 req/day, 500 search grounding/day
-Get key at: https://aistudio.google.com/apikey
+Get free key: https://aistudio.google.com/apikey
 Add GEMINI_API_KEY to Streamlit Secrets + GitHub Secrets.
 """
 
@@ -13,201 +13,199 @@ import os, json, requests, streamlit as st
 from datetime import date
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL   = "gemini-2.0-flash"
-GEMINI_URL     = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-# What actually moves NSE stocks — in priority order
 CATALYST_TYPES = [
-    "Q results / earnings surprise",
-    "Management guidance / concall",
-    "FII/DII buying or selling",
-    "Block deal / bulk deal",
-    "Promoter buy / pledge / sale",
-    "Order win / contract loss",
-    "SEBI / regulatory action",
-    "Sectoral tailwind / headwind",
-    "Global macro / crude / USD",
-    "Analyst upgrade / downgrade",
-    "Merger / acquisition / demerger",
-    "52-week high / technical breakout",
-    "No specific news found",
+    "Q results / earnings surprise", "Management guidance",
+    "FII/DII activity", "Block deal / bulk deal",
+    "Promoter activity", "Order win / contract",
+    "SEBI / regulatory", "Sectoral theme",
+    "Global macro / crude / USD", "Analyst upgrade/downgrade",
+    "M&A / demerger", "Technical breakout", "No specific catalyst",
 ]
+
+
+def _call_gemini(prompt: str, use_search: bool = True) -> dict:
+    """
+    Call Gemini API. Tries search grounding first, falls back to base model.
+    Returns raw JSON dict from API or raises exception.
+    """
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY not set")
+
+    # Gemini 2.0 Flash with Google Search grounding
+    if use_search:
+        url     = f"{BASE_URL}/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "tools":    [{"google_search": {}}],
+            "generationConfig": {"temperature": 0.05, "maxOutputTokens": 400},
+        }
+        r = requests.post(url, json=payload, timeout=20)
+        if r.status_code == 400:
+            # Search grounding not available — fall back to base model
+            return _call_gemini(prompt, use_search=False)
+        r.raise_for_status()
+        return r.json()
+
+    # Fallback: Gemini 1.5 Flash, no search tool (uses training data)
+    url     = f"{BASE_URL}/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 400},
+    }
+    r = requests.post(url, json=payload, timeout=15)
+    r.raise_for_status()
+    return r.json()
 
 
 def get_signal_context(symbol: str, strategy: str, signal_direction: str) -> dict:
     """
-    Ask Gemini with live Google Search: what is ACTUALLY driving this NSE stock today?
-    Returns {catalyst, catalyst_type, factors, sentiment, confidence, sources}
-    Only reports what it finds — returns 'No specific news found' if nothing genuine exists.
+    Get AI analysis for why a stock is in play.
+    Returns {catalyst, catalyst_type, factors, sentiment, confidence, sources, is_live}
     """
     if not GEMINI_API_KEY:
         return {"error": "GEMINI_API_KEY not set. Add it in Streamlit Secrets."}
 
-    today    = date.today().strftime("%d %B %Y")
-    today_yr = date.today().strftime("%Y")
-    prompt   = f"""You are a precise NSE India market analyst. Today is {today}.
+    today = date.today().strftime("%d %B %Y")
+    prompt = f"""Today is {today}. You are a precise NSE India market analyst.
 
-The stock {symbol} (NSE India) has triggered a {signal_direction} signal via the {strategy} technical pattern.
+The stock {symbol} (NSE) triggered a {signal_direction} signal using the {strategy} pattern.
 
-TASK: Search Google right now for news about {symbol} NSE India {today_yr}. Find the REAL fundamental or news catalyst behind any recent price movement.
-
-Look specifically for these in order of priority:
-1. Quarterly results / earnings (PAT, revenue beat/miss vs estimates)
-2. Management guidance changes or concall highlights
-3. Large FII/DII buy or sell (from NSE bulk/block deal data)
-4. Promoter activity (pledge increase/decrease, share sale)
-5. Order wins, contract announcements, capacity expansions
-6. SEBI order, regulatory approval/rejection
+Search for and report the most likely reason this stock is in focus. Look for:
+1. Recent Q results / earnings (PAT, revenue vs estimates)
+2. Management guidance or concall highlights
+3. Large FII/DII buy or sell activity
+4. Promoter activity (pledge/sale/buy)
+5. Order wins or contract news
+6. SEBI/regulatory news
 7. Analyst rating changes with target price
-8. Sectoral news (RBI policy, government order, commodity prices) affecting this company
-9. Global events (US tariffs, crude oil, USD/INR) affecting this sector
+8. Sectoral news affecting this company
+9. Global events (US tariffs, crude, USD/INR)
 
-STRICT RULES:
-- Only report what you ACTUALLY FIND in search results. Do NOT speculate or hallucinate.
-- If no genuine news found, set catalyst to "No specific catalyst found — technical setup only" and confidence to "LOW"
-- Numbers must be specific: "Q3 PAT up 23% YoY to ₹456Cr" not "strong results"
-- Source must be a real URL you found
+RULES: Be specific with numbers. If nothing found, say so clearly. Do NOT hallucinate.
 
-Respond ONLY with valid JSON (no markdown, no explanation):
-{{
-  "catalyst": "one specific sentence with actual numbers/facts",
-  "catalyst_type": "one of: {' / '.join(CATALYST_TYPES[:8])} / other",
-  "factors": [
-    "specific factor 1 with data",
-    "specific factor 2 with data"
-  ],
-  "sentiment": "BULLISH or BEARISH or NEUTRAL",
-  "confidence": "HIGH if strong news found / MEDIUM if soft signal / LOW if no news"
-}}"""
-
-    payload = {
-        "contents":        [{"parts": [{"text": prompt}]}],
-        "tools":           [{"google_search": {}}],
-        "generationConfig": {"temperature": 0.05, "maxOutputTokens": 400},
-    }
+Respond ONLY with valid JSON (no markdown fences):
+{{"catalyst": "specific one-sentence reason with data", "catalyst_type": "one of: {' / '.join(CATALYST_TYPES[:8])}", "factors": ["factor 1 with data", "factor 2 with data"], "sentiment": "BULLISH or BEARISH or NEUTRAL", "confidence": "HIGH or MEDIUM or LOW"}}"""
 
     try:
-        resp = requests.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload, timeout=20)
-        resp.raise_for_status()
-        data     = resp.json()
+        data     = _call_gemini(prompt, use_search=True)
         raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
         raw_text = raw_text.strip().replace("```json", "").replace("```", "").strip()
 
+        # Extract grounding sources if search was used
+        sources   = []
         grounding = data["candidates"][0].get("groundingMetadata", {})
-        sources   = [
-            chunk["web"]["uri"]
-            for chunk in grounding.get("groundingChunks", [])[:3]
-            if chunk.get("web", {}).get("uri")
-        ]
+        for chunk in grounding.get("groundingChunks", [])[:3]:
+            uri = chunk.get("web", {}).get("uri", "")
+            if uri:
+                sources.append(uri)
 
-        parsed           = json.loads(raw_text)
-        parsed["sources"] = sources
+        parsed              = json.loads(raw_text)
+        parsed["sources"]   = sources
+        parsed["is_live"]   = len(sources) > 0   # True = search grounded, False = training data
         return parsed
 
     except json.JSONDecodeError:
         return {
-            "catalyst":      raw_text[:250] if "raw_text" in dir() else "Parse error",
-            "catalyst_type": "other",
-            "factors":       [],
-            "sentiment":     "NEUTRAL",
-            "confidence":    "LOW",
-            "sources":       [],
+            "catalyst":      raw_text[:300] if "raw_text" in dir() else "Parse error",
+            "catalyst_type": "other", "factors": [],
+            "sentiment":     "NEUTRAL", "confidence": "LOW",
+            "sources": [], "is_live": False,
         }
-    except requests.exceptions.Timeout:
-        return {"error": "Gemini API timeout (>20s). NSE news fetch skipped."}
     except Exception as e:
-        return {"error": str(e)[:100]}
+        return {"error": str(e)[:300]}
 
 
 def get_sector_context(sector: str) -> str:
-    """One-line sector theme with actual news. Used in Dashboard sector cards."""
+    """One-line sector theme. Used in Dashboard sector cards."""
     if not GEMINI_API_KEY:
         return ""
-    today = date.today().strftime("%d %B %Y")
+    today  = date.today().strftime("%d %B %Y")
     prompt = (
-        f"Today is {today}. Search for actual news driving the {sector} sector "
-        f"in India's NSE market today. In ONE sentence, state the specific catalyst "
-        f"(e.g. a specific stock result, RBI action, crude price, FII data). "
-        f"Use real data only. If nothing found, say 'No sector-specific news today'."
+        f"Today is {today}. In ONE sentence, what is the main specific news driving "
+        f"the {sector} sector in India's NSE today? Name actual companies or events. "
+        f"If nothing found, say 'No sector-specific news today'."
     )
-    payload = {
-        "contents":        [{"parts": [{"text": prompt}]}],
-        "tools":           [{"google_search": {}}],
-        "generationConfig": {"temperature": 0.05, "maxOutputTokens": 120},
-    }
     try:
-        resp = requests.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload, timeout=12)
-        resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        data = _call_gemini(prompt, use_search=True)
+        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception:
         return ""
 
 
 def enrich_telegram_alert(base_message: str, symbol: str, strategy: str, signal_dir: str) -> str:
-    """
-    Appends Gemini news context to an existing Telegram alert message.
-    Only called for ELITE/STRONG signals (controlled in alert_engine.py).
-    Returns base_message unchanged if Gemini fails — never breaks alerts.
-    """
+    """Appends AI news context to an existing Telegram alert. Never breaks alerts on failure."""
     ctx = get_signal_context(symbol, strategy, signal_dir)
     if "error" in ctx or not ctx.get("catalyst"):
         return base_message
-
-    # Skip adding context if confidence is LOW and no sources found
     if ctx.get("confidence") == "LOW" and not ctx.get("sources"):
         return base_message
 
-    sent_icon = {"BULLISH": "🟢", "BEARISH": "🔴", "NEUTRAL": "🟡"}.get(ctx.get("sentiment", ""), "⚪")
+    sent_icon = {"BULLISH": "🟢", "BEARISH": "🔴", "NEUTRAL": "🟡"}.get(ctx.get("sentiment",""), "⚪")
+    live_tag  = "🔍 Live" if ctx.get("is_live") else "📚 Training"
     ctype     = ctx.get("catalyst_type", "")
 
-    enriched  = f"\n\n📰 <b>[{ctype}]</b> {ctx.get('catalyst', '—')}\n"
-    enriched += f"{sent_icon} {ctx.get('sentiment','—')} · {ctx.get('confidence','—')} confidence\n"
-
-    for factor in ctx.get("factors", []):
-        enriched += f"• {factor}\n"
-
+    msg = f"\n\n📰 <b>[{ctype}]</b> {ctx.get('catalyst','—')}\n"
+    msg += f"{sent_icon} {ctx.get('sentiment','—')} · {ctx.get('confidence','—')} · {live_tag}\n"
+    for f in ctx.get("factors", []):
+        msg += f"• {f}\n"
     sources = ctx.get("sources", [])
     if sources:
-        enriched += f'🔗 <a href="{sources[0]}">Source</a>'
-
-    return base_message + enriched
+        msg += f'🔗 <a href="{sources[0]}">Source</a>'
+    return base_message + msg
 
 
 def render_signal_context_card(symbol: str, strategy: str, signal_dir: str):
     """
-    Drop into any Streamlit signal detail expander to show live news context.
-    Caches per symbol per day — won't re-call Gemini on every render.
+    Streamlit card showing AI news analysis for a stock.
+    Cached per symbol per day. Drop into any page.
     """
     if not GEMINI_API_KEY:
-        st.caption("💡 Add GEMINI_API_KEY in Streamlit Secrets to enable news context.")
+        st.caption("💡 Add `GEMINI_API_KEY` in Streamlit Secrets to enable news analysis.")
+        st.code('GEMINI_API_KEY = "AIza..."', language="toml")
         return
 
     cache_key = f"gemini_ctx_{symbol}_{date.today()}"
     if cache_key not in st.session_state:
-        with st.spinner(f"🔍 Searching news for {symbol}..."):
+        with st.spinner(f"Searching news for {symbol}..."):
             st.session_state[cache_key] = get_signal_context(symbol, strategy, signal_dir)
 
     ctx = st.session_state[cache_key]
 
     if "error" in ctx:
-        st.caption(f"⚠️ News lookup failed: {ctx['error']}")
+        st.warning(f"Analysis failed: {ctx['error']}")
+        if st.button("🔄 Retry", key=f"retry_{symbol}"):
+            del st.session_state[cache_key]
+            st.rerun()
         return
 
-    conf    = ctx.get("confidence", "LOW")
-    ctype   = ctx.get("catalyst_type", "")
-    sent    = ctx.get("sentiment", "NEUTRAL")
-    colour  = {"BULLISH": "green", "BEARISH": "red", "NEUTRAL": "orange"}.get(sent, "gray")
-
-    # Don't render a card if genuinely nothing was found
     catalyst = ctx.get("catalyst", "")
-    if "No specific catalyst" in catalyst and conf == "LOW":
-        st.caption(f"📰 No news catalyst found for {symbol} today — pure technical setup.")
+    if "No specific catalyst" in catalyst and ctx.get("confidence") == "LOW":
+        st.caption(f"No news catalyst found for {symbol} today — pure technical setup.")
         return
 
-    st.markdown(f"**📰 {ctype}** &nbsp; :{colour}[{sent}]  `{conf} confidence`")
+    conf      = ctx.get("confidence", "LOW")
+    ctype     = ctx.get("catalyst_type", "")
+    sent      = ctx.get("sentiment", "NEUTRAL")
+    is_live   = ctx.get("is_live", False)
+    colour    = {"BULLISH": "green", "BEARISH": "red", "NEUTRAL": "orange"}.get(sent, "gray")
+    live_badge = "🔍 Live Search" if is_live else "📚 Training Data"
+
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        st.markdown(f"**{ctype}** &nbsp; :{colour}[{sent}] &nbsp; `{conf}`")
+    with col2:
+        st.caption(live_badge)
+
     st.write(catalyst)
     for f in ctx.get("factors", []):
         st.write(f"• {f}")
+
     srcs = ctx.get("sources", [])
     if srcs:
         st.caption(f"[News source]({srcs[0]})")
+
+    if st.button("🔄 Refresh analysis", key=f"refresh_{symbol}_{date.today()}"):
+        del st.session_state[cache_key]
+        st.rerun()
