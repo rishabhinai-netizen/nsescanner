@@ -2239,66 +2239,132 @@ def page_stock_lookup():
 # ============================================================================
 # SIGNAL HISTORY — Cross-stock signal tracking & drift detection
 # ============================================================================
+def _fmt_ist(ts_str: str) -> str:
+    """Convert any timestamp string to IST display format."""
+    if not ts_str:
+        return "—"
+    try:
+        import pytz
+        from datetime import datetime as _dt
+        IST = pytz.timezone("Asia/Kolkata")
+        if isinstance(ts_str, str):
+            ts = _dt.fromisoformat(ts_str.replace("Z", "+00:00"))
+        else:
+            ts = ts_str
+        if ts.tzinfo is None:
+            ts = pytz.utc.localize(ts)
+        return ts.astimezone(IST).strftime("%d %b %H:%M IST")
+    except Exception:
+        return str(ts_str)[:16]
+
+
 def page_signal_history():
     st.markdown("# 📜 Signal History")
-    st.caption("Track when stocks were first flagged, at what price, and how they've performed since. "
-               "Detects entry price drift (same stock, changed entry) to avoid chasing.")
+    st.caption("Every signal ever generated — when first detected, how many times re-detected, and entry drift. All times in IST.")
 
-    all_signals = load_signals()
-    if all_signals is None or all_signals.empty:
-        st.info("No signals recorded yet. Run scans to start building history.")
+    sb = _get_supabase()
+
+    # ── Load from Supabase directly (shows IST first_seen + scan_count) ──────
+    supa_rows = []
+    if sb:
+        try:
+            res = (sb.table("signals")
+                   .select("date,strategy,symbol,signal,entry,sl,t1,cmp,sqi_grade,sector,status,first_seen_ist,last_seen_ist,scan_count,pnl_pct")
+                   .order("first_seen_ist", desc=True)
+                   .limit(500)
+                   .execute())
+            supa_rows = res.data or []
+        except Exception as e:
+            st.warning(f"Supabase load failed: {e}")
+
+    if not supa_rows:
+        all_signals = load_signals()
+        if all_signals is None or all_signals.empty:
+            st.info("No signals recorded yet. Run scans to start building history.")
+            return
+        # Fallback: show CSV-based history
+        st.caption("⚠️ Showing CSV cache — Supabase data unavailable.")
+        st.dataframe(all_signals, use_container_width=True, hide_index=True)
         return
 
-    enriched = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
-
-    unique_stocks = all_signals["Symbol"].nunique()
-    c1, c2, c3 = st.columns(3)
+    # ── Summary stats ─────────────────────────────────────────────────────────
+    unique_stocks = len(set(r["symbol"] for r in supa_rows))
+    total_signals = len(supa_rows)
+    re_detected   = sum(1 for r in supa_rows if (r.get("scan_count") or 1) > 1)
+    c1, c2, c3, c4 = st.columns(4)
     with c1: pc("Unique Stocks", str(unique_stocks))
-    with c2: pc("Total Signals", str(len(all_signals)))
-    if "Date" in all_signals.columns:
-        with c3: pc("Date Range", f"{all_signals['Date'].min()} to {all_signals['Date'].max()}")
+    with c2: pc("Total Signals", str(total_signals))
+    with c3: pc("Re-detected", str(re_detected))
+    with c4: pc("Open", str(sum(1 for r in supa_rows if r.get("status") == "OPEN")))
 
-    st.markdown("### 📊 First Signal vs Current Price")
-    st.caption("Every stock ever flagged — sorted by performance since first signal.")
+    # ── Filter bar ────────────────────────────────────────────────────────────
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        filter_status = st.selectbox("Status", ["ALL", "OPEN", "TARGET", "STOPPED"], index=0)
+    with col_f2:
+        filter_redet = st.checkbox("Show re-detected only (scan_count > 1)", value=False)
 
-    first_seen = all_signals.sort_values("Date").groupby("Symbol").first().reset_index()
+    filtered = supa_rows
+    if filter_status != "ALL":
+        filtered = [r for r in filtered if r.get("status") == filter_status]
+    if filter_redet:
+        filtered = [r for r in filtered if (r.get("scan_count") or 1) > 1]
+
+    # ── Main table ────────────────────────────────────────────────────────────
+    st.markdown(f"### 📋 Signal Log ({len(filtered)} signals)")
     rows = []
-    for _, row in first_seen.iterrows():
-        sym = row["Symbol"]
-        first_entry = row.get("Entry", 0)
-        cmp_now = enriched.get(sym, pd.DataFrame())
-        cmp_val = cmp_now.iloc[-1]["close"] if not cmp_now.empty else 0
-        pnl = ((cmp_val / first_entry) - 1) * 100 if first_entry > 0 and cmp_val > 0 else 0
+    for r in filtered:
+        cnt   = r.get("scan_count") or 1
+        grade = r.get("sqi_grade", "—")
+        pnl   = r.get("pnl_pct")
         rows.append({
-            "Symbol": sym,
-            "First Seen": row.get("Date",""),
-            "Strategy": row.get("Strategy",""),
-            "Signal": row.get("Signal",""),
-            "Entry Then": fp(first_entry) if first_entry else "-",
-            "CMP Now": fp(cmp_val) if cmp_val else "-",
-            "P&L Since": f"{pnl:+.1f}%" if pnl else "-",
+            "Symbol":       r["symbol"],
+            "Strategy":     r.get("strategy",""),
+            "Signal":       r.get("signal",""),
+            "First Seen (IST)": _fmt_ist(r.get("first_seen_ist", r.get("date",""))),
+            "Last Seen (IST)":  _fmt_ist(r.get("last_seen_ist", r.get("date",""))),
+            "Seen×":        cnt,
+            "Entry ₹":      r.get("entry",""),
+            "SL ₹":         r.get("sl",""),
+            "T1 ₹":         r.get("t1",""),
+            "Grade":        grade,
+            "Sector":       r.get("sector",""),
+            "Status":       r.get("status",""),
+            "P&L%":         f"{float(pnl):+.1f}%" if pnl is not None else "—",
         })
 
     if rows:
         result_df = pd.DataFrame(rows)
-        result_df = result_df.sort_values("P&L Since", ascending=False, key=lambda x: pd.to_numeric(x.str.replace("%","").str.replace("+",""), errors="coerce"))
+        # Colour-code re-detected rows
         st.dataframe(result_df, use_container_width=True, hide_index=True)
 
-    # Entry drift detection
-    st.markdown("### ⚠️ Entry Price Drift Detection")
-    st.caption("Same stock, same strategy — but entry price changed? This could mean you're chasing.")
-    for sym in all_signals["Symbol"].unique():
-        sym_sigs = all_signals[all_signals["Symbol"] == sym]
-        for strat in sym_sigs["Strategy"].unique():
-            strat_sigs = sym_sigs[sym_sigs["Strategy"] == strat].sort_values("Date")
-            if len(strat_sigs) >= 2 and "Entry" in strat_sigs.columns:
-                first_e = strat_sigs.iloc[0]["Entry"]
-                last_e = strat_sigs.iloc[-1]["Entry"]
-                if isinstance(first_e, (int, float)) and isinstance(last_e, (int, float)):
-                    if abs(first_e - last_e) / (first_e + 1) > 0.05:
-                        drift = ((last_e / first_e) - 1) * 100
-                        st.warning(f"**{sym} — {strat}:** Entry drifted from ₹{first_e:,.1f} → ₹{last_e:,.1f} ({drift:+.1f}%). "
-                                   f"Earlier entry was the stronger setup.")
+    # ── Entry drift detection ─────────────────────────────────────────────────
+    st.markdown("### ⚠️ Entry Drift — Same Stock, Price Changed")
+    st.caption("When the same stock+strategy appears on different days with a changed entry price (>5% drift).")
+    by_stock_strat: dict = {}
+    for r in supa_rows:
+        key = (r["symbol"], r.get("strategy",""))
+        if key not in by_stock_strat:
+            by_stock_strat[key] = []
+        by_stock_strat[key].append(r)
+
+    drift_found = False
+    for (sym, strat), recs in by_stock_strat.items():
+        entries = [float(r["entry"]) for r in recs if r.get("entry")]
+        if len(entries) >= 2:
+            first_e, last_e = entries[0], entries[-1]
+            if abs(first_e - last_e) / (first_e + 1) > 0.05:
+                drift = ((last_e / first_e) - 1) * 100
+                first_ts = _fmt_ist(recs[0].get("first_seen_ist", ""))
+                last_ts  = _fmt_ist(recs[-1].get("last_seen_ist", ""))
+                st.warning(
+                    f"**{sym} — {strat}:** ₹{first_e:,.1f} ({first_ts}) → ₹{last_e:,.1f} ({last_ts}) "
+                    f"| Drift: {drift:+.1f}% | Seen {len(recs)}×"
+                )
+                drift_found = True
+
+    if not drift_found:
+        st.success("No significant entry drift detected across your signals.")
 
 
 # ============================================================================
