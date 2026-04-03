@@ -2213,6 +2213,24 @@ def page_stock_lookup():
     else:
         st.info(f"**{sym}** doesn't qualify in any daily strategy right now.")
 
+    # ── Gemini News Analysis (on-demand, cached per symbol per day) ──────────────
+    if PERPLEXITY_AVAILABLE:
+        import os as _os
+        _gemini_key = _os.environ.get("GEMINI_API_KEY", "") or st.secrets.get("GEMINI_API_KEY", "")
+        if _gemini_key:
+            with st.expander("📰 Why is this stock moving? (AI News Analysis)", expanded=True):
+                # Use the signal direction from latest signal if available, else neutral
+                _sig_dir = "BUY"
+                _strategy = "Technical"
+                if 'hits' in dir() and hits:
+                    _sig_dir = hits[0].signal
+                    _strategy = hits[0].strategy
+                render_signal_context_card(sym, _strategy, _sig_dir)
+        else:
+            with st.expander("📰 AI News Analysis (not configured)"):
+                st.caption("Add `GEMINI_API_KEY` in Streamlit Secrets to enable live news analysis for any stock.")
+                st.code('GEMINI_API_KEY = "AIza..."', language="toml")
+
     # Signal history for this stock
     st.markdown("### 📜 Signal History")
     all_signals = load_signals()
