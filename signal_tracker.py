@@ -101,7 +101,6 @@ def save_signals_today(signals_list: list, regime: dict = None) -> int:
     sb = _get_supabase()
     if sb:
         try:
-            from datetime import datetime
             import pytz
             IST = pytz.timezone('Asia/Kolkata')
             ist_now = datetime.now(IST).isoformat()
