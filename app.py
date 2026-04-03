@@ -74,6 +74,19 @@ from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REG
 
 # v16 additions
 from app_additions import page_performance, page_portfolio, render_supabase_status
+
+# v17 additions
+try:
+    from paper_trading import render_paper_trading_page
+    PAPER_TRADING_AVAILABLE = True
+except ImportError:
+    PAPER_TRADING_AVAILABLE = False
+
+try:
+    from perplexity_enrichment import render_signal_context_card
+    PERPLEXITY_AVAILABLE = True
+except ImportError:
+    PERPLEXITY_AVAILABLE = False
 from fundamental_gate import check_fundamental_quality, batch_fundamental_check
 from basket_export import generate_zerodha_basket, generate_generic_basket
 
@@ -485,7 +498,7 @@ PAGES = [
     "🔗 Option Chain", "🚀 IPO Scanner",
     "🔎 Stock Lookup", "📜 Signal History",
     "🧪 Backtest", "📊 Performance", "💼 Portfolio",
-    "📐 Trade Planner", "⭐ Watchlist", "📓 Journal", "⚙️ Settings"
+    "📐 Trade Planner", "⭐ Watchlist", "📓 Journal", "🎮 Virtual Game", "⚙️ Settings"
 ]
 
 # Persist page selection in URL query params
@@ -2635,6 +2648,7 @@ page_map = {
     "📐 Trade Planner": page_trade_planner,
     "⭐ Watchlist": page_watchlist,
     "📓 Journal": page_journal,
+    "🎮 Virtual Game": (render_paper_trading_page if PAPER_TRADING_AVAILABLE else lambda: st.warning("paper_trading.py not found in repo")),
     "⚙️ Settings": page_settings,
 }
 page_func = page_map.get(page, page_dashboard)
