@@ -156,33 +156,37 @@ def enrich_telegram_alert(base_message: str, symbol: str, strategy: str, signal_
     return base_message + msg
 
 
+@st.cache_data(ttl=21600, show_spinner=False)   # Cache 6 hours — prevents 429 on re-renders
+def _cached_gemini_context(symbol: str, strategy: str, signal_dir: str, _date_key: str) -> dict:
+    """Cache wrapper — _date_key ensures cache resets each day automatically."""
+    return get_signal_context(symbol, strategy, signal_dir)
+
+
 def render_signal_context_card(symbol: str, strategy: str, signal_dir: str):
     """
     Streamlit card showing AI news analysis for a stock.
-    Cached per symbol per day. Drop into any page.
+    Uses st.cache_data (6hr TTL) — safe against Streamlit re-renders causing repeated API calls.
+    Drop into any page.
     """
     if not GEMINI_API_KEY:
-        st.caption("💡 Add `GEMINI_API_KEY` in Streamlit Secrets to enable news analysis.")
+        st.caption("💡 Add `GEMINI_API_KEY` in Streamlit Secrets to enable live news analysis.")
         st.code('GEMINI_API_KEY = "AIza..."', language="toml")
         return
 
-    cache_key = f"gemini_ctx_{symbol}_{date.today()}"
-    if cache_key not in st.session_state:
-        with st.spinner(f"Searching news for {symbol}..."):
-            st.session_state[cache_key] = get_signal_context(symbol, strategy, signal_dir)
-
-    ctx = st.session_state[cache_key]
+    with st.spinner(f"Searching news for {symbol}..."):
+        ctx = _cached_gemini_context(symbol, strategy, signal_dir, str(date.today()))
 
     if "error" in ctx:
-        st.warning(f"Analysis failed: {ctx['error']}")
-        if st.button("🔄 Retry", key=f"retry_{symbol}"):
-            del st.session_state[cache_key]
+        st.warning(f"⚠️ Analysis failed: {ctx['error']}")
+        st.caption("This is cached — click Retry only once. Repeated calls waste free API quota.")
+        if st.button("🔄 Retry once", key=f"retry_{symbol}_{date.today()}"):
+            _cached_gemini_context.clear()
             st.rerun()
         return
 
     catalyst = ctx.get("catalyst", "")
     if "No specific catalyst" in catalyst and ctx.get("confidence") == "LOW":
-        st.caption(f"No news catalyst found for {symbol} today — pure technical setup.")
+        st.caption(f"📰 No specific news catalyst for {symbol} today — pure technical setup.")
         return
 
     conf      = ctx.get("confidence", "LOW")
@@ -190,22 +194,17 @@ def render_signal_context_card(symbol: str, strategy: str, signal_dir: str):
     sent      = ctx.get("sentiment", "NEUTRAL")
     is_live   = ctx.get("is_live", False)
     colour    = {"BULLISH": "green", "BEARISH": "red", "NEUTRAL": "orange"}.get(sent, "gray")
-    live_badge = "🔍 Live Search" if is_live else "📚 Training Data"
+    live_badge = "🔍 Live news" if is_live else "📚 AI knowledge"
 
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.markdown(f"**{ctype}** &nbsp; :{colour}[{sent}] &nbsp; `{conf}`")
+        st.markdown(f"**{ctype}** &nbsp; :{colour}[**{sent}**] &nbsp; `{conf} confidence`")
     with col2:
         st.caption(live_badge)
 
     st.write(catalyst)
     for f in ctx.get("factors", []):
         st.write(f"• {f}")
-
     srcs = ctx.get("sources", [])
     if srcs:
-        st.caption(f"[News source]({srcs[0]})")
-
-    if st.button("🔄 Refresh analysis", key=f"refresh_{symbol}_{date.today()}"):
-        del st.session_state[cache_key]
-        st.rerun()
+        st.caption(f"[Source]({srcs[0]})")
