@@ -27,7 +27,7 @@ CURATED_IPOS = [
     ("NTPCGREEN",   "NTPCGREEN",    "2024-11-27",  108, "NTPC Green Energy",      2.55,  1.72,  10000, "Energy",        "Mainboard"),
     ("BAJAJHFL",    "BAJAJHFL",     "2024-09-23",   70, "Bajaj Housing Finance", 223.46, 67.43,  6560, "Finance",       "Mainboard"),
     ("NIVABUPA",    "NIVABUPA",     "2024-11-14",   74, "Niva Bupa Health",       24.76,  6.93,  2200, "Insurance",     "Mainboard"),
-    ("PREMIER",     "PREMIER",      "2024-08-01",  900, "Premier Energies",      242.68, 74.12,  1291, "Energy",        "Mainboard"),
+    ("PREMIERENE",  "PREMIERENE",   "2024-08-01",  900, "Premier Energies",      242.68, 74.12,  1291, "Energy",        "Mainboard"),
     ("OLAELEC",     "OLAELEC",      "2024-08-09",   76, "Ola Electric",           32.93,  3.20,  6145, "Auto",          "Mainboard"),
     ("FIRSTCRY",    "FIRSTCRY",     "2024-08-13",  465, "FirstCry (Brainbees)",   56.01, 12.75,  4193, "Retail",        "Mainboard"),
     ("BHARTIHEXA",  "BHARTIHEXA",   "2024-07-12",  262, "Bharti Hexacom",        256.96, 30.37,  4275, "Telecom",       "Mainboard"),
