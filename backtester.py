@@ -32,7 +32,10 @@ class CostModel:
     sebi_pct: float = 0.0001
     gst_pct: float = 18.0
 
-    def total_cost_pct(self, entry_price: float, exit_price: float, shares: int = 1) -> float:
+    def total_cost_pct(self, entry_price: float, exit_price: float, shares: int = None) -> float:
+        # Default to ₹1,00,000 position size (realistic Indian retail trader)
+        if shares is None:
+            shares = max(1, int(100000 / entry_price)) if entry_price > 0 else 1
         position_value = entry_price * max(shares, 1)
         slippage       = self.slippage_pct * 2
         brokerage_pct  = (self.brokerage_per_order * 2) / position_value * 100 if position_value > 0 else 0
