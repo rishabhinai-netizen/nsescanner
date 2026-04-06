@@ -2494,24 +2494,39 @@ def page_option_chain():
                             with st.expander("🔍 Debug: raw fetch result"):
                                 st.json({k: str(v) for k, v in oc_data.items() if k not in ("calls","puts")})
                     else:
-                        # Try to give a more helpful error by probing Breeze directly
-                        st.warning(f"No option chain data returned for **{oc_sym}**.")
-                        with st.expander("🔍 Troubleshooting"):
-                            st.markdown("""
-**Common causes:**
-1. **Session token expired** — regenerate from ICICIDirect portal and update Streamlit secrets, then click Retry Breeze
-2. **Expiry date mismatch** — current week may have no options (holiday week). Try next Thursday.
-3. **Stock code mismatch** — Breeze uses ICICI's stock codes which sometimes differ from NSE symbols
-   - e.g. `BAJFINANCE` → `BAJAJFIN`, `M&M` → `M&M`, `ONGC` → `ONGC`
-4. **Market closed** — during non-market hours, some stocks return empty option chains
-
-**Quick test:** Check if Breeze is responding at all:
-""")
+                        from breeze_symbol_map import to_breeze_code
+                        breeze_code = to_breeze_code(oc_sym)
+                        st.warning(f"No option chain data returned for **{oc_sym}** (Breeze code: `{breeze_code}`).")
+                        
+                        # Real diagnostic: test NIFTY option chain (always works if token valid)
+                        with st.expander("🔍 Diagnose connection", expanded=True):
+                            st.caption(f"Testing with NIFTY (most reliable F&O instrument)...")
                             try:
-                                test = be.breeze.get_customer_details(api_session=be.breeze.user_id) if hasattr(be.breeze, 'user_id') else None
-                                st.info("Breeze API appears connected. Session may be valid — try refreshing token.")
+                                from datetime import date, timedelta
+                                today = date.today()
+                                # Get next Thursday
+                                days_to_thu = (3 - today.weekday()) % 7 or 7
+                                next_thu = today + timedelta(days=days_to_thu)
+                                test_expiry = next_thu.strftime("%Y-%m-%dT06:00:00.000Z")
+                                test_resp = be.breeze.get_option_chain_quotes(
+                                    stock_code="NIFTY", exchange_code="NFO",
+                                    product_type="options", expiry_date=test_expiry,
+                                    right="call", strike_price="0"
+                                )
+                                if test_resp and test_resp.get("Status") == 200 and test_resp.get("Success"):
+                                    n_rows = len(test_resp["Success"])
+                                    st.success(f"✅ Breeze token is valid — NIFTY returned {n_rows} strikes.")
+                                    st.error(f"Problem is specific to **{oc_sym}** (Breeze code: `{breeze_code}`). "
+                                             f"This stock may not have weekly options or the Breeze code mapping may be wrong.")
+                                    st.info(f"Known working F&O stocks: RELIANCE (→RELIND), HDFCBANK (→HDFWA2), INFY (→INFY), TCS (→TCS). "
+                                            f"Try one of these to confirm.")
+                                else:
+                                    err = test_resp.get("Error", "unknown") if test_resp else "no response"
+                                    st.error(f"❌ Breeze token appears expired or invalid. NIFTY test failed: {err}")
+                                    st.warning("**Fix:** Go to Settings → Update Session Token → paste today's token from ICICIDirect portal.")
                             except Exception as te:
-                                st.error(f"Breeze API error: {te}")
+                                st.error(f"❌ Breeze API error: {te}")
+                                st.warning("Breeze session is not working. Go to Settings to update the token.")
                 except Exception as e:
                     st.error(f"Option chain error: {e}")
                     import traceback
