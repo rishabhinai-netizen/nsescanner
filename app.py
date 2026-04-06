@@ -77,7 +77,7 @@ from app_additions import page_performance, render_supabase_status
 
 # v17 additions
 try:
-    from paper_trading import render_paper_trading_page
+    from paper_trading import render_paper_trading_page, enter_paper_trade
     PAPER_TRADING_AVAILABLE = True
 except ImportError:
     PAPER_TRADING_AVAILABLE = False
@@ -113,7 +113,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 st.set_page_config(
     page_title="NSE Scanner Pro", page_icon="🎯", layout="wide",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="expanded",
     menu_items={"Get Help": None, "Report a bug": None, "About": None}
 )
 
@@ -183,6 +183,20 @@ st.markdown("""
         top: -9999px !important;
     }
     
+    /* LOCK sidebar open — hide the collapse arrow button */
+    [data-testid="collapsedControl"],
+    button[kind="header"],
+    [data-testid="stSidebarCollapseButton"],
+    .st-emotion-cache-1ibsh2c,
+    section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
+    section[data-testid="stSidebar"] > div > div > button { 
+        display: none !important; 
+    }
+    /* Ensure sidebar is always visible */
+    section[data-testid="stSidebar"] {
+        min-width: 260px !important;
+        transform: none !important;
+    }
     /* Also hide the top padding that header leaves behind */
     .stApp > header + div { padding-top: 0 !important; }
     .block-container { padding-top: 1rem !important; }
@@ -1094,11 +1108,18 @@ def page_scanner_hub():
             sqi_grade = getattr(r, 'sqi_grade', '')
             sqi_breakdown = getattr(r, 'sqi_breakdown', '')
             
+            # SQI tooltip explanation
+            SQI_TOOLTIP = ("SQI (Signal Quality Index) = composite score 0-100. "
+                "Factors: Backtest Edge 30% + Relative Strength 25% + Regime Fit 20% + "
+                "Volume Contraction 15% + Volume Ratio 10%. "
+                "ELITE ≥80 | STRONG 65-79 | MODERATE 50-64 | WEAK <50")
+            
             # Build header: SQI if available, else confidence
+            direction_label = "🟢 BUY" if r.signal == "BUY" else "🔴 SHORT"
             if sqi_val is not None:
-                header = f"📋 {r.symbol} — {r.signal} | {fp(r.cmp)} | {sqi_icon} SQI {sqi_val:.0f} ({sqi_grade}) | RS {r.rs_rating:.0f}"
+                header = f"📋 {r.symbol} — {direction_label} | CMP {fp(r.cmp)} | {sqi_icon} SQI {sqi_val:.0f} ({sqi_grade}) | RS {r.rs_rating:.0f}"
             else:
-                header = f"📋 {r.symbol} — {r.signal} | {fp(r.cmp)} | Conf {r.confidence}% | RS {r.rs_rating:.0f}"
+                header = f"📋 {r.symbol} — {direction_label} | CMP {fp(r.cmp)} | Conf {r.confidence}% | RS {r.rs_rating:.0f}"
             
             with st.expander(header):
                 c1,c2,c3,c4,c5,c6 = st.columns(6)
@@ -1109,10 +1130,15 @@ def page_scanner_hub():
                 with c5: pc("T2", fp(r.target_2), "g")
                 with c6: pc("Regime", r.regime_fit, "g" if r.regime_fit=="IDEAL" else ("y" if r.regime_fit=="CAUTION" else ""))
                 
-                # v5.2: SQI breakdown
+                # v5.2: SQI breakdown with info
                 if sqi_val is not None:
-                    st.markdown(f"**{sqi_icon} Signal Quality: {sqi_val:.0f}/100 — {sqi_grade}**")
+                    sqi_col1, sqi_col2 = st.columns([10, 1])
+                    with sqi_col1:
+                        grade_color = {"ELITE":"gold","STRONG":"#5dade2","MODERATE":"#ffd700","WEAK":"#ff4757"}.get(sqi_grade,"white")
+                        st.markdown(f'**{sqi_icon} Signal Quality: <span style="color:{grade_color}">{sqi_val:.0f}/100 — {sqi_grade}</span>** '
+                                    f'<span title="{SQI_TOOLTIP}" style="cursor:help;color:#888">ℹ️</span>', unsafe_allow_html=True)
                     st.caption(f"Breakdown: {sqi_breakdown}")
+                    st.caption("SQI = Backtest Edge 30% + RS Strength 25% + Regime Fit 20% + Vol Contraction 15% + Volume 10%")
                 
                 # v5.2: Fundamental Gate (if enabled)
                 if st.session_state.fundamental_filter:
@@ -1160,12 +1186,22 @@ def page_scanner_hub():
                         if send_tg(fmt_alert(r)): st.success("Sent!")
                         else: st.warning("Setup Telegram first")
                 with c3:
-                    if st.button("📓 Journal", key=f"j_{strategy}_{r.symbol}"):
-                        add_journal_entry({"symbol":r.symbol,"strategy":strategy,"signal":r.signal,
-                            "entry":r.entry,"stop":r.stop_loss,"target1":r.target_1,"cmp":r.cmp,
-                            "confidence":r.confidence,"status":"open","entry_date":r.timestamp,"reasons":r.reasons[:3]})
-                        st.session_state.journal = load_journal()
-                        st.success("Journaled!")
+                    if PAPER_TRADING_AVAILABLE:
+                        if st.button("🎮 Paper Trade", key=f"pt_{strategy}_{r.symbol}", help="Deploy ₹50,000 virtual capital on this signal"):
+                            # Build a signal dict compatible with enter_paper_trade
+                            sig_dict = {
+                                "id": None,
+                                "symbol": r.symbol, "strategy": strategy, "signal": r.signal,
+                                "entry": r.entry, "cmp": r.cmp, "sl": r.stop_loss,
+                                "t1": r.target_1, "t2": r.target_2, "rr": r.risk_reward,
+                                "sqi": getattr(r,"sqi",50), "sqi_grade": getattr(r,"sqi_grade",""),
+                                "sector": getattr(r,"sector",""), "regime": getattr(r,"regime_fit",""),
+                            }
+                            result = enter_paper_trade(sig_dict)
+                            if result:
+                                st.success(f"🎮 ₹50K virtual deployed on {r.symbol}!")
+                            else:
+                                st.warning("Could not open paper trade. Check Virtual Game page.")
 
 
 # ============================================================================
