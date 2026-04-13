@@ -1184,7 +1184,7 @@ def page_scanner_hub():
             sqi_breakdown = getattr(r, 'sqi_breakdown', '')
             
             # SQI tooltip explanation
-            SQI_TOOLTIP = ("SQI (Signal Quality Index) = composite score 0-100. "
+                    SQI_TOOLTIP = TIPS.get("sqi", "SQI: composite signal quality score 0-100")
                 "Factors: Backtest Edge 30% + Relative Strength 25% + Regime Fit 20% + "
                 "Volume Contraction 15% + Volume Ratio 10%. "
                 "ELITE ≥80 | STRONG 65-79 | MODERATE 50-64 | WEAK <50")
