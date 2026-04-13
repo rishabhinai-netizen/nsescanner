@@ -75,6 +75,13 @@ from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REG
 # v16 additions
 from app_additions import page_performance, render_supabase_status
 
+# v18 — AI Deep Dive (Multi-Agent Swarm Analysis)
+try:
+    from ai_deep_dive import page_ai_deep_dive
+    AI_DEEP_DIVE_AVAILABLE = True
+except ImportError:
+    AI_DEEP_DIVE_AVAILABLE = False
+
 # v17 additions
 try:
     from paper_trading import render_paper_trading_page, enter_paper_trade
@@ -512,6 +519,7 @@ PAGES = [
     "🔗 Option Chain", "🚀 IPO Scanner",
     "🔎 Stock Lookup", "📜 Signal History",
     "🧪 Backtest", "📊 Performance",
+    "🧠 AI Deep Dive",
     "🎮 Virtual Game", "⚙️ Settings"
 ]
 
@@ -2780,6 +2788,7 @@ page_map = {
     "🧪 Backtest": page_backtest,
     "📊 Performance": page_performance,
     "🎮 Virtual Game": (render_paper_trading_page if PAPER_TRADING_AVAILABLE else lambda: st.warning("paper_trading.py not found in repo")),
+    "🧠 AI Deep Dive": (page_ai_deep_dive if AI_DEEP_DIVE_AVAILABLE else lambda: st.error("ai_deep_dive.py not found in repo")),
     "⚙️ Settings": page_settings,
 }
 page_func = page_map.get(page, page_dashboard)
