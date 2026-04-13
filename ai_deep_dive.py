@@ -1128,3 +1128,270 @@ def page_ai_deep_dive():
     if sent.get("factors"):
         with st.expander("📊 Sentiment Breakdown", expanded=False):
             for f in sent["factors"]: st.markdown(f"- {f}")
+    # ══════════════════════════════════════════════════════════════════════
+    # FEATURE 1: CONVICTION GAUGE
+    # ══════════════════════════════════════════════════════════════════════
+    st.divider()
+    st.markdown("### 🎯 Conviction Meter")
+    ws = rec["weighted_score"]
+    gauge_val = int((ws + 1) / 2 * 100)
+    gauge_color = "#26a69a" if ws >= 0.4 else ("#ef5350" if ws <= -0.4 else "#ff9800")
+    conviction_label = (
+        "STRONG BUY" if ws >= 0.7 else "BUY" if ws >= 0.4 else
+        "STRONG SELL" if ws <= -0.7 else "SELL" if ws <= -0.4 else "HOLD / WAIT"
+    )
+    _cg1, _cg2, _cg3 = st.columns([1,3,1])
+    with _cg2:
+        _atlas_w  = regime["atlas_weight"]
+        _oracle_w = regime["oracle_weight"]
+        _sent_w   = regime["sentinel_weight"]
+        _at_sig   = rec["atlas_signal"]
+        _or_sig   = rec["oracle_signal"]
+        _se_risk  = rec["sentinel_risk"]
+        st.markdown(
+            '<div style="background:#1a1d23;border:1px solid #333;border-radius:12px;'
+            'padding:18px 24px;text-align:center">'
+            '<div style="font-size:.75rem;color:#888;letter-spacing:2px;margin-bottom:8px">'
+            'SWARM CONVICTION</div>'
+            f'<div style="height:12px;background:#0d1117;border-radius:6px;'
+            f'margin-bottom:10px;overflow:hidden">'
+            f'<div style="height:100%;width:{gauge_val}%;'
+            f'background:linear-gradient(90deg,#ef5350,#ff9800,#26a69a);'
+            f'border-radius:6px"></div></div>'
+            f'<div style="font-size:1.6rem;font-weight:800;color:{gauge_color};'
+            f'letter-spacing:2px">{conviction_label}</div>'
+            f'<div style="font-size:.88rem;color:#888;margin-top:4px">'
+            f'Score <b style="color:{gauge_color}">{ws:+.3f}</b>'
+            f' &nbsp;(threshold ±0.40)</div>'
+            f'<div style="margin-top:10px;font-size:.78rem;color:#aaa">'
+            f'ATLAS {_at_sig} ({_atlas_w}%) · ORACLE {_or_sig} ({_oracle_w}%) · '
+            f'SENTINEL {_se_risk} risk ({_sent_w}%)'
+            f'</div></div>',
+            unsafe_allow_html=True
+        )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # FEATURE 2: TRADE CALCULATOR
+    # ══════════════════════════════════════════════════════════════════════
+    st.divider()
+    with st.expander("🧮 Trade Calculator — Position Size & Risk", expanded=(sig_ctx is not None)):
+        st.caption("Calculate exact shares, ₹ risk, and position size before placing the trade.")
+        default_entry = float(sig_ctx.get("entry", m["current_price"])) if sig_ctx else m["current_price"]
+        default_sl    = float(sig_ctx.get("sl",    m["current_price"] * 0.95)) if sig_ctx else m["current_price"] * 0.95
+        default_t1    = float(sig_ctx.get("t1",    m["current_price"] * 1.10)) if sig_ctx else m["current_price"] * 1.10
+        default_t2    = float(sig_ctx.get("t2",    m["current_price"] * 1.20)) if sig_ctx else m["current_price"] * 1.20
+        tc1, tc2, tc3 = st.columns(3)
+        with tc1:
+            tc_capital  = st.number_input("Capital (₹)", value=500000, step=50000, min_value=10000, key="tc_cap")
+            tc_risk_pct = st.slider("Risk per trade (%)", 0.5, 3.0, 1.5, 0.25, key="tc_risk",
+                help="% of capital you risk if SL is hit. Professional range: 1-2%.")
+        with tc2:
+            tc_entry = st.number_input("Entry ₹", value=round(default_entry, 2), step=1.0, key="tc_entry")
+            tc_sl    = st.number_input("Stop Loss ₹", value=round(default_sl, 2), step=1.0, key="tc_sl")
+        with tc3:
+            tc_t1 = st.number_input("Target 1 ₹", value=round(default_t1, 2), step=1.0, key="tc_t1")
+            tc_t2 = st.number_input("Target 2 ₹", value=round(default_t2, 2), step=1.0, key="tc_t2")
+        if tc_entry > 0 and tc_sl > 0 and abs(tc_entry - tc_sl) > 0.01:
+            risk_ps   = abs(tc_entry - tc_sl)
+            max_risk  = tc_capital * tc_risk_pct / 100
+            shares    = max(1, int(max_risk / risk_ps))
+            pos_val   = shares * tc_entry
+            pos_pct   = pos_val / tc_capital * 100
+            rr1       = abs(tc_t1 - tc_entry) / risk_ps if tc_entry != tc_t1 else 0
+            rr2       = abs(tc_t2 - tc_entry) / risk_ps if tc_entry != tc_t2 else 0
+            tr1, tr2, tr3, tr4, tr5 = st.columns(5)
+            tr1.metric("Shares",       f"{shares:,}")
+            tr2.metric("Position",     f"₹{pos_val:,.0f}", f"{pos_pct:.1f}% of capital")
+            tr3.metric("₹ Risk (SL)",  f"₹{max_risk:,.0f}", f"{tc_risk_pct}%")
+            tr4.metric("R:R at T1",    f"1:{rr1:.1f}")
+            tr5.metric("R:R at T2",    f"1:{rr2:.1f}")
+            pnl_t1 = shares * (tc_t1 - tc_entry)
+            pnl_t2 = shares * (tc_t2 - tc_entry)
+            pnl_sl = shares * (tc_sl - tc_entry)
+            st.markdown(
+                f"**P&L:** &nbsp; 🟢 T1: **+₹{pnl_t1:,.0f}** "
+                f"({pnl_t1/tc_capital*100:.1f}%) &nbsp;·&nbsp; "
+                f"🟢 T2: **+₹{pnl_t2:,.0f}** ({pnl_t2/tc_capital*100:.1f}%) "
+                f"&nbsp;·&nbsp; 🔴 SL: **₹{pnl_sl:,.0f}** ({pnl_sl/tc_capital*100:.1f}%)"
+            )
+            if rr1 < 1.5: st.warning("⚠️ R:R below 1.5 — consider adjusting targets or skipping.")
+            if pos_pct > 20: st.warning(f"⚠️ Position {pos_pct:.0f}% of capital — reduce risk % for safety.")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # FEATURE 3: ONE-CLICK PAPER TRADE
+    # ══════════════════════════════════════════════════════════════════════
+    if sig_ctx:
+        st.divider()
+        st.markdown("### 🎮 Paper Trade")
+        _c_pt1, _c_pt2 = st.columns([3, 1])
+        with _c_pt1:
+            _vc = {"BUY": "#26a69a", "SELL": "#ef5350", "HOLD": "#ff9800"}.get(rec["final_recommendation"], "#888")
+            st.markdown(
+                f"AI verdict: **<span style='color:{_vc}'>{rec['final_recommendation']}</span>** "
+                f"(score {rec['weighted_score']:+.3f}). Virtual ₹50,000 — no real money.",
+                unsafe_allow_html=True
+            )
+        with _c_pt2:
+            if st.button("🎮 Enter Paper Trade", type="primary", key="dd_paper_trade", use_container_width=True):
+                try:
+                    from paper_trading import enter_paper_trade
+                    result = enter_paper_trade(sig_ctx)
+                    if result:
+                        st.success("✅ Paper trade entered!")
+                        st.balloons()
+                    else:
+                        st.warning("Could not open paper trade. Check Virtual Game page.")
+                except Exception as _pe:
+                    st.error(f"Paper trade error: {_pe}")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # FEATURE 4: NEWS & CATALYST CONTEXT
+    # ══════════════════════════════════════════════════════════════════════
+    st.divider()
+    with st.expander("📰 News & Catalyst Context (Gemini + Google Search)", expanded=False):
+        st.caption("Live AI: why is this stock moving? Gemini with Google Search grounding.")
+        if st.button("🔍 Fetch News Context", key="dd_news_btn"):
+            try:
+                from perplexity_enrichment import get_signal_context
+                _sig_dir  = rec["final_recommendation"] if rec["final_recommendation"] != "HOLD" else "BUY"
+                _sig_strat = sig_ctx.get("strategy", "Technical") if sig_ctx else "Technical"
+                with st.spinner(f"Analysing {ticker} via Gemini + Google Search..."):
+                    ctx = get_signal_context(ticker, _sig_strat, _sig_dir)
+                if ctx.get("error"):
+                    st.warning(f"News fetch: {ctx['error']}")
+                    st.info("Add GEMINI_API_KEY to Streamlit Secrets for live news.")
+                else:
+                    _cat   = ctx.get("catalyst", "No specific catalyst identified")
+                    _ctype = ctx.get("catalyst_type", "Unknown")
+                    _csent = ctx.get("sentiment", "NEUTRAL")
+                    _conf  = ctx.get("confidence", 0)
+                    _live  = ctx.get("is_live", False)
+                    _facts = ctx.get("factors", [])
+                    _sc = {"BULLISH": "#26a69a", "BEARISH": "#ef5350", "NEUTRAL": "#ff9800"}.get(_csent, "#888")
+                    st.markdown(
+                        f'<div style="background:#1a1d23;border:1px solid #333;border-radius:10px;padding:16px">'
+                        f'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+                        f'<b>{_ctype}</b>'
+                        f'<span style="color:{_sc};font-weight:700">{_csent} · {_conf}% conf</span></div>'
+                        f'<div style="color:#ccc">{_cat}</div>'
+                        f'{"<div style=color:#26a69a;font-size:.75rem;margin-top:6px>🔴 LIVE — Google Search</div>" if _live else "<div style=color:#888;font-size:.75rem;margin-top:6px>📚 Training data</div>"}'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    for _f in _facts: st.markdown(f"- {_f}")
+            except ImportError:
+                st.info("Add GEMINI_API_KEY to Streamlit Secrets for news analysis.")
+            except Exception as _ne:
+                st.error(f"News context error: {_ne}")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # FEATURE 5: SHARE BUTTONS
+    # ══════════════════════════════════════════════════════════════════════
+    st.divider()
+    _sh1, _sh2, _sh3 = st.columns(3)
+
+    with _sh1:
+        if st.button("📱 Send to My Telegram", key="dd_tg_share", use_container_width=True):
+            try:
+                from auth_manager import get_current_profile
+                _prof = get_current_profile() or {}
+                _tgt  = _prof.get("telegram_bot_token", "")
+                _tgc  = _prof.get("telegram_chat_id", "")
+                if not _tgt:
+                    try: _tgt = st.secrets.get("TELEGRAM_BOT_TOKEN", "")
+                    except: pass
+                if not _tgc:
+                    try: _tgc = st.secrets.get("TELEGRAM_CHAT_ID", "")
+                    except: pass
+                if not _tgt or not _tgc:
+                    st.warning("Configure Telegram in Settings → Alert Preferences.")
+                else:
+                    _ve = "BUY" if rec["final_recommendation"]=="BUY" else ("SELL" if rec["final_recommendation"]=="SELL" else "HOLD")
+                    _vmoji = {"BUY":"🟢","SELL":"🔴","HOLD":"🟡"}.get(_ve,"⚪")
+                    _tg_lines = [
+                        "<b>AI Deep Dive: " + ticker + "</b>",
+                        _vmoji + " " + _ve + " — Score: " + f"{rec['weighted_score']:+.3f}",
+                        "Price: " + _fp(m["current_price"]) + " | 1D: " + f"{m['price_change_1d']:+.2f}%",
+                        "RSI: " + f"{m['rsi_14']:.1f}" + " | ADX: " + f"{m['adx_14']:.1f}" + " | Vol: " + f"{m['volume_ratio']:.2f}x",
+                        "Regime: " + regime["regime"] + " | VIX: " + str(regime["vix"]),
+                        "Sentiment: " + sent["overall"],
+                    ]
+                    if sig_ctx:
+                        _tg_lines += [
+                            "Strategy: " + sig_ctx.get("strategy","") + " " + sig_ctx.get("signal",""),
+                            "Entry " + _fp(sig_ctx.get("entry","?")) + " | SL " + _fp(sig_ctx.get("sl","?")) + " | T1 " + _fp(sig_ctx.get("t1","?")),
+                            "SQI " + str(sig_ctx.get("sqi","?")) + " (" + sig_ctx.get("sqi_grade","") + ")",
+                        ]
+                    _tg_lines.append("<i>NSE Scanner Pro</i>")
+                    _tg_msg = "\n".join(_tg_lines)
+                    import requests as _r
+                    _rr = _r.post(f"https://api.telegram.org/bot{_tgt}/sendMessage",
+                                  json={"chat_id": _tgc, "text": _tg_msg, "parse_mode": "HTML"}, timeout=10)
+                    if _rr.status_code == 200: st.success("✅ Sent to Telegram!")
+                    else: st.error(f"Failed: {_rr.json().get('description','Unknown')}")
+            except Exception as _te: st.error(f"Telegram error: {_te}")
+
+    with _sh2:
+        if st.button("📋 Copy Summary", key="dd_copy", use_container_width=True):
+            _sumlines = [
+                f"NSE Scanner Pro — AI Deep Dive: {ticker}",
+                f"Signal: {rec['final_recommendation']} (Score: {rec['weighted_score']:+.3f})",
+                f"Price: {_fp(m['current_price'])} | RSI: {m['rsi_14']:.1f} | ADX: {m['adx_14']:.1f}",
+                f"Regime: {regime['regime']} | VIX: {regime['vix']}",
+                f"Sentiment: {sent['overall']} (score: {sent['score']})",
+            ]
+            if sig_ctx:
+                _sumlines += [
+                    f"Strategy: {sig_ctx.get('strategy','')} | Entry: {_fp(sig_ctx.get('entry','?'))} | SL: {_fp(sig_ctx.get('sl','?'))} | T1: {_fp(sig_ctx.get('t1','?'))}",
+                    f"R:R: {sig_ctx.get('rr','?')} | SQI: {sig_ctx.get('sqi','?')} ({sig_ctx.get('sqi_grade','')})",
+                ]
+            st.text_area("Copy this:", "\n".join(_sumlines), height=160, key="dd_summary_text")
+
+    with _sh3:
+        if st.button("⭐ Add to Watchlist", key="dd_watchlist", use_container_width=True):
+            try:
+                from auth_manager import get_current_user
+                from signal_tracker import _get_supabase
+                _wu = get_current_user()
+                if _wu:
+                    _wsb = _get_supabase()
+                    if _wsb:
+                        _wsb.table("user_watchlists").upsert({
+                            "user_id": _wu["id"], "symbol": ticker,
+                            "strategy": sig_ctx.get("strategy","Manual") if sig_ctx else "Manual",
+                            "notes": f"AI Deep Dive — {rec['final_recommendation']} @ {_fp(m['current_price'])}",
+                        }, on_conflict="user_id,symbol,strategy").execute()
+                        st.success(f"⭐ {ticker} added to your watchlist!")
+                    else:
+                        st.session_state.setdefault("watchlist",[]).append({"symbol":ticker,"strategy":"AI Deep Dive","cmp":m["current_price"],"entry":m["current_price"],"stop":m["current_price"]*0.95,"target1":m["current_price"]*1.10,"target2":m["current_price"]*1.20,"confidence":80,"date":str(__import__("datetime").date.today()),"entry_type":"AT CMP","regime":regime.get("code","?"),"regime_fit":"OK"})
+                        st.success(f"⭐ {ticker} added!")
+                else:
+                    st.session_state.setdefault("watchlist",[]).append({"symbol":ticker,"strategy":"AI Deep Dive","cmp":m["current_price"],"entry":m["current_price"],"stop":m["current_price"]*0.95,"target1":m["current_price"]*1.10,"target2":m["current_price"]*1.20,"confidence":80,"date":str(__import__("datetime").date.today()),"entry_type":"AT CMP","regime":regime.get("code","?"),"regime_fit":"OK"})
+                    st.success(f"⭐ {ticker} added (sign in to persist)!")
+            except Exception as _we: st.error(f"Watchlist error: {_we}")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # FEATURE 6: SECTOR RRG CONTEXT
+    # ══════════════════════════════════════════════════════════════════════
+    _rrg = st.session_state.get("rrg_data", {})
+    _sector = (sig_ctx.get("sector","") if sig_ctx else "") or ""
+    if not _sector:
+        try:
+            from stock_universe import get_sector
+            _sector = get_sector(ticker)
+        except Exception: pass
+    if _sector and _rrg:
+        _rrg_s = _rrg.get(_sector, {})
+        if _rrg_s:
+            _quad = _rrg_s.get("quadrant","UNKNOWN")
+            _qmap = {
+                "LEADING":   ("🟢","Strong + Improving — best sector for longs (+8 confidence)","#26a69a"),
+                "WEAKENING": ("🟡","Strong but slowing — trade carefully","#ffd700"),
+                "IMPROVING": ("🔵","Weak but accelerating — early rotation opportunity","#42a5f5"),
+                "LAGGING":   ("🔴","Weak + Declining — avoid longs, consider shorts (-15 confidence)","#ef5350"),
+            }
+            _qe, _qdesc, _qcolor = _qmap.get(_quad, ("⚪","Unknown","#888"))
+            st.info(f"**Sector: {_sector}** — {_qe} **{_quad}**: {_qdesc}")
+    elif _sector:
+        st.caption(f"Sector: **{_sector}** | Load data from Dashboard for RRG sector rotation context.")
+
