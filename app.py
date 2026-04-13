@@ -75,14 +75,18 @@ from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REG
 # v16 additions
 from app_additions import page_performance, render_supabase_status
 
-# v18 — AI Deep Dive (Multi-Agent Swarm Analysis)
+# v18 — AI Deep Dive (Multi-Agent Swarm Analysis) [redeploy-trigger-v3]
 _AI_DEEP_DIVE_ERROR = ""
 try:
     from ai_deep_dive import page_ai_deep_dive
     AI_DEEP_DIVE_AVAILABLE = True
+    print("[AI Deep Dive] ✅ Loaded successfully")
 except Exception as _e:
+    import traceback
     AI_DEEP_DIVE_AVAILABLE = False
     _AI_DEEP_DIVE_ERROR = str(_e)
+    print(f"[AI Deep Dive] ❌ Import failed: {_e}")
+    print(traceback.format_exc())
 
 # v17 additions
 try:
