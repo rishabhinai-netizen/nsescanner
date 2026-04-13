@@ -1,0 +1,204 @@
+-- ============================================================
+-- NSE Scanner Pro v19 — Multi-User Schema Migration
+-- Run in Supabase SQL Editor: Dashboard → SQL Editor → New query
+-- ============================================================
+
+-- ============================================================
+-- 0. EXTENSIONS
+-- ============================================================
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================================
+-- 1. USER PROFILES  (extends Supabase auth.users)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id              UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email           TEXT        UNIQUE NOT NULL,
+    display_name    TEXT,
+    plan            TEXT        DEFAULT 'free',   -- 'free' | 'pro' | 'admin'
+    -- Telegram
+    telegram_chat_id    TEXT,
+    telegram_bot_token  TEXT,
+    telegram_alerts     BOOLEAN DEFAULT false,
+    -- Email alerts
+    email_alerts        BOOLEAN DEFAULT false,
+    alert_strategies    TEXT[]  DEFAULT '{}',     -- which strategies to alert on
+    alert_min_sqi       INTEGER DEFAULT 50,       -- only alert if SQI >= this
+    -- App preferences
+    default_universe    TEXT    DEFAULT 'nifty200',
+    default_capital     NUMERIC DEFAULT 500000,
+    -- Metadata
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    last_seen_at    TIMESTAMPTZ DEFAULT NOW(),
+    timezone        TEXT        DEFAULT 'Asia/Kolkata'
+);
+
+-- Trigger to auto-create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id, email, display_name)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
+-- 2. USER WATCHLISTS  (per-user)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_watchlists (
+    id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    symbol      TEXT        NOT NULL,
+    strategy    TEXT,
+    added_at    TIMESTAMPTZ DEFAULT NOW(),
+    notes       TEXT,
+    UNIQUE (user_id, symbol, strategy)
+);
+CREATE INDEX IF NOT EXISTS idx_watchlist_user ON user_watchlists(user_id);
+
+-- ============================================================
+-- 3. USER ALERTS LOG  (what was sent to whom)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_alerts (
+    id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    signal_id   UUID        REFERENCES signals(id),
+    symbol      TEXT        NOT NULL,
+    strategy    TEXT,
+    alert_type  TEXT        NOT NULL,  -- 'SIGNAL' | 'SL_HIT' | 'T1_HIT' | 'REGIME_CHANGE'
+    channel     TEXT        NOT NULL,  -- 'telegram' | 'email'
+    message     TEXT,
+    sent_at     TIMESTAMPTZ DEFAULT NOW(),
+    success     BOOLEAN     DEFAULT true,
+    error_msg   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_user_alerts_user    ON user_alerts(user_id, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_alerts_signal  ON user_alerts(signal_id);
+
+-- ============================================================
+-- 4. USER PAPER TRADES  (per-user virtual game)
+-- ============================================================
+-- Add user_id to paper_trades if not exists
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='paper_trades' AND column_name='user_id'
+    ) THEN
+        ALTER TABLE paper_trades ADD COLUMN user_id UUID REFERENCES auth.users(id);
+    END IF;
+END $$;
+
+-- Add user_id to paper_portfolio
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='paper_portfolio' AND column_name='user_id'
+    ) THEN
+        ALTER TABLE paper_portfolio ADD COLUMN user_id UUID REFERENCES auth.users(id);
+    END IF;
+END $$;
+
+-- ============================================================
+-- 5. UPDATE SIGNALS TABLE — add user_id for future per-user signals
+-- ============================================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='signals' AND column_name='created_by'
+    ) THEN
+        ALTER TABLE signals ADD COLUMN created_by UUID REFERENCES auth.users(id);
+        -- NULL means auto-generated by GitHub Actions (shared/global)
+    END IF;
+END $$;
+
+-- Additional columns if missing
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='signals' AND column_name='first_seen_ist') THEN
+        ALTER TABLE signals ADD COLUMN first_seen_ist TIMESTAMPTZ;
+        ALTER TABLE signals ADD COLUMN last_seen_ist TIMESTAMPTZ;
+        ALTER TABLE signals ADD COLUMN scan_count INTEGER DEFAULT 1;
+        ALTER TABLE signals ADD COLUMN sqi_breakdown TEXT;
+        ALTER TABLE signals ADD COLUMN reasons JSONB;
+    END IF;
+END $$;
+
+-- ============================================================
+-- 6. ROW LEVEL SECURITY POLICIES (Multi-user isolation)
+-- ============================================================
+
+-- user_profiles: users see only their own profile
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users_own_profile" ON user_profiles;
+CREATE POLICY "users_own_profile" ON user_profiles
+    FOR ALL USING (auth.uid() = id);
+
+-- user_watchlists: users see only their own
+ALTER TABLE user_watchlists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users_own_watchlist" ON user_watchlists;
+CREATE POLICY "users_own_watchlist" ON user_watchlists
+    FOR ALL USING (auth.uid() = user_id);
+
+-- user_alerts: users see only their own
+ALTER TABLE user_alerts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users_own_alerts" ON user_alerts;
+CREATE POLICY "users_own_alerts" ON user_alerts
+    FOR ALL USING (auth.uid() = user_id);
+
+-- paper_trades: per-user
+DROP POLICY IF EXISTS "users_own_paper_trades" ON paper_trades;
+CREATE POLICY "users_own_paper_trades" ON paper_trades
+    FOR ALL USING (user_id = auth.uid() OR user_id IS NULL);
+
+-- paper_portfolio: per-user
+DROP POLICY IF EXISTS "users_own_paper_portfolio" ON paper_portfolio;
+CREATE POLICY "users_own_paper_portfolio" ON paper_portfolio
+    FOR ALL USING (user_id = auth.uid() OR user_id IS NULL);
+
+-- signals: all users can READ, service role can WRITE
+DROP POLICY IF EXISTS "signals_read_all" ON signals;
+CREATE POLICY "signals_read_all" ON signals
+    FOR SELECT USING (true);
+DROP POLICY IF EXISTS "signals_write_service" ON signals;
+CREATE POLICY "signals_write_service" ON signals
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- ============================================================
+-- 7. ADMIN VIEW: who is using the platform
+-- ============================================================
+CREATE OR REPLACE VIEW admin_user_stats AS
+SELECT
+    up.id,
+    up.email,
+    up.display_name,
+    up.plan,
+    up.telegram_alerts,
+    up.email_alerts,
+    up.created_at,
+    up.last_seen_at,
+    COUNT(DISTINCT pt.id)  AS paper_trades,
+    COUNT(DISTINCT ua.id)  AS alerts_received
+FROM user_profiles up
+LEFT JOIN paper_trades pt    ON pt.user_id = up.id
+LEFT JOIN user_alerts  ua    ON ua.user_id = up.id
+GROUP BY up.id, up.email, up.display_name, up.plan,
+         up.telegram_alerts, up.email_alerts,
+         up.created_at, up.last_seen_at;
+
+-- Only admins can see this view (set via plan = 'admin')
+-- Service role bypasses RLS so GitHub Actions can still write
