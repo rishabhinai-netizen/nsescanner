@@ -1210,8 +1210,11 @@ def page_scanner_hub():
                     sqi_col1, sqi_col2 = st.columns([10, 1])
                     with sqi_col1:
                         grade_color = {"ELITE":"gold","STRONG":"#5dade2","MODERATE":"#ffd700","WEAK":"#ff4757"}.get(sqi_grade,"white")
-                        st.markdown(f'**{sqi_icon} Signal Quality: <span style="color:{grade_color}">{sqi_val:.0f}/100 — {sqi_grade}</span>** '
-                                    f'<span title="{SQI_TOOLTIP}" style="cursor:help;color:#888">ℹ️</span>', unsafe_allow_html=True)
+                        st.markdown(
+                                    f'**{sqi_icon} Signal Quality: <span style="color:{grade_color}">' +
+                                    f'{sqi_val:.0f}/100 — {sqi_grade}</span>**' +
+                                    tip_md("sqi") + " " + tip_md("sqi_grade", "grade ℹ️"),
+                                    unsafe_allow_html=True)
                     st.caption(f"Breakdown: {sqi_breakdown}")
                     st.caption("SQI = Backtest Edge 30% + RS Strength 25% + Regime Fit 20% + Vol Contraction 15% + Volume 10%")
                 
