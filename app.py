@@ -575,7 +575,7 @@ default_page = qp.get("page", PAGES[0])
 
 with st.sidebar:
     st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v19 — AI Deep Dive · Multi-User · Smart Navigation")
+    st.caption("v19 — AI · Multi-User · 1000+ Stocks · Smart Nav")
     
     # User identity chip
     _user = get_current_user()
@@ -2057,6 +2057,17 @@ def page_tracker():
 # ============================================================================
 def page_settings():
     st.markdown("# ⚙️ Settings")
+    
+    # Auth status
+    from auth_manager import get_current_user, get_current_profile, is_admin
+    _su = get_current_user()
+    _sp = get_current_profile() or {}
+    if _su:
+        st.success(f"✅ Signed in as **{_su.get('name',_su.get('email',''))}** "
+                   f"· Plan: **{_sp.get('plan','free').upper()}**")
+        st.caption(f"User ID: {_su.get('id','?')[:8]}...")
+    st.divider()
+    
     st.session_state.capital = st.number_input("Capital ₹", value=st.session_state.capital, step=50000)
 
     st.markdown("### 🔌 Breeze API")
