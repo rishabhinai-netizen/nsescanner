@@ -61,7 +61,7 @@ from backtester import (
     backtest_strategy, backtest_multi_stock, backtest_walk_forward,
     BacktestResult, CostModel, DEFAULT_COSTS
 )
-from tooltips import TIPS, tip
+from tooltips import TIPS, tip, tip_md, tip_badge
 from signal_tracker import (
     load_signals, load_tracker, save_signals_today,
     compute_tracker_stats, update_open_signals_live,
@@ -520,30 +520,79 @@ def load_data():
 # ============================================================================
 # SIDEBAR — with query_params persistence (fixes page jump on interaction)
 # ============================================================================
+# Navigation groups — order defines user workflow
+# ① Market Intelligence  ② Scan & Find  ③ Analyse  ④ Track  ⑤ System
 PAGES = [
-    "📊 Dashboard", "🔍 Scanner Hub", "📈 Charts & RS",
-    "🔗 Option Chain", "🚀 IPO Scanner",
-    "🔎 Stock Lookup", "📜 Signal History",
-    "🧪 Backtest", "📊 Performance",
+    "📊 Dashboard",
     "🧠 AI Deep Dive",
-    "🎮 Virtual Game", "⚙️ Settings"
+    "🔎 Stock Lookup",
+    "── SCAN ──",
+    "🔍 Scanner Hub",
+    "📜 Signal History",
+    "📊 Performance",
+    "── ANALYSE ──",
+    "📈 Charts & RS",
+    "🔗 Option Chain",
+    "🚀 IPO Scanner",
+    "🧪 Backtest",
+    "── TRACK ──",
+    "🎮 Virtual Game",
+    "── ──",
+    "⚙️ Settings",
 ]
+# Pages that are section dividers (not navigable)
+_NAV_DIVIDERS = {"── SCAN ──", "── ANALYSE ──", "── TRACK ──", "── ──"}
 
 # Persist page selection in URL query params
 qp = st.query_params
 default_page = qp.get("page", PAGES[0])
-if default_page not in PAGES:
-    default_page = PAGES[0]
+# default_page validated below after _NAV_DIVIDERS is defined
 
 with st.sidebar:
     st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v16 — Supabase + Alerts + Auto-Learning + Portfolio")
+    st.caption("v19 — AI Deep Dive · 1000+ Stocks · Smart Navigation")
     st.markdown("---")
-    page = st.radio("Navigation", PAGES,
-                    index=PAGES.index(default_page),
-                    label_visibility="collapsed", key="nav_radio")
-    
-    # Persist to URL so page survives reruns
+    # Grouped navigation — section headers are visual only
+    _navigable = [p for p in PAGES if p not in _NAV_DIVIDERS]
+    if default_page not in _navigable:
+        default_page = _navigable[0]
+
+    # Render each item: divider as caption, page as button-style radio
+    st.markdown("""
+    <style>
+    div[data-testid="stSidebarNav"] {display:none}
+    .nav-section {
+        font-size:0.62rem; font-weight:700; letter-spacing:1.5px;
+        color:#FF6B35; margin:10px 0 2px 4px; text-transform:uppercase;
+    }
+    div[data-testid="stRadio"] label {font-size:0.82rem !important;}
+    </style>""", unsafe_allow_html=True)
+
+    page = None
+    for p in PAGES:
+        if p in _NAV_DIVIDERS:
+            label = p.replace("──","").strip()
+            if label:
+                st.markdown(f'<div class="nav-section">{label}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<hr style="margin:6px 0;border-color:#333">', unsafe_allow_html=True)
+        else:
+            active = (p == default_page)
+            btn = st.button(
+                p,
+                key=f"nav_{p}",
+                use_container_width=True,
+                type="primary" if active else "secondary",
+            )
+            if btn:
+                page = p
+                default_page = p
+                st.query_params["page"] = p
+
+    if page is None:
+        page = default_page
+
+    # Persist to URL
     if page != qp.get("page"):
         st.query_params["page"] = page
     
@@ -982,6 +1031,17 @@ def page_scanner_hub():
     
     render_focus_panel()
     
+    # Inline info markers shown at top of scanner
+    st.markdown(
+        f"**Quick Reference:** &nbsp;"
+        f"RS{tip_md('rs_rating')} &nbsp;·&nbsp;"
+        f"SQI{tip_md('sqi')} &nbsp;·&nbsp;"
+        f"R:R{tip_md('risk_reward')} &nbsp;·&nbsp;"
+        f"Regime Fit{tip_md('regime_fit')} &nbsp;·&nbsp;"
+        f"Weekly Align{tip_md('weekly_aligned')} &nbsp;·&nbsp;"
+        f"Sector{tip_md('sector')}",
+        unsafe_allow_html=True
+    )
     with st.expander("ℹ️ What do these terms mean?"):
         c1, c2 = st.columns(2)
         with c1:
@@ -996,9 +1056,10 @@ def page_scanner_hub():
     # === FILTER CONTROLS (visible on Scanner Hub too) ===
     c1, c2 = st.columns(2)
     with c1:
-        st.session_state.rs_filter = st.slider("Min RS Rating (Long signals only)", 0, 95,
+        st.session_state.rs_filter = st.slider(
+            "Min RS Rating ℹ️ (Long signals only)", 0, 95,
             st.session_state.rs_filter, 5, key="hub_rs",
-            help=tip("rs_rating") + " **Note:** This filter only applies to BUY signals. SHORT signals are NOT filtered by RS — weak stocks (low RS) are ideal short candidates.")
+            help=tip("rs_rating") + " NOTE: Only applies to BUY signals. SHORT signals skip RS filter — weak stocks are ideal short candidates.")
     with c2:
         st.session_state.regime_filter = st.checkbox("Block strategies not suited for current regime",
             value=st.session_state.regime_filter, key="hub_regime",
@@ -2798,4 +2859,5 @@ page_map = {
     "⚙️ Settings": page_settings,
 }
 page_func = page_map.get(page, page_dashboard)
-page_func()
+if page not in _NAV_DIVIDERS:
+    page_func()
