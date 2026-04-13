@@ -75,7 +75,7 @@ from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REG
 # v16 additions
 from app_additions import page_performance, render_supabase_status
 
-# v18 — AI Deep Dive (Multi-Agent Swarm Analysis) [redeploy-trigger-v4]
+# v18 — AI Deep Dive (Multi-Agent Swarm Analysis) [v3-exhaustive]
 _AI_DEEP_DIVE_ERROR = ""
 try:
     from ai_deep_dive import page_ai_deep_dive
