@@ -76,6 +76,24 @@ from signal_quality import compute_sqi, get_regime_strategy_matrix, STRATEGY_REG
 from app_additions import page_performance, render_supabase_status
 
 # v18 — AI Deep Dive (Multi-Agent Swarm Analysis) [v3-exhaustive]
+
+# v19 — Auth manager (multi-user, Google OAuth, Telegram/email alerts)
+try:
+    from auth_manager import (
+        require_auth, get_current_user, get_current_profile,
+        is_admin, logout, render_alert_preferences, render_admin_dashboard
+    )
+    AUTH_AVAILABLE = True
+except Exception as _auth_e:
+    AUTH_AVAILABLE = False
+    print(f"[Auth] auth_manager not loaded: {_auth_e}")
+    def require_auth(): return True
+    def get_current_user(): return None
+    def get_current_profile(): return None
+    def is_admin(): return False
+    def logout(): pass
+    def render_alert_preferences(): st.info("Auth not configured.")
+    def render_admin_dashboard(): st.info("Auth not configured.")
 _AI_DEEP_DIVE_ERROR = ""
 try:
     from ai_deep_dive import page_ai_deep_dive
@@ -129,6 +147,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     menu_items={"Get Help": None, "Report a bug": None, "About": None}
 )
+
+# ============================================================================
+# AUTH GATE — Multi-user authentication (v19)
+# ============================================================================
+if not require_auth():
+    st.stop()  # Block rest of app until user is logged in
 
 # ============================================================================
 # PASSWORD GATE (optional — set APP_PASSWORD in Streamlit secrets to enable)
@@ -539,6 +563,7 @@ PAGES = [
     "🎮 Virtual Game",
     "── ──",
     "⚙️ Settings",
+    "👑 Admin",
 ]
 # Pages that are section dividers (not navigable)
 _NAV_DIVIDERS = {"── SCAN ──", "── ANALYSE ──", "── TRACK ──", "── ──"}
@@ -550,7 +575,23 @@ default_page = qp.get("page", PAGES[0])
 
 with st.sidebar:
     st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v19 — AI Deep Dive · 1000+ Stocks · Smart Navigation")
+    st.caption("v19 — AI Deep Dive · Multi-User · Smart Navigation")
+    
+    # User identity chip
+    _user = get_current_user()
+    _profile = get_current_profile()
+    if _user:
+        _plan = (_profile or {}).get("plan", "free")
+        _plan_badge = {"admin": "👑 Admin", "pro": "⭐ Pro", "free": "Free"}.get(_plan, "Free")
+        _plan_color = {"admin": "#ffd700", "pro": "#00d26a", "free": "#5dade2"}.get(_plan, "#5dade2")
+        st.markdown(
+            f'<div style="background:#1a1d23;border:1px solid #333;border-radius:8px;'
+            f'padding:7px 10px;margin:4px 0;display:flex;align-items:center;gap:8px;">'
+            f'<div style="font-size:1.1rem">{"🖼️" if not _user.get("avatar") else ""}</div>'
+            f'<div><div style="font-size:.8rem;font-weight:600;color:#fafafa">{_user.get("name","User")[:20]}</div>'
+            f'<div style="font-size:.68rem;color:{_plan_color}">{_plan_badge}</div></div>'
+            f'</div>', unsafe_allow_html=True
+        )
     st.markdown("---")
     # Grouped navigation — section headers are visual only
     _navigable = [p for p in PAGES if p not in _NAV_DIVIDERS]
@@ -570,6 +611,9 @@ with st.sidebar:
 
     page = None
     for p in PAGES:
+        # Hide Admin page from non-admin users
+        if p == "👑 Admin" and not is_admin():
+            continue
         if p in _NAV_DIVIDERS:
             label = p.replace("──","").strip()
             if label:
@@ -595,6 +639,11 @@ with st.sidebar:
     # Persist to URL
     if page != qp.get("page"):
         st.query_params["page"] = page
+    
+    # Logout button
+    if get_current_user():
+        if st.button("🚪 Sign Out", key="sidebar_logout", use_container_width=True):
+            logout()
     
     st.markdown("---")
     ist = now_ist()
@@ -2182,6 +2231,10 @@ def page_settings():
     st.caption("Alerts are sent via Telegram when scans run. Set in Streamlit Secrets:")
     st.code('TELEGRAM_BOT_TOKEN = "your_bot_token"\nTELEGRAM_CHAT_ID = "your_chat_id"', language="toml")
 
+    # Per-user alert preferences
+    st.divider()
+    render_alert_preferences()
+
 
 # ============================================================================
 # STOCK LOOKUP — Deep-dive per stock
@@ -2857,6 +2910,7 @@ page_map = {
     "🎮 Virtual Game": (render_paper_trading_page if PAPER_TRADING_AVAILABLE else lambda: st.warning("paper_trading.py not found in repo")),
     "🧠 AI Deep Dive": (page_ai_deep_dive if AI_DEEP_DIVE_AVAILABLE else lambda: st.error(f"AI Deep Dive load failed: {_AI_DEEP_DIVE_ERROR}")),
     "⚙️ Settings": page_settings,
+    "👑 Admin": render_admin_dashboard,
 }
 page_func = page_map.get(page, page_dashboard)
 if page not in _NAV_DIVIDERS:
