@@ -81,7 +81,9 @@ from app_additions import page_performance, render_supabase_status
 try:
     from auth_manager import (
         require_auth, get_current_user, get_current_profile,
-        is_admin, logout, render_alert_preferences, render_admin_dashboard
+        is_admin, is_pro, logout,
+        render_alert_preferences, render_admin_dashboard,
+        check_plan_feature, plan_gate,
     )
     AUTH_AVAILABLE = True
 except Exception as _auth_e:
@@ -91,9 +93,12 @@ except Exception as _auth_e:
     def get_current_user(): return None
     def get_current_profile(): return None
     def is_admin(): return False
+    def is_pro(): return False
     def logout(): pass
     def render_alert_preferences(): st.info("Auth not configured.")
     def render_admin_dashboard(): st.info("Auth not configured.")
+    def check_plan_feature(f): return True
+    def plan_gate(f, show_upgrade=True): return True
 _AI_DEEP_DIVE_ERROR = ""
 try:
     from ai_deep_dive import page_ai_deep_dive
@@ -2205,6 +2210,31 @@ def page_settings():
     st.markdown("Add this to Streamlit secrets to require a password:")
     st.code('APP_PASSWORD = "your_chosen_password"', language="toml")
     st.caption("Leave blank or remove to disable.")
+    
+    st.markdown("### 🔵 Enable Google Sign-In")
+    with st.expander("Step-by-step Google OAuth setup (one-time)", expanded=False):
+        st.markdown("""
+**Step 1 — Enable in Supabase:**
+1. Go to [supabase.com](https://supabase.com) → Your project → **Authentication** → **Providers**
+2. Click **Google** → Toggle **Enable**
+3. You'll need a Client ID and Secret (get from Step 2)
+4. Set Redirect URL to: `https://aiebaqvclyzxajigvkfd.supabase.co/auth/v1/callback`
+
+**Step 2 — Google Cloud Console:**
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. APIs & Services → Credentials → **Create Credentials** → OAuth Client ID
+3. Application type: **Web application**
+4. Authorised redirect URIs: `https://aiebaqvclyzxajigvkfd.supabase.co/auth/v1/callback`
+5. Copy **Client ID** and **Client Secret** → paste into Supabase (Step 1)
+
+**Step 3 — Streamlit Secrets:**
+```toml
+AUTH_ENABLED = "true"
+APP_URL = "https://nsescannerbyrishabh.streamlit.app"
+SUPABASE_ANON_KEY = "eyJhbGci..."
+```
+Once enabled, the "Sign in with Google" button appears automatically on the login page.
+        """)
 
     st.markdown("### 🤖 GitHub Actions (Auto-Scanner)")
     st.markdown("""
