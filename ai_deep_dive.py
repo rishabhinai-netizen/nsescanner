@@ -1145,6 +1145,27 @@ def page_ai_deep_dive():
     _gm = gemini_model if 'gemini_model' in dir() else "gemini-2.0-flash"
     st.caption(f"Groq llama-3.3-70b (primary) · Gemini 2.0 Flash (fallback) · {len(_build_prompt(ticker,m,regime,sent,rec,sig_ctx).split())} word prompt")
 
+    # ── Rate limit: 30s between analysis calls per session ─────────────────
+    import time as _time
+    _last = st.session_state.get("dd_last_analysis_ts", 0)
+    _now  = _time.time()
+    _wait = 30 - (_now - _last)
+    if _wait > 0 and st.session_state.get("dd_result"):
+        st.warning(f"⏳ Please wait {int(_wait)}s before running another analysis (rate limit).")
+        _render_deep_dive_results(
+            st.session_state["dd_result"]["ticker"],
+            st.session_state["dd_result"]["m"],
+            st.session_state["dd_result"]["df"],
+            st.session_state["dd_result"]["regime"],
+            st.session_state["dd_result"]["sent"],
+            st.session_state["dd_result"]["rec"],
+            st.session_state["dd_result"]["sig_ctx"],
+            st.session_state["dd_result"]["analysis"],
+            _gm, groq_key, gemini_key, open_sigs
+        )
+        return
+    st.session_state["dd_last_analysis_ts"] = _now
+
     analysis = _run_ai(ticker,m,regime,sent,rec,sig_ctx,groq_key,gemini_key, _gm)
     if analysis:
         st.markdown(analysis)
