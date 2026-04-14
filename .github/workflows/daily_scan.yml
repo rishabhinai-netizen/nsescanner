@@ -20,6 +20,8 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write   # only write permission needed for CSV commit
     steps:
       - uses: actions/checkout@v4
         with:
