@@ -62,14 +62,25 @@ def scan_and_record(mode="eod", universe="nifty500"):
     regime = detect_market_regime(nifty)
     log.info(f"Regime: {regime['regime_display']} ({regime['score']}/{regime['max_score']})")
     
-    # Run all daily scanners (no regime blocking for recording — we want all signals)
+    # Run with FULL regime blocking enforced
+    # We do NOT record signals from strategies that are blocked in current regime.
+    # Rationale: recording blocked signals pollutes performance stats with trades
+    # that should never have been taken. Last30Min_ATH and 52WH in PANIC/DISTRIBUTION
+    # are textbook examples — 0% win rate because market was wrong for the strategy.
     results = run_all_scanners(
         data, nifty, daily_only=True,
-        regime=None,  # Don't block — record everything
+        regime=regime,  # Enforce blocking — only record strategies valid for this regime
         has_intraday=False,
         sector_rankings={},
-        min_rs=0,  # Don't filter — record everything
+        min_rs=0,
     )
+    
+    # Log which strategies were blocked
+    from scanners import STRATEGY_PROFILES
+    current_regime_name = regime.get("regime", "UNKNOWN") if regime else "UNKNOWN"
+    for strat_name, profile in STRATEGY_PROFILES.items():
+        if current_regime_name in profile.get("blocked_regimes", []):
+            log.info(f"  ⛔ {strat_name} BLOCKED in {current_regime_name} regime — not recorded")
     
     total = sum(len(v) for v in results.values())
     log.info(f"Found {total} total signals")
