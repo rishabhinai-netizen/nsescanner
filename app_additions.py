@@ -95,9 +95,24 @@ def page_performance():
                   delta=f"{stats['win_rate'] - 50:+.1f}% vs 50%",
                   delta_color=wr_color)
 
-        pnl_col  = stats.get("total_pnl", 0)
-        pnl_sign = "normal" if pnl_col >= 0 else "inverse"
-        c6.metric("Total P&L", f"{pnl_col:+.1f}%", delta_color=pnl_sign)
+        avg_pnl    = stats.get("total_pnl", 0)        # avg P&L per closed trade
+        expectancy = stats.get("expectancy", avg_pnl)
+        pnl_sign   = "normal" if expectancy >= 0 else "inverse"
+        c6.metric(
+            "Avg P&L / Trade",
+            f"{avg_pnl:+.2f}%",
+            delta=f"Expectancy: {expectancy:+.2f}%",
+            delta_color=pnl_sign,
+            help="Average P&L per closed trade. Expectancy = (WinRate×AvgWin) + (LossRate×AvgLoss). NOT the sum of all trades."
+        )
+        # Also show avg win / avg loss below KPIs
+        if stats.get("avg_win") or stats.get("avg_loss"):
+            st.caption(
+                f"📈 Avg Win: **{stats.get('avg_win',0):+.2f}%** &nbsp;|&nbsp; "
+                f"📉 Avg Loss: **{stats.get('avg_loss',0):+.2f}%** &nbsp;|&nbsp; "
+                f"Closed trades: **{stats.get('closed',0)}** &nbsp;|&nbsp; "
+                f"⚠️ P&L shown is avg per trade, not cumulative sum"
+            )
 
         # Equity curve
         all_df = load_signals()
@@ -133,11 +148,16 @@ def _render_equity_curve(df: pd.DataFrame):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=closed[date_col], y=closed["_cumulative"].round(2),
-        mode="lines", name="Cumulative P&L %",
+        mode="lines", name="Cumulative Sum of Trade P&Ls (not portfolio %)",
         line=dict(color="#FF6B35", width=2),
         fill="tozeroy",
         fillcolor="rgba(255,107,53,0.08)",
     ))
+    fig.add_annotation(
+        text="Note: Y-axis = sum of individual trade P&L %. Not portfolio return %.",
+        xref="paper", yref="paper", x=0, y=1.02, showarrow=False,
+        font=dict(size=9, color="#888"), align="left"
+    )
     fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.4)
     fig.update_layout(
         template="plotly_dark", height=240,
