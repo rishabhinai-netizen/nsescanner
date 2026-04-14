@@ -517,9 +517,14 @@ def compute_tracker_stats(df: pd.DataFrame = None) -> Dict:
         "expired":        expired,
         "closed":         closed,
         "win_rate":       win_rate,
-        "total_pnl":      round(float(closed_pnl.sum()), 2),
+        # total_pnl = avg P&L per closed trade (expectancy metric). SUM was wrong.
+        "total_pnl":      round(float(closed_pnl.mean()), 2) if len(closed_pnl) > 0 else 0,
         "avg_win":        round(float(closed_pnl[closed_pnl > 0].mean()), 2) if (closed_pnl > 0).any() else 0,
         "avg_loss":       round(float(closed_pnl[closed_pnl < 0].mean()), 2) if (closed_pnl < 0).any() else 0,
+        "expectancy":     round(
+                              (win_rate/100) * (round(float(closed_pnl[closed_pnl>0].mean()),2) if (closed_pnl>0).any() else 0)
+                            + (1-win_rate/100) * (round(float(closed_pnl[closed_pnl<0].mean()),2) if (closed_pnl<0).any() else 0)
+                          , 2) if closed > 0 else 0,
         "strategy_stats": strategy_stats,
         "first_date":     dates.min().strftime("%Y-%m-%d") if len(dates) > 0 else "",
         "last_date":      dates.max().strftime("%Y-%m-%d") if len(dates) > 0 else "",
