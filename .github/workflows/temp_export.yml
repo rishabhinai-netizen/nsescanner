@@ -10,22 +10,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install supabase pandas -q
-      - name: Export
+      - name: Export signals to log
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: |
-          python3 -c "
-import os, pandas as pd
-from supabase import create_client
-sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_KEY'])
-res = sb.table('signals').select('symbol,strategy,signal,date,entry,sl,t1,cmp,status,exit_price,pnl_pct,exit_reason,regime,rs,sqi,sqi_grade,scan_count').order('date').execute()
-df = pd.DataFrame(res.data or [])
-print('TOTAL_ROWS:' + str(len(df)))
-print(df.to_csv(index=False))
-df.to_csv('/tmp/signals.csv', index=False)
-          "
-      - uses: actions/upload-artifact@v4
-        with:
-          name: signals-export
-          path: /tmp/signals.csv
+        run: python3 export_signals.py
