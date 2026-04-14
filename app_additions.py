@@ -71,53 +71,56 @@ def render_supabase_status():
 
 def page_performance():
     st.markdown("# 📊 Performance")
-    st.caption(
-        "Live forward-test results. Every scan auto-records signals. "
-        "Performance updates daily when signals close."
-    )
+    st.caption("Forward-test results. Regime-blocked strategies excluded from stats.")
 
     tracker_df = load_tracker()
     stats      = compute_tracker_stats(tracker_df) if tracker_df is not None else {}
 
-    # ── Top KPIs ──────────────────────────────────────────────────────────
-    if stats and stats.get("total", 0) > 0:
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
-        def _kpi(col, label, val, css=""):
-            col.metric(label, val)
+    if not stats or stats.get("total", 0) == 0:
+        st.info("No signals recorded yet.")
+        return
 
-        _kpi(c1, "Total Signals", stats["total"])
-        _kpi(c2, "🟢 Targets",    stats["targets"])
-        _kpi(c3, "🔴 Stopped",    stats["stopped"])
-        _kpi(c4, "⏳ Open",       stats["open"])
+    # ── ₹1L SIMULATION BANNER ─────────────────────────────────────────────
+    closed = stats.get("closed", 0)
+    targets = stats.get("targets", 0)
+    stopped = stats.get("stopped", 0)
+    avg_win  = stats.get("avg_win", 0)
+    avg_loss = stats.get("avg_loss", 0)
+    win_rate = stats.get("win_rate", 0)
+    expectancy = stats.get("expectancy", 0)
+    
+    # ₹1L simulation: each signal = ₹1L deployed
+    pnl_per_lakh = expectancy * 1000  # expectancy % on ₹1L = ₹ value
+    total_sim_pnl = closed * pnl_per_lakh
+    
+    color = "#26a69a" if expectancy >= 0 else "#ef5350"
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#0d1117,#161b22);border:1px solid #333;
+    border-radius:12px;padding:16px 20px;margin:8px 0">
+    <div style="font-size:.75rem;color:#888;letter-spacing:2px;margin-bottom:8px">
+    ₹1 LAKH PER SIGNAL — SIMULATION RESULT</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+    <div><div style="color:#888;font-size:.7rem">Closed Trades</div>
+    <div style="font-size:1.3rem;font-weight:700;color:#fff">{closed}</div>
+    <div style="color:#888;font-size:.7rem">{targets} hits · {stopped} stopped</div></div>
+    <div><div style="color:#888;font-size:.7rem">Win Rate</div>
+    <div style="font-size:1.3rem;font-weight:700;color:{color}">{win_rate:.1f}%</div>
+    <div style="color:#888;font-size:.7rem">Avg win {avg_win:+.2f}% / loss {avg_loss:+.2f}%</div></div>
+    <div><div style="color:#888;font-size:.7rem">Expectancy / Trade</div>
+    <div style="font-size:1.3rem;font-weight:700;color:{color}">{expectancy:+.2f}%</div>
+    <div style="color:#888;font-size:.7rem">₹{pnl_per_lakh:+,.0f} per ₹1L deployed</div></div>
+    <div><div style="color:#888;font-size:.7rem">Simulated Total P&L</div>
+    <div style="font-size:1.3rem;font-weight:700;color:{color}">₹{total_sim_pnl:+,.0f}</div>
+    <div style="color:#888;font-size:.7rem">on {closed}×₹1L = ₹{closed}L deployed</div></div>
+    </div></div>""", unsafe_allow_html=True)
 
-        wr_color = "normal" if stats["win_rate"] >= 50 else "inverse"
-        c5.metric("Win Rate", f"{stats['win_rate']}%",
-                  delta=f"{stats['win_rate'] - 50:+.1f}% vs 50%",
-                  delta_color=wr_color)
+    # ── OPEN POSITIONS LIVE P&L ───────────────────────────────────────────
+    _render_open_positions_live()
 
-        avg_pnl    = stats.get("total_pnl", 0)        # avg P&L per closed trade
-        expectancy = stats.get("expectancy", avg_pnl)
-        pnl_sign   = "normal" if expectancy >= 0 else "inverse"
-        c6.metric(
-            "Avg P&L / Trade",
-            f"{avg_pnl:+.2f}%",
-            delta=f"Expectancy: {expectancy:+.2f}%",
-            delta_color=pnl_sign,
-            help="Average P&L per closed trade. Expectancy = (WinRate×AvgWin) + (LossRate×AvgLoss). NOT the sum of all trades."
-        )
-        # Also show avg win / avg loss below KPIs
-        if stats.get("avg_win") or stats.get("avg_loss"):
-            st.caption(
-                f"📈 Avg Win: **{stats.get('avg_win',0):+.2f}%** &nbsp;|&nbsp; "
-                f"📉 Avg Loss: **{stats.get('avg_loss',0):+.2f}%** &nbsp;|&nbsp; "
-                f"Closed trades: **{stats.get('closed',0)}** &nbsp;|&nbsp; "
-                f"⚠️ P&L shown is avg per trade, not cumulative sum"
-            )
-
-        # Equity curve
-        all_df = load_signals()
-        if all_df is not None and not all_df.empty:
-            _render_equity_curve(all_df)
+    # Equity curve
+    all_df = load_signals()
+    if all_df is not None and not all_df.empty:
+        _render_equity_curve(all_df)
 
     # ── Tabs: Overview | Signals | Strategy Breakdown ──────────────────────
     tab1, tab2, tab3 = st.tabs(["📈 Strategy Breakdown", "📋 Signal Log", "📥 Export"])
@@ -130,6 +133,89 @@ def page_performance():
 
     with tab3:
         _render_export(tracker_df)
+
+
+def _render_open_positions_live():
+    """Shows open signals with live CMP fetched from yfinance."""
+    try:
+        from signal_tracker import _get_supabase
+        sb = _get_supabase()
+        if not sb:
+            return
+        res = sb.table("signals").select(
+            "symbol,strategy,signal,date,entry,sl,t1,t2,sqi_grade,sector,first_seen_ist"
+        ).eq("status","OPEN").order("sqi", desc=True).limit(60).execute()
+        open_rows = res.data or []
+    except Exception:
+        return
+    
+    if not open_rows:
+        return
+
+    st.markdown("### 📋 Open Positions — Live P&L")
+    
+    # Fetch live prices
+    symbols = list(set(r['symbol'] for r in open_rows))
+    live_prices = {}
+    try:
+        import yfinance as yf
+        for sym in symbols:
+            try:
+                h = yf.Ticker(f"{sym}.NS").history(period="1d")
+                if not h.empty:
+                    live_prices[sym] = float(h['Close'].iloc[-1])
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    rows = []
+    total_unrealised = 0
+    in_profit = 0
+    for r in open_rows:
+        entry = float(r.get('entry') or 0)
+        t1    = float(r.get('t1') or 0)
+        sl    = float(r.get('sl') or 0)
+        live  = live_prices.get(r['symbol'], entry)
+        
+        if r['signal'] == 'BUY':
+            pnl_pct = (live - entry) / entry * 100 if entry > 0 else 0
+        else:
+            pnl_pct = (entry - live) / entry * 100 if entry > 0 else 0
+        
+        t1_pct = (t1 - entry) / entry * 100 if entry > 0 and r['signal']=='BUY' else (entry - t1) / entry * 100 if entry > 0 else 0
+        sl_pct = (sl - entry) / entry * 100 if entry > 0 and r['signal']=='BUY' else (entry - sl) / entry * 100 if entry > 0 else 0
+        
+        # Progress to T1 (0-100%)
+        total_range = abs(t1 - entry)
+        progress = min(100, max(0, abs(live - entry) / total_range * 100)) if total_range > 0 else 0
+        if (r['signal']=='BUY' and live < entry) or (r['signal']=='SHORT' and live > entry):
+            progress = 0
+
+        total_unrealised += pnl_pct
+        if pnl_pct > 0:
+            in_profit += 1
+
+        rows.append({
+            "Symbol":      r['symbol'],
+            "Strategy":    r.get('strategy',''),
+            "Dir":         r['signal'],
+            "Entry ₹":     f"₹{entry:,.2f}",
+            "Live ₹":      f"₹{live:,.2f}" if r['symbol'] in live_prices else "—",
+            "Unrealised":  f"{pnl_pct:+.2f}%",
+            "→ T1":        f"{t1_pct:+.1f}%",
+            "SL":          f"{sl_pct:+.1f}%",
+            "Grade":       r.get('sqi_grade','—'),
+            "Since":       str(r.get('date',''))[:10],
+        })
+
+    if rows:
+        import pandas as _pd
+        open_display = _pd.DataFrame(rows)
+        st.dataframe(open_display, use_container_width=True, hide_index=True, height=min(400, 40 + len(rows)*35))
+        avg_unreal = total_unrealised / len(rows) if rows else 0
+        st.caption(f"Live prices: {len(live_prices)}/{len(symbols)} fetched · {in_profit}/{len(rows)} in profit · Avg unrealised: {avg_unreal:+.2f}%")
+    st.divider()
 
 
 def _render_equity_curve(df: pd.DataFrame):
