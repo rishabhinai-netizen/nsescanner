@@ -3,17 +3,15 @@ paper_trading.py — Virtual Trading Game for NSE Scanner Pro
 ===========================================================
 A gamified paper trading system linked to live scanner signals.
 Virtual ₹5L capital, XP/leveling, achievements, streaks.
+
+Security: All user operations use anon-key + JWT (respects RLS).
+Service key is NOT used here — only GitHub Actions workflows need it.
 """
 
 import streamlit as st
-from supabase import create_client, Client
 from datetime import date, datetime
 import yfinance as yf
 import os
-
-SUPABASE_URL = os.environ.get("SUPABASE_URL", st.secrets.get("SUPABASE_URL", ""))
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", st.secrets.get("SUPABASE_SERVICE_KEY", ""))
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 CAPITAL_PER_TRADE = 50000   # ₹50K virtual deployed per trade
 STARTING_CAPITAL  = 500000  # ₹5 lakh total
@@ -40,7 +38,7 @@ LEVELS = [
     (50000, "Legend"),
 ]
 
-def get_level(xp: int) -> tuple[int, str, int, int]:
+def get_level(xp: int) -> tuple:
     """Returns (level_num, title, xp_start, xp_next)"""
     for i, (threshold, title) in enumerate(LEVELS):
         if i + 1 < len(LEVELS):
@@ -50,47 +48,114 @@ def get_level(xp: int) -> tuple[int, str, int, int]:
     return len(LEVELS), LEVELS[-1][1], LEVELS[-1][0], LEVELS[-1][0]
 
 
+# ── Supabase client — user-scoped (respects RLS) ───────────────────────────────
+
+def _get_sb():
+    """
+    Returns a Supabase client scoped to the current authenticated user.
+    Uses anon key + JWT session — this respects Row Level Security.
+    Falls back to service key only when no user session exists
+    (e.g. GitHub Actions context).
+    """
+    try:
+        from auth_manager import _client_user, _client_admin
+        client = _client_user()
+        if client is not None:
+            return client
+        # No user session — use admin client (GitHub Actions / server context only)
+        return _client_admin()
+    except Exception:
+        # Last resort: direct env-var service key (GitHub Actions)
+        try:
+            from supabase import create_client
+            url = os.environ.get("SUPABASE_URL", "")
+            key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+            if url and key:
+                return create_client(url, key)
+        except Exception:
+            pass
+        return None
+
+
+def _get_uid() -> str | None:
+    """Get current authenticated user ID. Returns None if not logged in."""
+    try:
+        from auth_manager import get_user_id
+        return get_user_id()
+    except Exception:
+        return None
+
+
 # ── Portfolio helpers ───────────────────────────────────────────────────────────
 
 def get_paper_portfolio() -> dict:
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        return {}
     try:
-        res = supabase.table("paper_portfolio").select("*").limit(1).execute()
+        if uid:
+            res = sb.table("paper_portfolio").select("*").eq("user_id", uid).limit(1).execute()
+        else:
+            res = sb.table("paper_portfolio").select("*").limit(1).execute()
         if res.data:
             return res.data[0]
+        # Auto-create portfolio for new user
+        if uid:
+            new = {
+                "user_id": uid,
+                "starting_capital": STARTING_CAPITAL,
+                "current_capital":  STARTING_CAPITAL,
+                "total_pnl": 0, "total_pnl_pct": 0,
+                "total_trades": 0, "winning_trades": 0, "losing_trades": 0,
+                "current_streak": 0, "max_win_streak": 0, "max_loss_streak": 0,
+                "xp_points": 0, "rank_title": "Rookie Trader", "reset_count": 0,
+            }
+            ins = sb.table("paper_portfolio").insert(new).execute()
+            return ins.data[0] if ins.data else {}
     except Exception as e:
         st.error(f"Error loading paper portfolio: {e}")
     return {}
 
 
 def get_open_paper_trades() -> list:
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        return []
     try:
-        res = (supabase.table("paper_trades")
-               .select("*")
-               .eq("status", "OPEN")
-               .order("created_at", desc=True)
-               .execute())
-        return res.data or []
+        q = sb.table("paper_trades").select("*").eq("status", "OPEN")
+        if uid:
+            q = q.eq("user_id", uid)
+        return (q.order("created_at", desc=True).execute()).data or []
     except Exception:
         return []
 
 
 def get_closed_paper_trades(limit: int = 30) -> list:
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        return []
     try:
-        res = (supabase.table("paper_trades")
-               .select("*")
-               .neq("status", "OPEN")
-               .order("updated_at", desc=True)
-               .limit(limit)
-               .execute())
-        return res.data or []
+        q = sb.table("paper_trades").select("*").neq("status", "OPEN")
+        if uid:
+            q = q.eq("user_id", uid)
+        return (q.order("updated_at", desc=True).limit(limit).execute()).data or []
     except Exception:
         return []
 
 
 def get_achievements() -> list:
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        return []
     try:
-        res = supabase.table("game_achievements").select("*").order("xp_reward").execute()
-        return res.data or []
+        q = sb.table("game_achievements").select("*")
+        if uid:
+            q = q.eq("user_id", uid)
+        return (q.order("xp_reward").execute()).data or []
     except Exception:
         return []
 
@@ -102,6 +167,12 @@ def enter_paper_trade(signal: dict) -> dict | None:
     Accept a signal dict (from signals table) and open a paper trade.
     Returns the new paper_trade row or None on failure.
     """
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        st.error("Database connection unavailable.")
+        return None
+
     portfolio = get_paper_portfolio()
     if not portfolio:
         st.error("Paper portfolio not found.")
@@ -119,34 +190,38 @@ def enter_paper_trade(signal: dict) -> dict | None:
     qty   = int(CAPITAL_PER_TRADE / entry) if entry > 0 else 1
 
     trade_data = {
-        "signal_id":           signal.get("id"),
-        "symbol":              signal["symbol"],
-        "strategy":            signal["strategy"],
-        "signal":              signal["signal"],
-        "entry_price":         entry,
-        "stop_loss":           sl,
-        "target1":             t1,
-        "target2":             float(t2) if t2 else None,
-        "rr":                  float(signal.get("rr") or 0),
-        "sqi":                 float(signal.get("sqi") or 0),
-        "sqi_grade":           signal.get("sqi_grade"),
-        "sector":              signal.get("sector"),
-        "regime":              signal.get("regime"),
+        "signal_id":            signal.get("id"),
+        "symbol":               signal["symbol"],
+        "strategy":             signal["strategy"],
+        "signal":               signal["signal"],
+        "entry_price":          entry,
+        "stop_loss":            sl,
+        "target1":              t1,
+        "target2":              float(t2) if t2 else None,
+        "rr":                   float(signal.get("rr") or 0),
+        "sqi":                  float(signal.get("sqi") or 0),
+        "sqi_grade":            signal.get("sqi_grade"),
+        "sector":               signal.get("sector"),
+        "regime":               signal.get("regime"),
         "virtual_capital_used": CAPITAL_PER_TRADE,
-        "qty":                 qty,
-        "status":              "OPEN",
-        "trade_date":          str(date.today()),
+        "qty":                  qty,
+        "status":               "OPEN",
+        "trade_date":           str(date.today()),
     }
+    if uid:
+        trade_data["user_id"] = uid
 
     try:
-        res = supabase.table("paper_trades").insert(trade_data).execute()
+        res = sb.table("paper_trades").insert(trade_data).execute()
         if res.data:
-            # Deduct capital from paper_portfolio
             new_cap = current_cap - CAPITAL_PER_TRADE
-            supabase.table("paper_portfolio").update({
-                "current_capital": new_cap,
-                "last_trade_at": datetime.now().isoformat(),
-            }).eq("id", portfolio["id"]).execute()
+            upd = {"current_capital": new_cap, "last_trade_at": datetime.now().isoformat()}
+            q = sb.table("paper_portfolio").update(upd)
+            if uid:
+                q = q.eq("user_id", uid)
+            else:
+                q = q.eq("id", portfolio["id"])
+            q.execute()
             _check_first_trade_achievement(portfolio)
             return res.data[0]
     except Exception as e:
@@ -157,11 +232,16 @@ def enter_paper_trade(signal: dict) -> dict | None:
 # ── Exit a paper trade ─────────────────────────────────────────────────────────
 
 def exit_paper_trade(trade_id: str, exit_price: float, exit_reason: str = "MANUAL_EXIT") -> bool:
-    """
-    Close an open paper trade, calculate P&L, award XP.
-    """
+    """Close an open paper trade, calculate P&L, award XP."""
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        return False
     try:
-        trade_res = supabase.table("paper_trades").select("*").eq("id", trade_id).single().execute()
+        q = sb.table("paper_trades").select("*").eq("id", trade_id)
+        if uid:
+            q = q.eq("user_id", uid)   # user can only close their own trades
+        trade_res = q.single().execute()
         trade = trade_res.data
         if not trade:
             return False
@@ -169,20 +249,19 @@ def exit_paper_trade(trade_id: str, exit_price: float, exit_reason: str = "MANUA
         portfolio = get_paper_portfolio()
         entry     = float(trade["entry_price"])
         qty       = int(trade["qty"])
-        direction = trade["signal"]  # BUY or SHORT
+        direction = trade["signal"]
 
         if direction == "BUY":
             pnl     = (exit_price - entry) * qty
             pnl_pct = ((exit_price - entry) / entry) * 100
-        else:  # SHORT
+        else:
             pnl     = (entry - exit_price) * qty
             pnl_pct = ((entry - exit_price) / entry) * 100
 
         won = pnl > 0
         xp  = _calculate_xp(trade, pnl_pct, won)
 
-        # Update trade
-        supabase.table("paper_trades").update({
+        sb.table("paper_trades").update({
             "status":      exit_reason,
             "exit_price":  exit_price,
             "exit_reason": exit_reason,
@@ -193,7 +272,6 @@ def exit_paper_trade(trade_id: str, exit_price: float, exit_reason: str = "MANUA
             "updated_at":  datetime.now().isoformat(),
         }).eq("id", trade_id).execute()
 
-        # Update portfolio stats
         pid        = portfolio["id"]
         new_cap    = float(portfolio.get("current_capital", 0)) + float(trade["virtual_capital_used"]) + pnl
         total_pnl  = float(portfolio.get("total_pnl", 0)) + pnl
@@ -202,17 +280,15 @@ def exit_paper_trade(trade_id: str, exit_price: float, exit_reason: str = "MANUA
         losses     = int(portfolio.get("losing_trades", 0)) + (0 if won else 1)
         streak     = int(portfolio.get("current_streak", 0))
         streak     = streak + 1 if won else (streak - 1 if streak >= 0 else streak - 1)
-        if won and streak < 0:
-            streak = 1
-        if not won and streak > 0:
-            streak = -1
+        if won and streak < 0:   streak = 1
+        if not won and streak > 0: streak = -1
 
         max_win  = max(int(portfolio.get("max_win_streak", 0)), streak if streak > 0 else 0)
         max_loss = max(int(portfolio.get("max_loss_streak", 0)), abs(streak) if streak < 0 else 0)
         new_xp   = int(portfolio.get("xp_points", 0)) + xp
         _, rank, _, _ = get_level(new_xp)
 
-        supabase.table("paper_portfolio").update({
+        upd_port = {
             "current_capital":  round(new_cap, 2),
             "total_pnl":        round(total_pnl, 2),
             "total_pnl_pct":    round((total_pnl / STARTING_CAPITAL) * 100, 2),
@@ -225,14 +301,19 @@ def exit_paper_trade(trade_id: str, exit_price: float, exit_reason: str = "MANUA
             "xp_points":        new_xp,
             "rank_title":       rank,
             "last_trade_at":    datetime.now().isoformat(),
-        }).eq("id", pid).execute()
+        }
+        q = sb.table("paper_portfolio").update(upd_port)
+        if uid:
+            q = q.eq("user_id", uid)
+        else:
+            q = q.eq("id", pid)
+        q.execute()
 
-        # Log XP
-        supabase.table("xp_log").insert({
-            "action":      "TRADE_WIN" if won else "TRADE_LOSS",
-            "xp_gained":   xp,
-            "description": f"{'Won' if won else 'Lost'} {trade['symbol']} {trade['strategy']} ({pnl_pct:+.1f}%)",
-        }).execute()
+        xp_row = {"action": "TRADE_WIN" if won else "TRADE_LOSS", "xp_gained": xp,
+                  "description": f"{'Won' if won else 'Lost'} {trade['symbol']} {trade['strategy']} ({pnl_pct:+.1f}%)"}
+        if uid:
+            xp_row["user_id"] = uid
+        sb.table("xp_log").insert(xp_row).execute()
 
         _check_achievements(portfolio, trade, pnl_pct, won, streak, wins)
         return True
@@ -248,7 +329,6 @@ def _calculate_xp(trade: dict, pnl_pct: float, won: bool) -> int:
         xp += XP_RULES["elite_signal_win"]
     if won and float(trade.get("rr") or 0) >= 3:
         xp += XP_RULES["rr_above_3"]
-    # beat scanner: exit above T1 on a BUY
     if trade["signal"] == "BUY" and won and trade.get("target1"):
         exit_p = trade.get("exit_price") or 0
         if float(exit_p) > float(trade["target1"]):
@@ -257,11 +337,18 @@ def _calculate_xp(trade: dict, pnl_pct: float, won: bool) -> int:
 
 
 def _unlock_achievement(key: str):
+    sb  = _get_sb()
+    uid = _get_uid()
+    if not sb:
+        return
     try:
-        supabase.table("game_achievements").update({
+        q = sb.table("game_achievements").update({
             "is_unlocked": True,
             "unlocked_at": datetime.now().isoformat(),
-        }).eq("achievement_key", key).eq("is_unlocked", False).execute()
+        }).eq("achievement_key", key).eq("is_unlocked", False)
+        if uid:
+            q = q.eq("user_id", uid)
+        q.execute()
     except Exception:
         pass
 
@@ -272,14 +359,10 @@ def _check_first_trade_achievement(portfolio: dict):
 
 
 def _check_achievements(portfolio: dict, trade: dict, pnl_pct: float, won: bool, streak: int, wins: int):
-    if wins == 1:
-        _unlock_achievement("first_win")
-    if streak >= 3:
-        _unlock_achievement("streak_3")
-    if streak >= 5:
-        _unlock_achievement("streak_5")
-    if streak >= 10:
-        _unlock_achievement("streak_10")
+    if wins == 1:     _unlock_achievement("first_win")
+    if streak >= 3:   _unlock_achievement("streak_3")
+    if streak >= 5:   _unlock_achievement("streak_5")
+    if streak >= 10:  _unlock_achievement("streak_10")
     if float(portfolio.get("current_capital", 0)) >= STARTING_CAPITAL * 2:
         _unlock_achievement("doubled_capital")
 
@@ -311,26 +394,21 @@ def auto_update_paper_trades():
             pass
 
     for trade in open_trades:
-        sym   = trade["symbol"]
+        sym = trade["symbol"]
         if sym not in prices:
             continue
-        lp    = prices[sym]["current"]
-        high  = prices[sym]["high"]
-        low   = prices[sym]["low"]
-        sl    = float(trade["stop_loss"])
-        t1    = float(trade["target1"])
+        high = prices[sym]["high"]
+        low  = prices[sym]["low"]
+        sl   = float(trade["stop_loss"])
+        t1   = float(trade["target1"])
         direction = trade["signal"]
 
         if direction == "BUY":
-            if low <= sl:
-                exit_paper_trade(trade["id"], sl, "STOPPED")
-            elif high >= t1:
-                exit_paper_trade(trade["id"], t1, "TARGET1")
-        else:  # SHORT
-            if high >= sl:
-                exit_paper_trade(trade["id"], sl, "STOPPED")
-            elif low <= t1:
-                exit_paper_trade(trade["id"], t1, "TARGET1")
+            if low <= sl:    exit_paper_trade(trade["id"], sl, "STOPPED")
+            elif high >= t1: exit_paper_trade(trade["id"], t1, "TARGET1")
+        else:
+            if high >= sl:  exit_paper_trade(trade["id"], sl, "STOPPED")
+            elif low <= t1: exit_paper_trade(trade["id"], t1, "TARGET1")
 
 
 # ── Streamlit page ─────────────────────────────────────────────────────────────
@@ -339,7 +417,6 @@ def render_paper_trading_page():
     st.title("🎮 Virtual Trading Game")
     st.caption("Paper trade every scanner signal with virtual ₹5L. No real money, real market prices.")
 
-    # Auto-update open trades silently
     with st.spinner("Syncing live prices..."):
         auto_update_paper_trades()
 
@@ -352,11 +429,9 @@ def render_paper_trading_page():
     level_num, rank, xp_start, xp_next = get_level(xp)
     xp_progress = (xp - xp_start) / max(xp_next - xp_start, 1) if xp_next > xp_start else 1.0
 
-    # ── Header card ──────────────────────────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
     starting = float(portfolio.get("starting_capital", STARTING_CAPITAL))
     current  = float(portfolio.get("current_capital", STARTING_CAPITAL))
-    total_pnl_pct = float(portfolio.get("total_pnl_pct", 0))
     wins  = int(portfolio.get("winning_trades", 0))
     losses = int(portfolio.get("losing_trades", 0))
     total = int(portfolio.get("total_trades", 0))
@@ -369,12 +444,13 @@ def render_paper_trading_page():
     with col2:
         st.metric("Win Rate", f"{win_rate:.0f}%", f"{wins}W / {losses}L")
     with col3:
-        streak_label = f"🔥 {streak} win streak" if streak > 0 else (f"📉 {abs(streak)} loss streak" if streak < 0 else "—")
+        streak_label = (f"🔥 {streak} win streak" if streak > 0
+                        else (f"📉 {abs(streak)} loss streak" if streak < 0 else "—"))
         st.metric("Streak", streak_label)
     with col4:
-        st.metric("Total P&L", f"{total_pnl_pct:+.1f}%", f"₹{float(portfolio.get('total_pnl', 0)):+,.0f}")
+        st.metric("Total P&L", f"{float(portfolio.get('total_pnl_pct', 0)):+.1f}%",
+                  f"₹{float(portfolio.get('total_pnl', 0)):+,.0f}")
 
-    # ── XP / Level bar ───────────────────────────────────────────────────────
     st.markdown(f"**Level {level_num} — {rank}** &nbsp;&nbsp; `{xp} XP`")
     st.progress(xp_progress, text=f"{xp - xp_start} / {xp_next - xp_start} XP to Level {level_num + 1}")
     st.divider()
@@ -387,7 +463,7 @@ def render_paper_trading_page():
 
     # ── OPEN POSITIONS ────────────────────────────────────────────────────────
     with tabs[0]:
-        open_trades = open_trades_check  # already fetched above
+        open_trades = open_trades_check
         if not open_trades:
             st.info("No open paper positions. Go to 'Take a Trade' to accept a signal.")
         for t in open_trades:
@@ -399,10 +475,8 @@ def render_paper_trading_page():
             direction = t["signal"]
             sqi_g = t.get("sqi_grade", "—")
 
-            # Get live price
             try:
-                ticker = yf.Ticker(f"{sym}.NS")
-                lp     = float(ticker.fast_info["last_price"])
+                lp = float(yf.Ticker(f"{sym}.NS").fast_info["last_price"])
             except Exception:
                 lp = entry
 
@@ -459,9 +533,9 @@ def render_paper_trading_page():
         st.subheader("Accept a Signal")
         st.caption(f"Each trade deploys ₹{CAPITAL_PER_TRADE:,} virtual. Available: ₹{float(portfolio.get('current_capital', 0)):,.0f}")
 
-        # Load today's open scanner signals
+        sb = _get_sb()
         try:
-            sigs = (supabase.table("signals")
+            sigs = (sb.table("signals")
                     .select("*")
                     .eq("date", str(date.today()))
                     .eq("status", "OPEN")
@@ -475,8 +549,7 @@ def render_paper_trading_page():
         if not today_signals:
             st.warning("No open signals today yet. Scanner runs at 4:30 PM and 7:00 PM IST.")
         else:
-            # Check which ones are already paper-traded today
-            already = {t["symbol"] + t["strategy"] for t in open_trades}
+            already = {t["symbol"] + t["strategy"] for t in open_trades_check}
 
             for sig in today_signals:
                 key = sig["symbol"] + sig["strategy"]
@@ -508,16 +581,24 @@ def render_paper_trading_page():
         st.warning("This will reset your virtual capital to ₹5L and clear all paper trades. XP and achievements are kept.")
         if st.button("Reset Capital", type="secondary"):
             portfolio = get_paper_portfolio()
-            supabase.table("paper_trades").delete().eq("status", "OPEN").execute()
-            supabase.table("paper_portfolio").update({
-                "current_capital":  STARTING_CAPITAL,
-                "total_trades":     0,
-                "winning_trades":   0,
-                "losing_trades":    0,
-                "total_pnl":        0,
-                "total_pnl_pct":    0,
-                "current_streak":   0,
-                "reset_count":      int(portfolio.get("reset_count", 0)) + 1,
-            }).eq("id", portfolio["id"]).execute()
+            sb = _get_sb()
+            uid = _get_uid()
+            if sb:
+                q = sb.table("paper_trades").delete().eq("status", "OPEN")
+                if uid:
+                    q = q.eq("user_id", uid)
+                q.execute()
+                upd = {
+                    "current_capital":  STARTING_CAPITAL,
+                    "total_trades":     0, "winning_trades": 0, "losing_trades": 0,
+                    "total_pnl":        0, "total_pnl_pct":  0, "current_streak": 0,
+                    "reset_count":      int(portfolio.get("reset_count", 0)) + 1,
+                }
+                uq = sb.table("paper_portfolio").update(upd)
+                if uid:
+                    uq = uq.eq("user_id", uid)
+                else:
+                    uq = uq.eq("id", portfolio["id"])
+                uq.execute()
             st.success("Portfolio reset to ₹5L. Your XP and achievements remain.")
             st.rerun()
