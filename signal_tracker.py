@@ -479,12 +479,18 @@ def compute_tracker_stats(df: pd.DataFrame = None) -> Dict:
     except Exception:
         pass  # If dedup fails, continue with raw data (safer than crashing)
 
-    total    = len(df)
+    # Exclude DUPLICATE and REGIME_BLOCKED from all counts
+    # These are noise rows — DUPLICATE = cross-day same signal,
+    # REGIME_BLOCKED = signal generated during a blocked market regime
+    EXCLUDED = ["DUPLICATE", "REGIME_BLOCKED"]
+    df = df[~df[status_col].isin(EXCLUDED)].copy()
+
     targets  = len(df[df[status_col] == "TARGET"])
     stopped  = len(df[df[status_col] == "STOPPED"])
     open_c   = len(df[df[status_col] == "OPEN"])
     expired  = len(df[df[status_col] == "EXPIRED"])
     closed   = targets + stopped
+    total    = targets + stopped + open_c + expired  # meaningful total only
 
     win_rate = round(targets / closed * 100, 1) if closed > 0 else 0
 
@@ -499,12 +505,17 @@ def compute_tracker_stats(df: pd.DataFrame = None) -> Dict:
         t_c  = len(sdf[sdf[status_col] == "TARGET"])
         s_c  = len(sdf[sdf[status_col] == "STOPPED"])
         tot  = t_c + s_c
+        sdf_pnl = pd.to_numeric(sdf.get(pnl_col_name, pd.Series()), errors="coerce")
+        wins_pnl = sdf_pnl[sdf[status_col] == "TARGET"].dropna()
+        loss_pnl = sdf_pnl[sdf[status_col] == "STOPPED"].dropna()
         strategy_stats[strat] = {
             "total":    len(sdf),
             "open":     len(sdf[sdf[status_col] == "OPEN"]),
             "targets":  t_c,
             "stopped":  s_c,
             "win_rate": round(t_c / tot * 100, 1) if tot > 0 else 0,
+            "avg_win":  round(float(wins_pnl.mean()), 2) if len(wins_pnl) > 0 else 0,
+            "avg_loss": round(float(loss_pnl.mean()), 2) if len(loss_pnl) > 0 else 0,
         }
 
     dates = pd.to_datetime(df.get("Date", df.get("date", pd.Series())), errors="coerce").dropna()
