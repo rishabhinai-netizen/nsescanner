@@ -295,6 +295,71 @@ def _render_export(df: pd.DataFrame):
         if st.button("✅ Mark Closed", key="manual_close_btn"):
             st.success("Marked as closed. Reload Performance tab to see the update.")
 
+    st.markdown("---")
+    st.markdown("### 🧹 One-Time Data Cleanup (Run Once in Supabase)")
+    st.caption("Copy the SQL below and run it in Supabase → SQL Editor to fix historical data.")
+    with st.expander("🔧 Show Cleanup SQL", expanded=False):
+        cleanup_sql = """-- NSE Scanner Pro — One-Time Signal History Cleanup
+-- Run this ONCE in Supabase SQL Editor
+
+-- STEP 1: Fix SHORT PnL (was computed wrong — using ratio instead of difference)
+UPDATE signals
+SET pnl_pct = ROUND(((entry - exit_price) / entry * 100)::numeric, 2)
+WHERE signal = 'SHORT'
+  AND status IN ('STOPPED','TARGET','EXPIRED')
+  AND exit_price IS NOT NULL AND entry IS NOT NULL AND entry > 0;
+
+-- STEP 2: Fix BUY PnL (recalculate from actual exit_price to be safe)
+UPDATE signals
+SET pnl_pct = ROUND(((exit_price - entry) / entry * 100)::numeric, 2)
+WHERE signal = 'BUY'
+  AND status IN ('STOPPED','TARGET','EXPIRED')
+  AND exit_price IS NOT NULL AND entry IS NOT NULL AND entry > 0;
+
+-- STEP 3: Mark cross-day duplicate OPEN signals (keep only earliest per symbol+strategy)
+WITH ranked AS (
+    SELECT id,
+           ROW_NUMBER() OVER (PARTITION BY symbol, strategy ORDER BY date ASC, created_at ASC) as rn
+    FROM signals WHERE status = 'OPEN'
+),
+to_mark AS (SELECT id FROM ranked WHERE rn > 1)
+UPDATE signals
+SET status = 'DUPLICATE',
+    exit_reason = 'Cross-day duplicate suppressed'
+WHERE id IN (SELECT id FROM to_mark);
+
+-- STEP 4: Expire old OPEN signals (EMA21/Last30 > 15 days, Breakout > 25 days)
+UPDATE signals
+SET status = 'EXPIRED', exit_date = CURRENT_DATE::text,
+    exit_price = cmp,
+    exit_reason = 'Auto-expired: exceeded max hold period',
+    pnl_pct = CASE
+        WHEN signal = 'BUY'   THEN ROUND(((cmp - entry)/entry*100)::numeric,2)
+        WHEN signal = 'SHORT' THEN ROUND(((entry - cmp)/entry*100)::numeric,2)
+        ELSE 0 END
+WHERE status = 'OPEN' AND entry > 0 AND cmp IS NOT NULL
+  AND ((strategy IN ('EMA21_Bounce','Last30Min_ATH') AND (CURRENT_DATE - date::date) > 15)
+    OR (strategy IN ('52WH_Breakout','Failed_Breakout_Short') AND (CURRENT_DATE - date::date) > 25));
+
+-- STEP 5: Prevent future cross-day duplication (unique OPEN index)
+CREATE UNIQUE INDEX IF NOT EXISTS signals_unique_open
+ON signals (symbol, strategy) WHERE status = 'OPEN';
+
+-- STEP 6: Verify results
+SELECT strategy,
+    COUNT(*) total,
+    COUNT(*) FILTER (WHERE status='OPEN') open,
+    COUNT(*) FILTER (WHERE status='TARGET') target,
+    COUNT(*) FILTER (WHERE status='STOPPED') stopped,
+    COUNT(*) FILTER (WHERE status='EXPIRED') expired,
+    COUNT(*) FILTER (WHERE status='DUPLICATE') duplicate,
+    ROUND(COUNT(*) FILTER (WHERE status='TARGET') * 100.0 /
+          NULLIF(COUNT(*) FILTER (WHERE status IN ('TARGET','STOPPED','EXPIRED')),0),1) win_rate,
+    ROUND(AVG(pnl_pct) FILTER (WHERE status IN ('TARGET','STOPPED','EXPIRED')),2) avg_pnl
+FROM signals GROUP BY strategy ORDER BY strategy;"""
+        st.code(cleanup_sql, language="sql")
+        st.info("📋 Copy the SQL above → go to supabase.com → your project → SQL Editor → New query → paste → Run")
+
 
 # ============================================================
 # PAGE: PORTFOLIO
