@@ -245,6 +245,10 @@ def handle_oauth_callback():
         params = st.query_params
         access_token  = params.get("access_token")
         refresh_token = params.get("refresh_token", "")
+        # Security: immediately clear token from URL to prevent exposure in history/logs
+        if access_token:
+            try: st.query_params.clear()
+            except Exception: pass
         if access_token and not is_authenticated():
             sb = _client_user()
             if sb:
