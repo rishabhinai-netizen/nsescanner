@@ -90,7 +90,7 @@ def page_performance():
     expectancy = stats.get("expectancy", 0)
     
     # ₹1L simulation: each signal = ₹1L deployed
-    pnl_per_lakh = expectancy * 1000  # expectancy % on ₹1L = ₹ value
+    pnl_per_lakh = expectancy / 100 * 100000  # expectancy % on ₹1L capital
     total_sim_pnl = closed * pnl_per_lakh
     
     color = "#26a69a" if expectancy >= 0 else "#ef5350"
@@ -98,20 +98,23 @@ def page_performance():
     <div style="background:linear-gradient(135deg,#0d1117,#161b22);border:1px solid #333;
     border-radius:12px;padding:16px 20px;margin:8px 0">
     <div style="font-size:.75rem;color:#888;letter-spacing:2px;margin-bottom:8px">
-    ₹1 LAKH PER SIGNAL — SIMULATION RESULT</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+    ₹1,00,000 PER SIGNAL — FORWARD TEST SIMULATION</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
     <div><div style="color:#888;font-size:.7rem">Closed Trades</div>
     <div style="font-size:1.3rem;font-weight:700;color:#fff">{closed}</div>
-    <div style="color:#888;font-size:.7rem">{targets} hits · {stopped} stopped</div></div>
+    <div style="color:#aaa;font-size:.7rem">🟢 {targets} TARGET · 🔴 {stopped} STOPPED</div></div>
     <div><div style="color:#888;font-size:.7rem">Win Rate</div>
     <div style="font-size:1.3rem;font-weight:700;color:{color}">{win_rate:.1f}%</div>
-    <div style="color:#888;font-size:.7rem">Avg win {avg_win:+.2f}% / loss {avg_loss:+.2f}%</div></div>
+    <div style="color:#aaa;font-size:.7rem">Avg win {avg_win:+.2f}% / loss {avg_loss:+.2f}%</div></div>
     <div><div style="color:#888;font-size:.7rem">Expectancy / Trade</div>
     <div style="font-size:1.3rem;font-weight:700;color:{color}">{expectancy:+.2f}%</div>
-    <div style="color:#888;font-size:.7rem">₹{pnl_per_lakh:+,.0f} per ₹1L deployed</div></div>
-    <div><div style="color:#888;font-size:.7rem">Simulated Total P&L</div>
+    <div style="color:#aaa;font-size:.7rem">₹{pnl_per_lakh:+,.0f} profit per trade</div></div>
+    <div><div style="color:#888;font-size:.7rem">Closed P&L on ₹1L/trade</div>
     <div style="font-size:1.3rem;font-weight:700;color:{color}">₹{total_sim_pnl:+,.0f}</div>
-    <div style="color:#888;font-size:.7rem">on {closed}×₹1L = ₹{closed}L deployed</div></div>
+    <div style="color:#aaa;font-size:.7rem">{closed} trades × ₹1L each</div></div>
+    <div><div style="color:#888;font-size:.7rem">Open Positions</div>
+    <div style="font-size:1.3rem;font-weight:700;color:#ff9800">{stats.get("open",0)}</div>
+    <div style="color:#aaa;font-size:.7rem">unrealised P&L shown below ↓</div></div>
     </div></div>""", unsafe_allow_html=True)
 
     # ── OPEN POSITIONS LIVE P&L ───────────────────────────────────────────
@@ -176,33 +179,38 @@ def _render_open_positions_live():
         entry = float(r.get('entry') or 0)
         t1    = float(r.get('t1') or 0)
         sl    = float(r.get('sl') or 0)
-        live  = live_prices.get(r['symbol'], entry)
-        
-        if r['signal'] == 'BUY':
-            pnl_pct = (live - entry) / entry * 100 if entry > 0 else 0
-        else:
-            pnl_pct = (entry - live) / entry * 100 if entry > 0 else 0
-        
-        t1_pct = (t1 - entry) / entry * 100 if entry > 0 and r['signal']=='BUY' else (entry - t1) / entry * 100 if entry > 0 else 0
-        sl_pct = (sl - entry) / entry * 100 if entry > 0 and r['signal']=='BUY' else (entry - sl) / entry * 100 if entry > 0 else 0
-        
-        # Progress to T1 (0-100%)
-        total_range = abs(t1 - entry)
-        progress = min(100, max(0, abs(live - entry) / total_range * 100)) if total_range > 0 else 0
-        if (r['signal']=='BUY' and live < entry) or (r['signal']=='SHORT' and live > entry):
-            progress = 0
+        has_live = r['symbol'] in live_prices
+        live  = live_prices.get(r['symbol'], None)
 
-        total_unrealised += pnl_pct
-        if pnl_pct > 0:
-            in_profit += 1
+        if has_live and live and entry > 0:
+            if r['signal'] == 'BUY':
+                pnl_pct = (live - entry) / entry * 100
+            else:
+                pnl_pct = (entry - live) / entry * 100
+            pnl_str = f"{pnl_pct:+.2f}%"
+            pnl_rs  = pnl_pct / 100 * 100000  # P&L on ₹1L
+            pnl_rs_str = f"₹{pnl_rs:+,.0f}"
+        else:
+            pnl_pct = 0.0
+            pnl_str = "—"
+            pnl_rs_str = "—"
+
+        t1_pct = (t1-entry)/entry*100 if entry>0 and r['signal']=='BUY' else (entry-t1)/entry*100 if entry>0 else 0
+        sl_pct = (sl-entry)/entry*100 if entry>0 and r['signal']=='BUY' else (entry-sl)/entry*100 if entry>0 else 0
+
+        if has_live and pnl_pct != 0:
+            total_unrealised += pnl_pct
+            if pnl_pct > 0:
+                in_profit += 1
 
         rows.append({
             "Symbol":      r['symbol'],
             "Strategy":    r.get('strategy',''),
-            "Dir":         r['signal'],
+            "Dir":         "🟢 BUY" if r['signal']=='BUY' else "🔴 SHORT",
             "Entry ₹":     f"₹{entry:,.2f}",
-            "Live ₹":      f"₹{live:,.2f}" if r['symbol'] in live_prices else "—",
-            "Unrealised":  f"{pnl_pct:+.2f}%",
+            "Live ₹":      f"₹{live:,.2f}" if has_live and live else "—",
+            "P&L %":       pnl_str,
+            "P&L on ₹1L":  pnl_rs_str,
             "→ T1":        f"{t1_pct:+.1f}%",
             "SL":          f"{sl_pct:+.1f}%",
             "Grade":       r.get('sqi_grade','—'),
@@ -214,7 +222,23 @@ def _render_open_positions_live():
         open_display = _pd.DataFrame(rows)
         st.dataframe(open_display, use_container_width=True, hide_index=True, height=min(400, 40 + len(rows)*35))
         avg_unreal = total_unrealised / len(rows) if rows else 0
-        st.caption(f"Live prices: {len(live_prices)}/{len(symbols)} fetched · {in_profit}/{len(rows)} in profit · Avg unrealised: {avg_unreal:+.2f}%")
+        live_count = sum(1 for r in rows if r["P&L %"] != "—")
+        total_unreal_rs = sum(
+            float(r["P&L on ₹1L"].replace("₹","").replace(",","").replace("+",""))
+            for r in rows if r["P&L on ₹1L"] not in ("—", "")
+        ) if rows else 0
+        unreal_color = "#26a69a" if total_unreal_rs >= 0 else "#ef5350"
+        st.markdown(
+            f'<div style="background:#1a1d23;border:1px solid #333;border-radius:8px;'
+            f'padding:10px 16px;margin:6px 0;display:flex;gap:24px;flex-wrap:wrap">'
+            f'<span>📡 Live prices: <b>{live_count}/{len(rows)}</b></span>'
+            f'<span>🟢 In profit: <b>{in_profit}/{len(rows)}</b></span>'
+            f'<span>Avg unrealised: <b>{avg_unreal:+.2f}%</b></span>'
+            f'<span style="color:{unreal_color}">Total unrealised on ₹1L/trade: '
+            f'<b>₹{total_unreal_rs:+,.0f}</b></span>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     st.divider()
 
 
@@ -269,14 +293,25 @@ def _render_strategy_breakdown(stats: dict):
         wr   = s["win_rate"]
         tot  = s["targets"] + s["stopped"]
         live_pf_exp = pf_matrix.get(strat, {}).get("EXPANSION", "—")
+        avg_w = s.get("avg_win", 0)
+        avg_l = s.get("avg_loss", 0)
+        exp   = round((wr/100 * avg_w) + ((1-wr/100) * avg_l), 2) if tot > 0 else 0
+        pnl_rs = int(exp / 100 * 100000)
+        note = ""
+        if name in ["Last 30 Min ATH", "52-Week High Breakout"]:
+            note = " ⛔ blocked"
         rows.append({
-            "Strategy":    f"{p.get('icon','')} {name}",
-            "Total":       s["total"],
-            "Open":        s["open"],
-            "🟢 Target":   s["targets"],
-            "🔴 Stopped":  s["stopped"],
-            "Win Rate":    f"{wr}%" if tot > 0 else "—",
-            "Live PF (EXPANSION)": f"{live_pf_exp:.2f}" if isinstance(live_pf_exp, float) else live_pf_exp,
+            "Strategy":            f"{p.get('icon','')} {name}{note}",
+            "Closed":              tot,
+            "Open":                s["open"],
+            "🟢 Target":           s["targets"],
+            "🔴 Stopped":          s["stopped"],
+            "Win Rate":            f"{wr:.1f}%" if tot > 0 else "—",
+            "Avg Win":             f"{avg_w:+.2f}%" if avg_w else "—",
+            "Avg Loss":            f"{avg_l:+.2f}%" if avg_l else "—",
+            "Expectancy/Trade":    f"{exp:+.2f}%" if tot > 0 else "—",
+            "P&L per ₹1L":         f"₹{pnl_rs:+,}" if tot > 0 else "—",
+            "Live PF":             f"{live_pf_exp:.2f}" if isinstance(live_pf_exp, float) else "—",
         })
 
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
