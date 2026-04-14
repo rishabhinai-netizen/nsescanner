@@ -106,23 +106,37 @@ def save_signals_today(signals_list: list, regime: dict = None) -> int:
             IST = pytz.timezone('Asia/Kolkata')
             ist_now = datetime.now(IST).isoformat()
 
-            # Fetch existing signals for today to know which are new vs re-detected
-            existing_res = sb.table("signals").select("id,symbol,strategy,scan_count").eq("date", today).execute()
-            existing_map = {(r["symbol"], r["strategy"]): r for r in (existing_res.data or [])}
+            # Fetch ALL currently OPEN signals (any date) to prevent cross-day duplicates
+            # A signal is only "new" if no OPEN row exists for same symbol+strategy
+            existing_res = sb.table("signals").select("id,symbol,strategy,scan_count,date").eq("status", "OPEN").execute()
+            existing_open = {(r["symbol"], r["strategy"]): r for r in (existing_res.data or [])}
+            
+            # Also check today's signals (even closed ones) for same-day re-detection
+            today_res = sb.table("signals").select("id,symbol,strategy,scan_count").eq("date", today).execute()
+            today_map = {(r["symbol"], r["strategy"]): r for r in (today_res.data or [])}
 
             new_inserts, updates = [], []
             for row in new_rows:
                 key = (row["symbol"], row["strategy"])
-                if key in existing_map:
-                    # Signal seen before today — update CMP and tracking fields only
+                if key in today_map:
+                    # Already recorded today — just update CMP + scan_count
                     updates.append({
-                        "id":           existing_map[key]["id"],
+                        "id":           today_map[key]["id"],
                         "cmp":          row["cmp"],
-                        "scan_count":   (existing_map[key].get("scan_count") or 1) + 1,
+                        "scan_count":   (today_map[key].get("scan_count") or 1) + 1,
+                        "last_seen_ist": ist_now,
+                    })
+                elif key in existing_open:
+                    # Already OPEN from a prior day — update CMP + last_seen only
+                    # Do NOT create a new row — this is the cross-day dedup fix
+                    updates.append({
+                        "id":           existing_open[key]["id"],
+                        "cmp":          row["cmp"],
+                        "scan_count":   (existing_open[key].get("scan_count") or 1) + 1,
                         "last_seen_ist": ist_now,
                     })
                 else:
-                    # Brand new signal — set first_seen and last_seen
+                    # Genuinely new signal — no open row exists for this symbol+strategy
                     row["first_seen_ist"] = ist_now
                     row["last_seen_ist"]  = ist_now
                     row["scan_count"]     = 1
@@ -300,9 +314,18 @@ def update_open_signals_live(data_dict: dict) -> int:
         if stock_df is None or stock_df.empty:
             continue
 
-        recent = stock_df.iloc[-5:]
-        recent_high = float(recent["high"].max()) if "high" in recent.columns else 0
-        recent_low  = float(recent["low"].min())  if "low"  in recent.columns else 0
+        # Use price history SINCE the signal date (not just last 5 bars)
+        sig_date_str = str(row.get("Date", row.get("date", today)))
+        try:
+            sig_date = pd.Timestamp(sig_date_str)
+            since_signal = stock_df[stock_df.index >= sig_date] if not stock_df.empty else stock_df
+            if since_signal.empty:
+                since_signal = stock_df.iloc[-5:]   # fallback
+        except Exception:
+            since_signal = stock_df.iloc[-5:]
+
+        recent_high = float(since_signal["high"].max()) if "high" in since_signal.columns and not since_signal.empty else 0
+        recent_low  = float(since_signal["low"].min())  if "low"  in since_signal.columns and not since_signal.empty else 0
         close       = float(stock_df.iloc[-1].get("close", 0))
 
         try:
@@ -316,29 +339,51 @@ def update_open_signals_live(data_dict: dict) -> int:
         if entry <= 0:
             continue
 
+        # Days held — for expiry logic
+        try:
+            days_held = (date.today() - pd.Timestamp(sig_date_str).date()).days
+        except Exception:
+            days_held = 0
+
+        # Strategy-specific max hold (EMA bounce = 15d, breakout/short = 25d)
+        strategy_name = str(row.get("Strategy", row.get("strategy", "")))
+        max_hold = 15 if "EMA21" in strategy_name or "Last30" in strategy_name else 25
+
         update = None
         if signal == "BUY":
-            if recent_low <= sl > 0:
-                update = dict(status="STOPPED", exit_date=today,
-                              exit_price=round(sl, 2),
-                              exit_reason="Stop Loss Hit",
-                              pnl_pct=round((sl / entry - 1) * 100, 2))
-            elif recent_high >= t1 > 0:
+            # Check T1 FIRST — if both SL and T1 were touched, T1 wins (assume best execution)
+            if recent_high >= t1 > 0:
                 update = dict(status="TARGET", exit_date=today,
                               exit_price=round(t1, 2),
                               exit_reason="Target 1 Hit",
                               pnl_pct=round((t1 / entry - 1) * 100, 2))
-        elif signal == "SHORT":
-            if recent_high >= sl > 0:
+            elif recent_low <= sl > 0:
                 update = dict(status="STOPPED", exit_date=today,
                               exit_price=round(sl, 2),
                               exit_reason="Stop Loss Hit",
-                              pnl_pct=round((entry / sl - 1) * 100, 2))
-            elif recent_low <= t1 > 0:
+                              pnl_pct=round((sl / entry - 1) * 100, 2))
+            elif days_held > max_hold:
+                update = dict(status="EXPIRED", exit_date=today,
+                              exit_price=round(close, 2),
+                              exit_reason=f"Expired ({days_held}d > {max_hold}d max)",
+                              pnl_pct=round((close / entry - 1) * 100, 2))
+        elif signal == "SHORT":
+            # T1 check first (if both triggered, T1 wins)
+            if recent_low <= t1 > 0:
                 update = dict(status="TARGET", exit_date=today,
                               exit_price=round(t1, 2),
                               exit_reason="Target 1 Hit",
-                              pnl_pct=round((entry / t1 - 1) * 100, 2))
+                              pnl_pct=round((entry - t1) / entry * 100, 2))   # positive = profit
+            elif recent_high >= sl > 0:
+                update = dict(status="STOPPED", exit_date=today,
+                              exit_price=round(sl, 2),
+                              exit_reason="Stop Loss Hit",
+                              pnl_pct=round((entry - sl) / entry * 100, 2))   # negative = loss
+            elif days_held > max_hold:
+                update = dict(status="EXPIRED", exit_date=today,
+                              exit_price=round(close, 2),
+                              exit_reason=f"Expired ({days_held}d > {max_hold}d max)",
+                              pnl_pct=round((entry - close) / entry * 100, 2))
 
         if update:
             sig_date = str(row.get("Date", row.get("date", today)))
@@ -397,13 +442,43 @@ def _update_csv_outcomes(updates: list):
 # ============================================================
 
 def compute_tracker_stats(df: pd.DataFrame = None) -> Dict:
-    """Compute forward-test statistics."""
+    """Compute forward-test statistics.
+    
+    Deduplication policy: for same symbol+strategy, keep the LATEST row only.
+    This prevents cross-day duplicate signals from inflating counts.
+    """
     if df is None:
         df = load_tracker()
     if df is None or df.empty:
         return {}
 
-    status_col = "Status" if "Status" in df.columns else "status"
+    strat_col  = "Strategy" if "Strategy" in df.columns else "strategy"
+    sym_col    = "Symbol"   if "Symbol"   in df.columns else "symbol"
+    date_col   = "Date"     if "Date"     in df.columns else "date"
+    status_col = "Status"   if "Status"   in df.columns else "status"
+
+    # Deduplicate: per (symbol, strategy) keep latest non-OPEN outcome if any,
+    # else keep the most recent OPEN row. This ensures each trade idea counted once.
+    try:
+        df = df.copy()
+        # Sort by date descending so .first() picks most recent
+        df["_date_sort"] = pd.to_datetime(df[date_col], errors="coerce")
+        df = df.sort_values("_date_sort", ascending=False)
+        
+        # Within each symbol+strategy, prefer closed outcomes (TARGET/STOPPED/EXPIRED)
+        # over OPEN — so if same stock was signalled 3 times and hit target once, 
+        # we count it as 1 TARGET.
+        def _pick_best_row(group):
+            closed = group[group[status_col].isin(["TARGET","STOPPED","EXPIRED"])]
+            if not closed.empty:
+                return closed.iloc[0]   # most recent closed outcome
+            return group.iloc[0]        # most recent OPEN
+        
+        df = df.groupby([sym_col, strat_col], as_index=False).apply(_pick_best_row)
+        df = df.reset_index(drop=True)
+    except Exception:
+        pass  # If dedup fails, continue with raw data (safer than crashing)
+
     total    = len(df)
     targets  = len(df[df[status_col] == "TARGET"])
     stopped  = len(df[df[status_col] == "STOPPED"])
@@ -578,4 +653,5 @@ def get_portfolio_pnl(data_dict: dict) -> dict:
         "total_invested": round(total_invested, 2),
         "position_count": len(positions),
     }
+
 
