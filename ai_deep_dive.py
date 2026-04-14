@@ -967,23 +967,47 @@ def page_ai_deep_dive():
 
     run_btn = (run_signal and sig_ctx) or (run_manual and manual_input.strip())
 
-    # ── Idle state ──────────────────────────────────────────────────────────
-    if not run_btn:
+    # ── If Analyse clicked, wipe any previous cached result ─────────────────
+    if run_btn:
+        st.session_state.pop("dd_result", None)
+
+    # ── Idle state: show open signals table only if no saved result either ──
+    if not run_btn and "dd_result" not in st.session_state:
         if open_sigs:
             st.divider()
             st.markdown("#### 📋 Open Signals — sorted by SQI quality")
             rows = []
             for s in open_sigs:
-                sqi = s.get("sqi",0)
+                sqi = s.get("sqi") or 0
                 grade = s.get("sqi_grade","")
                 grade_icon = {"ELITE":"🏆","STRONG":"⭐","MODERATE":"✅","WEAK":"⚠️"}.get(grade,"")
                 rows.append({"Symbol":s["symbol"],"Strategy":s["strategy"],"Signal":s["signal"],
                     "CMP":_fp(s.get("cmp",0)),"Entry":_fp(s.get("entry",0)),
                     "SL":_fp(s.get("sl",0)),"T1":_fp(s.get("t1",0)),
-                    "R:R":s.get("rr","—"),f"{grade_icon}SQI":sqi,"Grade":grade,
+                    "R:R":s.get("rr","—"),f"{grade_icon} SQI": f"{sqi}" if sqi else "—",
+                    "Grade":grade,
                     "RS":s.get("rs","—"),"Sector":s.get("sector","—"),"Fit":s.get("regime_fit","—")})
             st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True,height=320)
         st.info("👆 Pick a signal above or type any stock in the 'Any Stock' tab, then click Analyse.")
+        return
+
+    # ── If no new run_btn but we have a saved result, restore from state ────
+    if not run_btn and "dd_result" in st.session_state:
+        _r = st.session_state["dd_result"]
+        ticker   = _r["ticker"]
+        m        = _r["m"]
+        df       = _r["df"]
+        regime   = _r["regime"]
+        sent     = _r["sent"]
+        rec      = _r["rec"]
+        sig_ctx  = _r["sig_ctx"]
+        analysis = _r["analysis"]
+        gemini_model = _r.get("gemini_model", "gemini-2.0-flash")
+        # Skip data fetch / computation — jump straight to rendering
+        _render_deep_dive_results(
+            ticker, m, df, regime, sent, rec, sig_ctx, analysis,
+            gemini_model, groq_key, gemini_key, open_sigs
+        )
         return
 
     if not ticker:
@@ -1118,16 +1142,44 @@ def page_ai_deep_dive():
     # ── AI Analysis ────────────────────────────────────────────────────────
     st.divider()
     st.subheader(f"🤖 Swarm Analysis — {ticker}")
+    _gm = gemini_model if 'gemini_model' in dir() else "gemini-2.0-flash"
     st.caption(f"Groq llama-3.3-70b (primary) · Gemini 2.0 Flash (fallback) · {len(_build_prompt(ticker,m,regime,sent,rec,sig_ctx).split())} word prompt")
 
-    analysis = _run_ai(ticker,m,regime,sent,rec,sig_ctx,groq_key,gemini_key,
-                       gemini_model if 'gemini_model' in dir() else "gemini-2.0-flash")
+    analysis = _run_ai(ticker,m,regime,sent,rec,sig_ctx,groq_key,gemini_key, _gm)
     if analysis:
         st.markdown(analysis)
 
     if sent.get("factors"):
         with st.expander("📊 Sentiment Breakdown", expanded=False):
             for f in sent["factors"]: st.markdown(f"- {f}")
+
+    # ── Save all computed data to session_state so buttons survive re-runs ──
+    st.session_state["dd_result"] = {
+        "ticker": ticker, "m": m, "df": df, "regime": regime,
+        "sent": sent, "rec": rec, "sig_ctx": sig_ctx,
+        "analysis": analysis, "gemini_model": _gm,
+    }
+    # ── Render remaining UI (buttons, gauge, news) via shared helper ────────
+    _render_deep_dive_results(
+        ticker, m, df, regime, sent, rec, sig_ctx, analysis,
+        _gm, groq_key, gemini_key, open_sigs
+    )
+
+
+def _render_deep_dive_results(ticker, m, df, regime, sent, rec, sig_ctx, analysis,
+                               gemini_model, groq_key, gemini_key, open_sigs):
+    """
+    Renders everything after the AI analysis text:
+    Conviction Meter, Trade Calculator, Paper Trade, News, Share Buttons, Sector RRG.
+    Extracted into a standalone function so that button clicks (which cause Streamlit
+    re-runs) can restore from session_state and re-render without re-running analysis.
+    """
+    def _fp(v):
+        try:
+            v=float(v)
+            return f"₹{v:,.0f}" if v>=10000 else f"₹{v:,.1f}" if v>=100 else f"₹{v:,.2f}"
+        except: return str(v)
+
     # ══════════════════════════════════════════════════════════════════════
     # FEATURE 1: CONVICTION GAUGE
     # ══════════════════════════════════════════════════════════════════════
@@ -1394,4 +1446,5 @@ def page_ai_deep_dive():
             st.info(f"**Sector: {_sector}** — {_qe} **{_quad}**: {_qdesc}")
     elif _sector:
         st.caption(f"Sector: **{_sector}** | Load data from Dashboard for RRG sector rotation context.")
+
 
