@@ -82,8 +82,9 @@ def save_signals_today(signals_list: list, regime: dict = None) -> int:
             "rr":            round(r.risk_reward, 1),
             "confidence":    int(r.confidence),
             "rs":            round(r.rs_rating, 1),
-            "sqi":           round(getattr(r, "sqi", 0), 1),
-            "sqi_grade":     getattr(r, "sqi_grade", ""),
+            "sqi":           round(getattr(r, "sqi", 0), 1) or None,
+            "sqi_grade":     getattr(r, "sqi_grade", "") or None,
+            "sqi_breakdown": getattr(r, "sqi_breakdown", "") or None,
             "sector":        getattr(r, "sector", ""),
             "regime":        regime_name,
             "regime_score":  int(regime_score),
@@ -577,3 +578,4 @@ def get_portfolio_pnl(data_dict: dict) -> dict:
         "total_invested": round(total_invested, 2),
         "position_count": len(positions),
     }
+
