@@ -166,7 +166,8 @@ try:
     _app_pw = st.secrets.get("APP_PASSWORD", "")
 except Exception:
     _app_pw = ""
-if _app_pw and _app_pw != "your_password":
+if _app_pw:
+    # APP_PASSWORD is set — enforce it
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
     if not st.session_state.authenticated:
@@ -174,13 +175,16 @@ if _app_pw and _app_pw != "your_password":
         st.markdown("---")
         pw = st.text_input("Enter access password", type="password", key="pw_input")
         if st.button("Login", key="pw_btn"):
-            if pw == _app_pw:
+            # Constant-time comparison to prevent timing attacks
+            import hmac as _hmac
+            if _hmac.compare_digest(pw, _app_pw):
                 st.session_state.authenticated = True
                 st.rerun()
             else:
                 st.error("Wrong password.")
         st.stop()
 else:
+    # No APP_PASSWORD set — rely solely on Supabase auth gate above
     st.session_state.authenticated = True
 
 # ============================================================================
@@ -2218,13 +2222,13 @@ def page_settings():
 1. Go to [supabase.com](https://supabase.com) → Your project → **Authentication** → **Providers**
 2. Click **Google** → Toggle **Enable**
 3. You'll need a Client ID and Secret (get from Step 2)
-4. Set Redirect URL to: `https://aiebaqvclyzxajigvkfd.supabase.co/auth/v1/callback`
+4. Set Redirect URL to: `https://<your-project>.supabase.co/auth/v1/callback`
 
 **Step 2 — Google Cloud Console:**
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. APIs & Services → Credentials → **Create Credentials** → OAuth Client ID
 3. Application type: **Web application**
-4. Authorised redirect URIs: `https://aiebaqvclyzxajigvkfd.supabase.co/auth/v1/callback`
+4. Authorised redirect URIs: `https://<your-project>.supabase.co/auth/v1/callback`
 5. Copy **Client ID** and **Client Secret** → paste into Supabase (Step 1)
 
 **Step 3 — Streamlit Secrets:**
@@ -2260,10 +2264,10 @@ Once enabled, the "Sign in with Google" button appears automatically on the logi
         st.success("✅ Supabase Connected — signals, portfolio, and auto-learning are active")
     else:
         st.warning("⚠️ Supabase not configured. Add to Streamlit Secrets:")
-        st.code('SUPABASE_URL = "https://aiebaqvclyzxajigvkfd.supabase.co"\nSUPABASE_SERVICE_KEY = "your_service_role_key"', language="toml")
+        st.code('SUPABASE_URL = "https://<your-project-id>.supabase.co"\nSUPABASE_SERVICE_KEY = "your_service_role_key"', language="toml")
         st.markdown("""
 **Your project is already created:**
-- URL: `https://aiebaqvclyzxajigvkfd.supabase.co`
+- URL: `https://<your-project>.supabase.co`
 - Get the service_role key from: supabase.com → nse-scanner-pro → Project Settings → API
 - Paste both in Streamlit Cloud → App Settings → Secrets
         """)
