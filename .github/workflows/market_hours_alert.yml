@@ -14,6 +14,8 @@ jobs:
   alert:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    permissions:
+      contents: read   # read-only — no repo writes needed
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -43,4 +45,3 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ALERT_UNIVERSE: nifty200
         run: python alert_engine.py
-
