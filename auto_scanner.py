@@ -242,20 +242,12 @@ def update_tracker():
             except:
                 days_held = 0
             
+            strategy_name = str(row.get("Strategy", ""))
+            max_hold = 15 if "EMA21" in strategy_name or "Last30" in strategy_name else 25
+
             if row["Signal"] == "BUY":
-                # Check SL hit (did price go below SL?)
-                if p["low"] <= sl or p["today_low"] <= sl:
-                    df.at[idx, "Status"] = "STOPPED"
-                    df.at[idx, "Exit_Date"] = today
-                    df.at[idx, "Exit_Price"] = round(sl, 2)
-                    df.at[idx, "Exit_Reason"] = "Stop Loss Hit"
-                    df.at[idx, "PnL_Pct"] = round((sl / entry - 1) * 100, 2)
-                    changed = True
-                    updated_count += 1
-                    log.info(f"  🔴 {sym} BUY STOPPED at {sl:.0f} (entry {entry:.0f})")
-                
-                # Check T1 hit
-                elif p["high"] >= t1 or p["today_high"] >= t1:
+                # T1 checked FIRST — if both T1 and SL were touched, T1 wins
+                if p["high"] >= t1 or p["today_high"] >= t1:
                     df.at[idx, "Status"] = "TARGET"
                     df.at[idx, "Exit_Date"] = today
                     df.at[idx, "Exit_Price"] = round(t1, 2)
@@ -264,44 +256,54 @@ def update_tracker():
                     changed = True
                     updated_count += 1
                     log.info(f"  🟢 {sym} BUY TARGET at {t1:.0f} (entry {entry:.0f})")
-                
-                # Expire after 30 days
-                elif days_held > 30:
-                    df.at[idx, "Status"] = "EXPIRED"
-                    df.at[idx, "Exit_Date"] = today
-                    df.at[idx, "Exit_Price"] = round(p["close"], 2)
-                    df.at[idx, "Exit_Reason"] = f"Expired ({days_held}d)"
-                    df.at[idx, "PnL_Pct"] = round((p["close"] / entry - 1) * 100, 2)
-                    changed = True
-                    updated_count += 1
-                
-            elif row["Signal"] == "SHORT":
-                if p["high"] >= sl or p["today_high"] >= sl:
+
+                elif p["low"] <= sl or p["today_low"] <= sl:
                     df.at[idx, "Status"] = "STOPPED"
                     df.at[idx, "Exit_Date"] = today
                     df.at[idx, "Exit_Price"] = round(sl, 2)
                     df.at[idx, "Exit_Reason"] = "Stop Loss Hit"
-                    df.at[idx, "PnL_Pct"] = round((entry / sl - 1) * 100, 2)
+                    df.at[idx, "PnL_Pct"] = round((sl / entry - 1) * 100, 2)
                     changed = True
                     updated_count += 1
-                    log.info(f"  🔴 {sym} SHORT STOPPED at {sl:.0f}")
-                
-                elif p["low"] <= t1 or p["today_low"] <= t1:
+                    log.info(f"  🔴 {sym} BUY STOPPED at {sl:.0f} (entry {entry:.0f})")
+
+                elif days_held > max_hold:
+                    df.at[idx, "Status"] = "EXPIRED"
+                    df.at[idx, "Exit_Date"] = today
+                    df.at[idx, "Exit_Price"] = round(p["close"], 2)
+                    df.at[idx, "Exit_Reason"] = f"Expired ({days_held}d > {max_hold}d)"
+                    df.at[idx, "PnL_Pct"] = round((p["close"] / entry - 1) * 100, 2)
+                    changed = True
+                    updated_count += 1
+
+            elif row["Signal"] == "SHORT":
+                # T1 checked FIRST — if both triggered, T1 wins
+                if p["low"] <= t1 or p["today_low"] <= t1:
                     df.at[idx, "Status"] = "TARGET"
                     df.at[idx, "Exit_Date"] = today
                     df.at[idx, "Exit_Price"] = round(t1, 2)
                     df.at[idx, "Exit_Reason"] = "Target 1 Hit"
-                    df.at[idx, "PnL_Pct"] = round((entry / t1 - 1) * 100, 2)
+                    df.at[idx, "PnL_Pct"] = round((entry - t1) / entry * 100, 2)
                     changed = True
                     updated_count += 1
                     log.info(f"  🟢 {sym} SHORT TARGET at {t1:.0f}")
-                
-                elif days_held > 30:
+
+                elif p["high"] >= sl or p["today_high"] >= sl:
+                    df.at[idx, "Status"] = "STOPPED"
+                    df.at[idx, "Exit_Date"] = today
+                    df.at[idx, "Exit_Price"] = round(sl, 2)
+                    df.at[idx, "Exit_Reason"] = "Stop Loss Hit"
+                    df.at[idx, "PnL_Pct"] = round((entry - sl) / entry * 100, 2)
+                    changed = True
+                    updated_count += 1
+                    log.info(f"  🔴 {sym} SHORT STOPPED at {sl:.0f}")
+
+                elif days_held > max_hold:
                     df.at[idx, "Status"] = "EXPIRED"
                     df.at[idx, "Exit_Date"] = today
                     df.at[idx, "Exit_Price"] = round(p["close"], 2)
-                    df.at[idx, "Exit_Reason"] = f"Expired ({days_held}d)"
-                    df.at[idx, "PnL_Pct"] = round((entry / p["close"] - 1) * 100, 2)
+                    df.at[idx, "Exit_Reason"] = f"Expired ({days_held}d > {max_hold}d)"
+                    df.at[idx, "PnL_Pct"] = round((entry - p["close"]) / entry * 100, 2)
                     changed = True
                     updated_count += 1
         
@@ -370,3 +372,4 @@ if __name__ == "__main__":
         scan_and_record(mode=args.mode, universe=universe)
         # Always update tracker after scanning
         update_tracker()
+
