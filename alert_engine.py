@@ -214,23 +214,25 @@ def check_exit_alerts(data_dict: dict) -> int:
         pnl_pct    = 0.0
 
         if signal == "BUY":
-            if sl > 0 and low_rec <= sl and not already_alerted(sym, strategy, "SL_HIT"):
-                exit_type  = "STOP"
-                exit_price = sl
-                pnl_pct    = round((sl / entry - 1) * 100, 2) if entry > 0 else 0
-            elif t1 > 0 and high_rec >= t1 and not already_alerted(sym, strategy, "T1_HIT"):
+            # T1 checked first — if both triggered, profit wins
+            if t1 > 0 and high_rec >= t1 and not already_alerted(sym, strategy, "T1_HIT"):
                 exit_type  = "TARGET"
                 exit_price = t1
                 pnl_pct    = round((t1 / entry - 1) * 100, 2) if entry > 0 else 0
-        elif signal == "SHORT":
-            if sl > 0 and high_rec >= sl and not already_alerted(sym, strategy, "SL_HIT"):
+            elif sl > 0 and low_rec <= sl and not already_alerted(sym, strategy, "SL_HIT"):
                 exit_type  = "STOP"
                 exit_price = sl
-                pnl_pct    = round((entry / sl - 1) * 100, 2) if sl > 0 else 0
-            elif t1 > 0 and low_rec <= t1 and not already_alerted(sym, strategy, "T1_HIT"):
+                pnl_pct    = round((sl / entry - 1) * 100, 2) if entry > 0 else 0
+        elif signal == "SHORT":
+            # T1 checked first — if both triggered, profit wins
+            if t1 > 0 and low_rec <= t1 and not already_alerted(sym, strategy, "T1_HIT"):
                 exit_type  = "TARGET"
                 exit_price = t1
-                pnl_pct    = round((entry / t1 - 1) * 100, 2) if t1 > 0 else 0
+                pnl_pct    = round((entry - t1) / entry * 100, 2) if entry > 0 else 0
+            elif sl > 0 and high_rec >= sl and not already_alerted(sym, strategy, "SL_HIT"):
+                exit_type  = "STOP"
+                exit_price = sl
+                pnl_pct    = round((entry - sl) / entry * 100, 2) if entry > 0 else 0
 
         if exit_type:
             alert_key = "SL_HIT" if exit_type == "STOP" else "T1_HIT"
