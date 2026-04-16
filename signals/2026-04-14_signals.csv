@@ -1,5 +1,5 @@
 Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,RS,Sector,Regime,Regime_Score,Regime_Fit,Status,Exit_Date,Exit_Price,Exit_Reason,PnL_Pct
-2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,GICRE,SHORT,389.5,389.5,412.17,355.5,332.83,2.5,77,78.0,Financial Services,DISTRIBUTION,0,IDEAL,OPEN,,,,
+2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,GICRE,SHORT,389.5,389.5,412.17,355.5,332.83,2.5,77,78.0,Financial Services,DISTRIBUTION,0,IDEAL,STOPPED,2026-04-16,412.17,Stop Loss Hit,-5.82
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,NEULANDLAB,SHORT,14512.0,14512.0,15285.89,13351.16,12577.27,2.5,77,63.0,Healthcare,DISTRIBUTION,0,IDEAL,TARGET,2026-04-14,13351.16,Target 1 Hit,8.0
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,BOSCHLTD,SHORT,36615.0,36615.0,38091.39,34400.42,32924.03,2.5,77,57.0,Automobile and Auto Components,DISTRIBUTION,0,IDEAL,TARGET,2026-04-14,34400.42,Target 1 Hit,6.05
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,ACE,SHORT,888.0,888.0,924.1,833.85,797.75,2.5,72,58.0,Capital Goods,DISTRIBUTION,0,IDEAL,TARGET,2026-04-14,833.85,Target 1 Hit,6.1
@@ -11,4 +11,4 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,EICHERMOT,SHORT,7050.0,7050.0,7513.63,6354.56,5890.93,2.5,72,54.0,Automobile and Auto Components,DISTRIBUTION,0,IDEAL,OPEN,,,,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,APLAPOLLO,SHORT,1979.8,1979.8,2095.27,1806.59,1691.12,2.5,75,74.0,Capital Goods,DISTRIBUTION,0,IDEAL,OPEN,,,,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,MARUTI,SHORT,13076.0,13076.0,13920.36,11809.46,10965.1,2.5,72,25.0,Automobile and Auto Components,DISTRIBUTION,0,IDEAL,OPEN,,,,
-2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,CHOLAFIN,SHORT,1507.2,1507.2,1603.47,1362.8,1266.53,2.5,72,40.0,Financial Services,DISTRIBUTION,0,IDEAL,OPEN,,,,
+2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,CHOLAFIN,SHORT,1507.2,1507.2,1603.47,1362.8,1266.53,2.5,72,40.0,Financial Services,DISTRIBUTION,0,IDEAL,STOPPED,2026-04-16,1603.47,Stop Loss Hit,-6.39
