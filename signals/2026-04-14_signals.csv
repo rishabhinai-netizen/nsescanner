@@ -9,6 +9,6 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,JYOTICNC,SHORT,698.95,698.95,857.48,461.16,302.63,2.5,75,16.0,Capital Goods,DISTRIBUTION,0,IDEAL,OPEN,,,,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,NUVOCO,SHORT,306.7,306.7,318.75,280.45,280.3,2.2,72,45.0,Construction Materials,DISTRIBUTION,0,IDEAL,OPEN,,,,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,EICHERMOT,SHORT,7050.0,7050.0,7513.63,6354.56,5890.93,2.5,72,54.0,Automobile and Auto Components,DISTRIBUTION,0,IDEAL,OPEN,,,,
-2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,APLAPOLLO,SHORT,1979.8,1979.8,2095.27,1806.59,1691.12,2.5,75,74.0,Capital Goods,DISTRIBUTION,0,IDEAL,OPEN,,,,
+2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,APLAPOLLO,SHORT,1979.8,1979.8,2095.27,1806.59,1691.12,2.5,75,74.0,Capital Goods,DISTRIBUTION,0,IDEAL,STOPPED,2026-04-17,2095.27,Stop Loss Hit,-5.83
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,MARUTI,SHORT,13076.0,13076.0,13920.36,11809.46,10965.1,2.5,72,25.0,Automobile and Auto Components,DISTRIBUTION,0,IDEAL,OPEN,,,,
 2026-04-14,15:01,Failed_Breakout_Short,Failed Breakout Short,CHOLAFIN,SHORT,1507.2,1507.2,1603.47,1362.8,1266.53,2.5,72,40.0,Financial Services,DISTRIBUTION,0,IDEAL,STOPPED,2026-04-16,1603.47,Stop Loss Hit,-6.39

@@ -1,0 +1,18 @@
+{
+  "date": "2026-04-17",
+  "scan_time": "11:55",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "ACCUMULATION",
+  "regime_score": 2,
+  "nifty": 24353.55,
+  "stocks_scanned": 185,
+  "total_signals": 28,
+  "new_signals": 28,
+  "strategies": {
+    "EMA21_Bounce": 3,
+    "52WH_Breakout": 7,
+    "Last30Min_ATH": 14,
+    "Failed_Breakout_Short": 4
+  }
+}
