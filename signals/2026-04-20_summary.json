@@ -1,0 +1,15 @@
+{
+  "date": "2026-04-20",
+  "scan_time": "12:08",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "DISTRIBUTION",
+  "regime_score": 1,
+  "nifty": 24364.85,
+  "stocks_scanned": 185,
+  "total_signals": 4,
+  "new_signals": 4,
+  "strategies": {
+    "Failed_Breakout_Short": 4
+  }
+}

@@ -1,0 +1,5 @@
+Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,RS,Sector,Regime,Regime_Score,Regime_Fit,Status,Exit_Date,Exit_Price,Exit_Reason,PnL_Pct
+2026-04-20,12:08,Failed_Breakout_Short,Failed Breakout Short,IEX,SHORT,124.99,124.99,138.17,105.22,92.04,2.5,75,42.0,Financial Services,DISTRIBUTION,1,IDEAL,OPEN,,,,
+2026-04-20,12:08,Failed_Breakout_Short,Failed Breakout Short,RAMCOCEM,SHORT,1010.45,1010.45,1034.88,940.0,888.0,5.0,77,47.0,Construction Materials,DISTRIBUTION,1,IDEAL,OPEN,,,,
+2026-04-20,12:08,Failed_Breakout_Short,Failed Breakout Short,YESBANK,SHORT,19.84,19.84,20.9,18.25,17.19,2.5,75,34.0,Financial Services,DISTRIBUTION,1,IDEAL,OPEN,,,,
+2026-04-20,12:08,Failed_Breakout_Short,Failed Breakout Short,SJVN,SHORT,76.98,76.98,80.5,71.7,68.18,2.5,77,59.0,Power,DISTRIBUTION,1,IDEAL,TARGET,2026-04-20,71.7,Target 1 Hit,6.86
