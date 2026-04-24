@@ -1,5 +1,5 @@
 """
-NSE SCANNER PRO v15 — Complete Professional Trading Intelligence Suite
+NSE SCANNER PRO v15.1 — Complete Professional Trading Intelligence Suite
 =======================================================================
 v15 merges the best of all previous versions:
 
