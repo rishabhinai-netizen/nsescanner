@@ -674,6 +674,10 @@ PAGES = [
 ]
 _NAV_DIVIDERS = {"── SCAN ──", "── ANALYSE ──", "── TRACK ──", "── ──"}
 
+# Persist page selection in URL query params
+qp = st.query_params
+default_page = qp.get("page", PAGES[0])
+
 # ============================================================================
 # SIDEBAR — Professional Trading Terminal Navigation v20
 # ============================================================================
