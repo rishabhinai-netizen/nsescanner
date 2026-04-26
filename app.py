@@ -188,149 +188,248 @@ else:
     st.session_state.authenticated = True
 
 # ============================================================================
-# CSS — Mobile-friendly, overflow-safe, branding hidden
+# CSS — Bloomberg Terminal Pro · v20 Professional UI
 # ============================================================================
 st.markdown("""
 <style>
-    /* === NUCLEAR BRANDING HIDE — covers all Streamlit versions === */
-    #MainMenu, footer, header, 
-    .stDeployButton,
-    [data-testid="stToolbar"],
-    [data-testid="stStatusWidget"],
-    [data-testid="stHeader"],
-    [data-testid="manage-app-button"],
-    #stDecoration,
-    /* Class-based (varies by Streamlit version) */
-    .viewerBadge_container__r5tak, .styles_viewerBadge__CvC9N,
-    ._profileContainer_51w34_53, ._profilePreview_51w34_63,
-    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_link__qRIco,
-    .styles_viewerBadge__1yB5_, .viewerBadge_text__1JaDK,
-    /* Catch-all for ANY link to github or streamlit */
-    a[href*="github.com"],
-    a[href*="streamlit.io"],
-    a[href*="github"],
-    /* Footer and deploy elements */
-    .stApp > footer,
-    div[class*="stDeployButton"],
-    div[class*="viewerBadge"],
-    div[class*="StatusWidget"],
-    button[kind="header"],
-    /* Mobile-specific toolbar */
-    section[data-testid="stSidebar"] a[href*="github"],
-    .stApp header,
-    .stApp [data-testid="stHeader"] {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        overflow: hidden !important;
-        position: absolute !important;
-        top: -9999px !important;
-    }
-    
-    /* LOCK sidebar open — hide the collapse arrow button */
-    [data-testid="collapsedControl"],
-    button[kind="header"],
-    [data-testid="stSidebarCollapseButton"],
-    .st-emotion-cache-1ibsh2c,
-    section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
-    section[data-testid="stSidebar"] > div > div > button { 
-        display: none !important; 
-    }
-    /* Ensure sidebar is always visible */
-    section[data-testid="stSidebar"] {
-        min-width: 260px !important;
-        transform: none !important;
-    }
-    /* Also hide the top padding that header leaves behind */
-    .stApp > header + div { padding-top: 0 !important; }
-    .block-container { padding-top: 1rem !important; }
-    
-    /* Metric boxes: compact, no overflow */
-    div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #1a1d23, #252830);
-        border: 1px solid #333; border-radius: 8px; padding: 8px 10px; overflow: hidden;
-    }
-    div[data-testid="stMetric"] label { font-size: 0.7rem !important; color: #888 !important; }
-    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    
-    /* Custom cards */
-    .pc { background: linear-gradient(135deg,#1a1d23,#252830); border:1px solid #333;
-          border-radius:8px; padding:8px 12px; margin:3px 0; }
-    .pc .lb { font-size:0.68rem; color:#888; margin-bottom:1px; }
-    .pc .vl { font-size:0.95rem; font-weight:600; color:#fafafa; }
-    .pc .vl.g { color:#00d26a; } .pc .vl.r { color:#ff4757; } .pc .vl.o { color:#FF6B35; }
-    .pc .vl.y { color:#ffd700; }
-    
-    /* Focus panel */
-    .focus { background:linear-gradient(135deg,#0d1117,#161b22); border:1px solid #FF6B35;
-             border-radius:12px; padding:16px 20px; margin:10px 0; }
-    .focus h3 { margin:0 0 8px 0; color:#FF6B35; font-size:1.1rem; }
-    .focus .regime { font-size:1.3rem; font-weight:700; margin:4px 0; }
-    .focus .tip { color:#aaa; font-size:0.82rem; margin-top:6px; }
-    
-    /* Strategy cards */
-    .sc { background:#1a1d23; border:1px solid #333; border-radius:10px; padding:12px; margin:5px 0; }
-    .sc:hover { border-color:#FF6B35; }
-    .sc.blocked { opacity:0.4; border-color:#ff4757; }
-    .sc.ideal { border-left:3px solid #00d26a; }
-    .sc.caution { border-left:3px solid #ffd700; }
-    
-    /* Badges */
-    .bg { display:inline-block; padding:2px 7px; border-radius:10px; font-size:0.65em; }
-    .bg-s { background:#1e3a5f; color:#5dade2; } .bg-i { background:#3e2723; color:#ff8a65; }
-    .bg-p { background:#1b5e20; color:#81c784; } .bg-o { background:#4a148c; color:#ce93d8; }
-    .bg-blocked { background:#3d1a1a; color:#ff4757; }
-    .bg-ideal { background:#0d3320; color:#00d26a; }
-    .bg-caution { background:#3d3a1a; color:#ffd700; }
-    
-    /* SQI badges */
-    .sqi-elite { background:#0d3320; color:#00d26a; font-weight:700; }
-    .sqi-strong { background:#1e3a5f; color:#5dade2; font-weight:600; }
-    .sqi-moderate { background:#3d3a1a; color:#ffd700; }
-    .sqi-weak { background:#3d1a1a; color:#ff4757; }
-    
-    /* Stale data warning */
-    .stale { background:#3d2a1a; border:1px solid #ff8a65; border-radius:8px;
-             padding:8px 14px; color:#ff8a65; font-size:0.85rem; }
-    
-    /* Workflow */
-    .ws { border-left:3px solid #FF6B35; padding:7px 12px; margin:5px 0;
-          background:#1a1d23; border-radius:0 8px 8px 0; }
-    
-    /* Breeze banner */
-    .bb { padding:6px 12px; border-radius:8px; margin:6px 0; font-size:0.8rem; }
-    .bb-on { background:#0d3320; border:1px solid #1b5e20; color:#81c784; }
-    .bb-off { background:#1a1d23; border:1px solid #333; color:#888; }
-    
-    .dataframe { font-size:0.78rem !important; }
-    
-    /* Mobile: ensure sidebar works */
-    @media (max-width: 768px) {
-        .pc .vl { font-size:0.85rem; }
-        .pc .lb { font-size:0.62rem; }
-        div[data-testid="stMetric"] [data-testid="stMetricValue"] { font-size:0.85rem !important; }
-        .focus { padding:12px 14px; }
-        .sc { padding:10px; }
-        /* Extra mobile branding kill */
-        header[data-testid="stHeader"] { display:none !important; }
-        .stApp > header { display:none !important; }
-    }
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@200;300;400;500;600;700;800&display=swap');
+
+:root {
+    --bg-base:      #080c10;
+    --bg-panel:     #0d1117;
+    --bg-card:      #111720;
+    --bg-hover:     #161d28;
+    --bg-selected:  #0a1f35;
+    --border:       #1c2a3a;
+    --border-bright:#243447;
+    --amber:        #f5a623;
+    --amber-dim:    #c47d0e;
+    --amber-glow:   rgba(245,166,35,0.12);
+    --cyan:         #00d4e8;
+    --cyan-dim:     #0099aa;
+    --green:        #00e676;
+    --green-dim:    #00b359;
+    --red:          #ff3d5a;
+    --red-dim:      #cc1f3a;
+    --gold:         #ffd700;
+    --text-primary: #e8edf5;
+    --text-secondary:#8b9bb4;
+    --text-muted:   #4a5568;
+    --font-display: 'Outfit', sans-serif;
+    --font-body:    'Space Grotesk', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+    --shadow-card: 0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03);
+    --shadow-amber: 0 0 20px rgba(245,166,35,0.15), 0 0 60px rgba(245,166,35,0.05);
+}
+
+/* BASE */
+html, body, [class*="css"], .stApp { background-color: var(--bg-base) !important; font-family: var(--font-body) !important; color: var(--text-primary) !important; }
+.block-container { padding: 0 !important; max-width: 100% !important; }
+
+/* NUCLEAR HIDE */
+#MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stStatusWidget"],
+[data-testid="stHeader"], [data-testid="manage-app-button"], #stDecoration,
+.viewerBadge_container__r5tak, ._profileContainer_51w34_53, .css-1jc7ptx, .e1ewe7hr3,
+a[href*="github.com"], a[href*="streamlit.io"], .stApp > footer,
+div[class*="stDeployButton"], div[class*="viewerBadge"], div[class*="StatusWidget"],
+button[kind="header"], .stApp header, .stApp [data-testid="stHeader"] {
+    display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important;
+}
+[data-testid="stSidebarCollapseButton"], .st-emotion-cache-1ibsh2c,
+section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
+[data-testid="collapsedControl"] { display: none !important; }
+
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    min-width: 240px !important; max-width: 240px !important;
+    transform: none !important; background: var(--bg-panel) !important;
+    border-right: 1px solid var(--border) !important; padding-top: 0 !important;
+}
+section[data-testid="stSidebar"] > div:first-child { padding-top: 0 !important; }
+
+/* MAIN CONTENT */
+.main .block-container { padding: 1.5rem 2rem 3rem 2rem !important; max-width: 100% !important; }
+
+/* PAGE TITLES */
+.stMarkdown h1 {
+    font-family: var(--font-display) !important; font-size: 1.8rem !important; font-weight: 700 !important;
+    letter-spacing: -0.02em !important; margin-bottom: 0.2rem !important; padding-bottom: 0.8rem !important;
+    border-bottom: 1px solid var(--border) !important;
+    background: linear-gradient(135deg, var(--text-primary) 60%, var(--amber));
+    -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; background-clip: text !important;
+}
+.stMarkdown h2 { font-family: var(--font-display) !important; font-size: 1.2rem !important; font-weight: 600 !important; color: var(--text-primary) !important; margin-top: 1.5rem !important; }
+.stMarkdown h3 { font-family: var(--font-display) !important; font-size: 0.72rem !important; font-weight: 700 !important; color: var(--amber) !important; text-transform: uppercase !important; letter-spacing: 0.1em !important; margin-top: 1.2rem !important; margin-bottom: 0.5rem !important; -webkit-text-fill-color: var(--amber) !important; }
+.stMarkdown h4 { font-family: var(--font-body) !important; font-size: 0.88rem !important; font-weight: 600 !important; color: var(--text-primary) !important; }
+.stMarkdown p { font-family: var(--font-body) !important; font-size: 0.82rem !important; color: var(--text-secondary) !important; line-height: 1.6 !important; }
+.stMarkdown strong { color: var(--text-primary) !important; font-weight: 600 !important; }
+.stCaption, [data-testid="stCaptionContainer"] { font-family: var(--font-mono) !important; font-size: 0.66rem !important; color: var(--text-muted) !important; }
+
+/* METRIC CARDS */
+div[data-testid="stMetric"] {
+    background: var(--bg-card) !important; border: 1px solid var(--border) !important;
+    border-top: 2px solid var(--amber) !important; border-radius: var(--radius-md) !important;
+    padding: 0.9rem 1rem 0.7rem !important; box-shadow: var(--shadow-card) !important; transition: all 0.15s ease !important;
+}
+div[data-testid="stMetric"]:hover { border-color: var(--amber) !important; box-shadow: var(--shadow-amber) !important; }
+div[data-testid="stMetric"] label { font-family: var(--font-mono) !important; font-size: 0.6rem !important; font-weight: 500 !important; color: var(--text-muted) !important; text-transform: uppercase !important; letter-spacing: 0.1em !important; }
+div[data-testid="stMetric"] [data-testid="stMetricValue"] { font-family: var(--font-mono) !important; font-size: 1.1rem !important; font-weight: 700 !important; color: var(--text-primary) !important; }
+
+/* PC CARDS */
+.pc { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; padding: 0.7rem 0.9rem !important; margin: 3px 0 !important; transition: all 0.15s ease; }
+.pc:hover { border-color: var(--border-bright) !important; }
+.pc .lb { font-family: var(--font-mono) !important; font-size: 0.58rem !important; color: var(--text-muted) !important; text-transform: uppercase !important; letter-spacing: 0.12em !important; margin-bottom: 3px !important; }
+.pc .vl { font-family: var(--font-mono) !important; font-size: 1rem !important; font-weight: 700 !important; color: var(--text-primary) !important; }
+.pc .vl.g { color: var(--green) !important; }
+.pc .vl.r { color: var(--red) !important; }
+.pc .vl.o { color: var(--amber) !important; }
+.pc .vl.y { color: var(--gold) !important; }
+
+/* FOCUS PANEL */
+.focus { background: linear-gradient(135deg, #0a1520, #0d1a2a, #0a1018) !important; border: 1px solid var(--border) !important; border-left: 3px solid var(--amber) !important; border-radius: var(--radius-lg) !important; padding: 1.2rem 1.5rem !important; margin: 0.5rem 0 1rem !important; box-shadow: var(--shadow-card); position: relative; overflow: hidden; }
+.focus h3 { font-family: var(--font-display) !important; font-size: 0.72rem !important; font-weight: 700 !important; color: var(--amber) !important; text-transform: uppercase !important; letter-spacing: 0.15em !important; margin: 0 0 0.5rem 0 !important; -webkit-text-fill-color: var(--amber) !important; }
+.focus .regime { font-family: var(--font-display) !important; font-size: 1rem !important; font-weight: 600 !important; color: var(--text-primary) !important; margin: 0.4rem 0 !important; }
+.focus .tip { font-family: var(--font-mono) !important; font-size: 0.68rem !important; color: var(--text-muted) !important; margin-top: 0.5rem !important; border-top: 1px solid var(--border) !important; padding-top: 0.5rem !important; }
+
+/* STRATEGY CARDS */
+.sc { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; padding: 0.8rem 1rem !important; margin: 4px 0 !important; transition: all 0.2s ease !important; }
+.sc:hover { border-color: var(--amber) !important; background: var(--bg-hover) !important; box-shadow: 0 0 16px rgba(245,166,35,0.08) !important; transform: translateY(-1px) !important; }
+.sc.blocked { opacity: 0.35 !important; border-color: var(--red-dim) !important; }
+.sc.ideal { border-left: 2px solid var(--green) !important; }
+.sc.caution { border-left: 2px solid var(--amber) !important; }
+.sc strong { font-family: var(--font-body) !important; font-size: 0.82rem !important; font-weight: 600 !important; color: var(--text-primary) !important; }
+
+/* BADGES */
+.bg { display: inline-flex !important; align-items: center !important; padding: 2px 8px !important; border-radius: 2px !important; font-family: var(--font-mono) !important; font-size: 0.58rem !important; font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; }
+.bg-s { background: rgba(0,212,232,0.1) !important; color: var(--cyan) !important; border: 1px solid rgba(0,212,232,0.2) !important; }
+.bg-i { background: rgba(245,166,35,0.1) !important; color: var(--amber) !important; border: 1px solid rgba(245,166,35,0.2) !important; }
+.bg-p { background: rgba(0,230,118,0.1) !important; color: var(--green) !important; border: 1px solid rgba(0,230,118,0.2) !important; }
+.bg-o { background: rgba(255,215,0,0.1) !important; color: var(--gold) !important; border: 1px solid rgba(255,215,0,0.2) !important; }
+.bg-blocked { background: rgba(255,61,90,0.1) !important; color: var(--red) !important; border: 1px solid rgba(255,61,90,0.2) !important; }
+.bg-ideal { background: rgba(0,230,118,0.1) !important; color: var(--green) !important; border: 1px solid rgba(0,230,118,0.2) !important; }
+.bg-caution { background: rgba(245,166,35,0.1) !important; color: var(--amber) !important; border: 1px solid rgba(245,166,35,0.2) !important; }
+.sqi-elite { background: rgba(255,215,0,0.12) !important; color: var(--gold) !important; font-weight: 700 !important; border: 1px solid rgba(255,215,0,0.25) !important; }
+.sqi-strong { background: rgba(0,212,232,0.1) !important; color: var(--cyan) !important; border: 1px solid rgba(0,212,232,0.2) !important; }
+.sqi-moderate { background: rgba(245,166,35,0.1) !important; color: var(--amber) !important; border: 1px solid rgba(245,166,35,0.2) !important; }
+.sqi-weak { background: rgba(255,61,90,0.1) !important; color: var(--red) !important; border: 1px solid rgba(255,61,90,0.2) !important; }
+
+/* STALE */
+.stale { background: rgba(245,166,35,0.06) !important; border: 1px solid rgba(245,166,35,0.25) !important; border-radius: var(--radius-md) !important; padding: 0.6rem 1rem !important; color: var(--amber) !important; font-family: var(--font-mono) !important; font-size: 0.72rem !important; }
+
+/* BUTTONS */
+.stButton > button { font-family: var(--font-body) !important; font-size: 0.78rem !important; font-weight: 600 !important; border-radius: var(--radius-sm) !important; transition: all 0.15s ease !important; border: 1px solid var(--border) !important; background: var(--bg-card) !important; color: var(--text-secondary) !important; padding: 0.4rem 1rem !important; }
+.stButton > button:hover { border-color: var(--amber) !important; color: var(--amber) !important; background: rgba(245,166,35,0.06) !important; box-shadow: 0 0 12px rgba(245,166,35,0.12) !important; }
+.stButton > button[kind="primary"] { background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.08)) !important; border: 1px solid var(--amber) !important; color: var(--amber) !important; box-shadow: 0 0 16px rgba(245,166,35,0.1) !important; }
+.stButton > button[kind="primary"]:hover { background: linear-gradient(135deg, rgba(245,166,35,0.25), rgba(245,166,35,0.15)) !important; box-shadow: 0 0 24px rgba(245,166,35,0.2) !important; transform: translateY(-1px) !important; }
+section[data-testid="stSidebar"] .stButton button { text-align: left !important; background: transparent !important; border: 1px solid transparent !important; border-radius: var(--radius-sm) !important; color: var(--text-secondary) !important; font-family: var(--font-body) !important; font-size: 0.78rem !important; font-weight: 500 !important; padding: 0.45rem 0.8rem !important; margin: 1px 0 !important; }
+section[data-testid="stSidebar"] .stButton button:hover { background: var(--bg-hover) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+section[data-testid="stSidebar"] .stButton button[kind="primary"] { background: linear-gradient(135deg, var(--bg-selected), rgba(10,31,53,0.8)) !important; border-color: var(--amber) !important; color: var(--amber) !important; font-weight: 600 !important; box-shadow: 0 0 12px rgba(245,166,35,0.1) !important; }
+
+/* ALERTS */
+.stSuccess { background: rgba(0,230,118,0.06) !important; border: 1px solid rgba(0,230,118,0.2) !important; border-left: 3px solid var(--green) !important; border-radius: var(--radius-md) !important; color: var(--green) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stWarning { background: rgba(245,166,35,0.06) !important; border: 1px solid rgba(245,166,35,0.2) !important; border-left: 3px solid var(--amber) !important; border-radius: var(--radius-md) !important; color: var(--amber) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stError { background: rgba(255,61,90,0.06) !important; border: 1px solid rgba(255,61,90,0.2) !important; border-left: 3px solid var(--red) !important; border-radius: var(--radius-md) !important; color: var(--red) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stInfo { background: rgba(0,212,232,0.05) !important; border: 1px solid rgba(0,212,232,0.15) !important; border-left: 3px solid var(--cyan) !important; border-radius: var(--radius-md) !important; color: var(--cyan) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+
+/* EXPANDERS */
+details { border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; background: var(--bg-panel) !important; margin: 4px 0 !important; }
+details summary { font-family: var(--font-body) !important; font-size: 0.8rem !important; font-weight: 600 !important; color: var(--text-secondary) !important; padding: 0.6rem 0.9rem !important; transition: all 0.15s ease !important; }
+details summary:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
+details[open] summary { border-bottom: 1px solid var(--border) !important; color: var(--amber) !important; }
+details > div { padding: 0.8rem !important; }
+
+/* INPUTS */
+.stSelectbox > div > div, .stMultiSelect > div > div { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; color: var(--text-primary) !important; font-family: var(--font-body) !important; font-size: 0.82rem !important; }
+.stTextInput > div > div > input, .stNumberInput > div > div > input, .stTextArea > div > div > textarea { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; color: var(--text-primary) !important; font-family: var(--font-mono) !important; font-size: 0.82rem !important; }
+
+/* SLIDER */
+.stSlider > div > div > div > div { background: var(--amber) !important; }
+.stSlider > div > div > div { background: var(--border) !important; }
+
+/* TABS */
+.stTabs [data-baseweb="tab-list"] { background: transparent !important; border-bottom: 1px solid var(--border) !important; gap: 0 !important; }
+.stTabs [data-baseweb="tab"] { background: transparent !important; border: none !important; border-bottom: 2px solid transparent !important; color: var(--text-muted) !important; font-family: var(--font-body) !important; font-size: 0.78rem !important; font-weight: 500 !important; padding: 0.5rem 1.2rem !important; transition: all 0.15s ease !important; border-radius: 0 !important; }
+.stTabs [data-baseweb="tab"]:hover { color: var(--text-primary) !important; background: var(--bg-hover) !important; }
+.stTabs [aria-selected="true"] { color: var(--amber) !important; border-bottom-color: var(--amber) !important; background: transparent !important; }
+
+/* PROGRESS */
+.stProgress > div > div > div { background: linear-gradient(90deg, var(--amber), var(--cyan)) !important; border-radius: 2px !important; }
+.stProgress > div > div { background: var(--border) !important; border-radius: 2px !important; height: 3px !important; }
+
+/* BREEZE BANNERS */
+.bb { padding: 0.45rem 0.8rem !important; border-radius: var(--radius-sm) !important; margin: 4px 0 !important; font-family: var(--font-mono) !important; font-size: 0.66rem !important; font-weight: 500 !important; letter-spacing: 0.05em !important; }
+.bb-on { background: rgba(0,230,118,0.08) !important; border: 1px solid rgba(0,230,118,0.2) !important; color: var(--green) !important; }
+.bb-off { background: var(--bg-card) !important; border: 1px solid var(--border) !important; color: var(--text-muted) !important; }
+
+/* NAV SECTION */
+.nav-section { font-family: var(--font-mono) !important; font-size: 0.56rem !important; font-weight: 600 !important; letter-spacing: 0.18em !important; color: var(--amber) !important; margin: 10px 0 3px 4px !important; text-transform: uppercase !important; opacity: 0.7 !important; }
+section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] { font-family: var(--font-mono) !important; font-size: 0.62rem !important; color: var(--text-muted) !important; }
+
+/* DATAFRAME */
+.dataframe, [data-testid="stDataFrame"] { font-family: var(--font-mono) !important; font-size: 0.72rem !important; }
+[data-testid="stDataFrame"] > div { border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; background: var(--bg-panel) !important; }
+
+/* DOWNLOAD */
+.stDownloadButton > button { background: rgba(0,212,232,0.08) !important; border: 1px solid rgba(0,212,232,0.25) !important; color: var(--cyan) !important; font-family: var(--font-body) !important; font-size: 0.75rem !important; border-radius: var(--radius-sm) !important; }
+.stDownloadButton > button:hover { background: rgba(0,212,232,0.15) !important; box-shadow: 0 0 12px rgba(0,212,232,0.15) !important; }
+
+/* HR */
+hr { border: none !important; border-top: 1px solid var(--border) !important; margin: 1rem 0 !important; }
+
+/* FORM */
+[data-testid="stForm"] { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; padding: 1.2rem !important; }
+
+/* TABLES IN MARKDOWN */
+.stMarkdown table { border-collapse: collapse !important; width: 100% !important; font-family: var(--font-mono) !important; font-size: 0.75rem !important; }
+.stMarkdown th { background: var(--bg-card) !important; border: 1px solid var(--border) !important; padding: 0.4rem 0.7rem !important; color: var(--amber) !important; font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; font-size: 0.65rem !important; }
+.stMarkdown td { border: 1px solid var(--border) !important; padding: 0.35rem 0.7rem !important; color: var(--text-primary) !important; }
+.stMarkdown tr:hover td { background: var(--bg-hover) !important; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+
+/* DROPDOWN */
+[data-baseweb="popover"] { background: var(--bg-card) !important; border: 1px solid var(--border-bright) !important; border-radius: var(--radius-md) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important; }
+[data-baseweb="menu"] { background: var(--bg-card) !important; }
+[data-baseweb="option"] { background: transparent !important; color: var(--text-primary) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+[data-baseweb="option"]:hover { background: var(--bg-hover) !important; color: var(--amber) !important; }
+
+/* RADIO / CHECKBOX */
+.stRadio label, .stCheckbox label { font-family: var(--font-body) !important; font-size: 0.78rem !important; color: var(--text-secondary) !important; }
+
+/* WORKFLOW */
+.ws { border-left: 2px solid var(--amber) !important; padding: 0.5rem 0.9rem !important; margin: 4px 0 !important; background: var(--bg-card) !important; border-radius: 0 var(--radius-md) var(--radius-md) 0 !important; font-family: var(--font-body) !important; font-size: 0.78rem !important; }
+
+/* CODE */
+.stCode, code, pre { font-family: var(--font-mono) !important; background: var(--bg-panel) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; color: var(--cyan) !important; font-size: 0.75rem !important; }
+
+/* SPINNER */
+.stSpinner > div { border-color: var(--amber) transparent transparent transparent !important; }
+
+/* MOBILE */
+@media (max-width: 768px) {
+    .main .block-container { padding: 0.8rem 0.8rem 2rem !important; }
+    .stMarkdown h1 { font-size: 1.3rem !important; }
+    .pc .vl { font-size: 0.88rem !important; }
+    section[data-testid="stSidebar"] { min-width: 200px !important; max-width: 200px !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
-# PWA — Add to Home Screen support for mobile
+# PWA — Add to Home Screen
 st.markdown("""
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIk5TRSBTY2FubmVyIFBybyIsICJzaG9ydF9uYW1lIjogIlNjYW5uZXIiLCAic3RhcnRfdXJsIjogIi4iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzBFMTExNyIsICJ0aGVtZV9jb2xvciI6ICIjRkY2QjAwIiwgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwgImljb25zIjogW3sic3JjIjogImh0dHBzOi8vZW0tY29udGVudC56b2JqLm5ldC9zb3VyY2UvYXBwbGUvMzU0L2RpcmVjdC1oaXRfMWYzYWYucG5nIiwgInNpemVzIjogIjEyMHgxMjAiLCAidHlwZSI6ICJpbWFnZS9wbmcifV19" />
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIk5TRSBTY2FubmVyIFBybyIsICJzaG9ydF9uYW1lIjogIlNjYW5uZXIiLCAic3RhcnRfdXJsIjogIi4iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzA4MGMxMCIsICJ0aGVtZV9jb2xvciI6ICIjZjVhNjIzIiwgImljb25zIjogW3sic3JjIjogImh0dHBzOi8vZW0tY29udGVudC56b2JqLm5ldC9zb3VyY2UvYXBwbGUvMzU0L2RpcmVjdC1oaXRfMWYzYWYucG5nIiwgInNpemVzIjogIjEyMHgxMjAiLCAidHlwZSI6ICJpbWFnZS9wbmcifV19" />
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NSE Scanner">
-<meta name="theme-color" content="#FF6B00">
+<meta name="theme-color" content="#080c10">
 """, unsafe_allow_html=True)
+
 # ============================================================================
 for k, v in {
     "watchlist":[], "scan_results":{}, "regime":None,
@@ -550,77 +649,83 @@ def load_data():
     pb.progress(1.0, f"✅ {len(data)} stocks loaded!")
     return data, nifty, enriched
 
-# ============================================================================
-# SIDEBAR — with query_params persistence (fixes page jump on interaction)
-# ============================================================================
-# Navigation groups — order defines user workflow
-# ① Market Intelligence  ② Scan & Find  ③ Analyse  ④ Track  ⑤ System
-PAGES = [
-    "📊 Dashboard",
-    "🧠 AI Deep Dive",
-    "🔎 Stock Lookup",
-    "── SCAN ──",
-    "🔍 Scanner Hub",
-    "📜 Signal History",
-    "📊 Performance",
-    "── ANALYSE ──",
-    "📈 Charts & RS",
-    "🔗 Option Chain",
-    "🚀 IPO Scanner",
-    "🧪 Backtest",
-    "── TRACK ──",
-    "🎮 Virtual Game",
-    "── ──",
-    "⚙️ Settings",
-    "👑 Admin",
-]
-# Pages that are section dividers (not navigable)
-_NAV_DIVIDERS = {"── SCAN ──", "── ANALYSE ──", "── TRACK ──", "── ──"}
-
 # Persist page selection in URL query params
 qp = st.query_params
 default_page = qp.get("page", PAGES[0])
-# default_page validated below after _NAV_DIVIDERS is defined
+
+# ============================================================================
+# SIDEBAR — Professional Trading Terminal Navigation v20
+# ============================================================================
+qp = st.query_params
+default_page = qp.get("page", PAGES[0])
+_NAV_DIVIDERS_check = {p for p in PAGES if p not in [p2 for p2 in PAGES if p2 not in _NAV_DIVIDERS]}
 
 with st.sidebar:
-    st.markdown("## 🎯 NSE Scanner Pro")
-    st.caption("v19 — AI · Multi-User · 1000+ Stocks · Smart Nav")
-    
-    # User identity chip
+    # ── BRAND HEADER ─────────────────────────────────────────────────────
+    ist_now = now_ist()
+    is_mkt_open = dtime(9,15) <= ist_now.time() <= dtime(15,30) and ist_now.weekday() < 5
+    mkt_color = "#00e676" if is_mkt_open else "#ff3d5a"
+    mkt_label = "NSE LIVE" if is_mkt_open else "NSE CLOSED"
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#0d1117,#111720);border-bottom:1px solid #1c2a3a;
+                margin:-1rem -1rem 0.8rem -1rem;padding:1rem 1.2rem 0.9rem;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:30px;height:30px;background:linear-gradient(135deg,#f5a623,#c47d0e);
+                        border-radius:7px;display:flex;align-items:center;justify-content:center;
+                        font-size:15px;box-shadow:0 0 14px rgba(245,166,35,0.35);">🎯</div>
+            <div>
+                <div style="font-family:'Outfit',sans-serif;font-size:0.92rem;font-weight:700;
+                            color:#e8edf5;letter-spacing:-0.01em;line-height:1.1;">NSE Scanner Pro</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;
+                            color:#4a5568;letter-spacing:0.1em;text-transform:uppercase;">Intelligence Suite · v20</div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.35);
+                    border:1px solid #1c2a3a;border-radius:4px;padding:5px 9px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:{mkt_color};
+                        box-shadow:0 0 7px {mkt_color};flex-shrink:0;"></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+                         color:{mkt_color};font-weight:600;letter-spacing:0.1em;">{mkt_label}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+                         color:#4a5568;margin-left:auto;">{ist_now.strftime('%H:%M IST')}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── USER CHIP ─────────────────────────────────────────────────────────
     _user = get_current_user()
     _profile = get_current_profile()
     if _user:
         _plan = (_profile or {}).get("plan", "free")
-        _plan_badge = {"admin": "👑 Admin", "pro": "⭐ Pro", "free": "Free"}.get(_plan, "Free")
-        _plan_color = {"admin": "#ffd700", "pro": "#00d26a", "free": "#5dade2"}.get(_plan, "#5dade2")
-        st.markdown(
-            f'<div style="background:#1a1d23;border:1px solid #333;border-radius:8px;'
-            f'padding:7px 10px;margin:4px 0;display:flex;align-items:center;gap:8px;">'
-            f'<div style="font-size:1.1rem">{"🖼️" if not _user.get("avatar") else ""}</div>'
-            f'<div><div style="font-size:.8rem;font-weight:600;color:#fafafa">{_user.get("name","User")[:20]}</div>'
-            f'<div style="font-size:.68rem;color:{_plan_color}">{_plan_badge}</div></div>'
-            f'</div>', unsafe_allow_html=True
-        )
-    st.markdown("---")
-    # Grouped navigation — section headers are visual only
+        _plan_color = {"admin":"#ffd700","pro":"#00e676","free":"#00d4e8"}.get(_plan,"#00d4e8")
+        _plan_label = {"admin":"ADMIN","pro":"PRO","free":"FREE"}.get(_plan,"FREE")
+        _name = _user.get("name","Trader")[:18]
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:8px;background:#111720;
+                    border:1px solid #1c2a3a;border-radius:6px;padding:7px 10px;margin-bottom:6px;">
+            <div style="width:24px;height:24px;border-radius:50%;
+                        background:linear-gradient(135deg,{_plan_color}22,{_plan_color}11);
+                        border:1px solid {_plan_color}44;display:flex;align-items:center;
+                        justify-content:center;font-size:10px;">👤</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:0.75rem;font-weight:600;
+                            color:#e8edf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_name}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:0.56rem;
+                            color:{_plan_color};font-weight:600;letter-spacing:0.08em;">{_plan_label}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    st.markdown('<hr style="margin:0 0 0.5rem 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+
+    # ── NAVIGATION ────────────────────────────────────────────────────────
+    st.markdown('<style>div[data-testid="stSidebarNav"]{display:none}</style>', unsafe_allow_html=True)
     _navigable = [p for p in PAGES if p not in _NAV_DIVIDERS]
     if default_page not in _navigable:
         default_page = _navigable[0]
 
-    # Render each item: divider as caption, page as button-style radio
-    st.markdown("""
-    <style>
-    div[data-testid="stSidebarNav"] {display:none}
-    .nav-section {
-        font-size:0.62rem; font-weight:700; letter-spacing:1.5px;
-        color:#FF6B35; margin:10px 0 2px 4px; text-transform:uppercase;
-    }
-    div[data-testid="stRadio"] label {font-size:0.82rem !important;}
-    </style>""", unsafe_allow_html=True)
-
     page = None
     for p in PAGES:
-        # Hide Admin page from non-admin users
         if p == "👑 Admin" and not is_admin():
             continue
         if p in _NAV_DIVIDERS:
@@ -628,84 +733,107 @@ with st.sidebar:
             if label:
                 st.markdown(f'<div class="nav-section">{label}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<hr style="margin:6px 0;border-color:#333">', unsafe_allow_html=True)
+                st.markdown('<hr style="margin:4px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
         else:
             active = (p == default_page)
-            btn = st.button(
-                p,
-                key=f"nav_{p}",
-                use_container_width=True,
-                type="primary" if active else "secondary",
-            )
+            btn = st.button(p, key=f"nav_{p}", use_container_width=True,
+                            type="primary" if active else "secondary")
             if btn:
-                page = p
-                default_page = p
-                st.query_params["page"] = p
+                page = p; default_page = p; st.query_params["page"] = p
 
     if page is None:
         page = default_page
-
-    # Persist to URL
     if page != qp.get("page"):
         st.query_params["page"] = page
-    
-    # Logout button
+
+    # ── SIGN OUT ──────────────────────────────────────────────────────────
     if get_current_user():
+        st.markdown('<hr style="margin:4px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
         if st.button("🚪 Sign Out", key="sidebar_logout", use_container_width=True):
             logout()
-    
-    st.markdown("---")
-    ist = now_ist()
-    is_mkt = dtime(9,15) <= ist.time() <= dtime(15,30) and ist.weekday() < 5
-    st.caption(f"{'🟢' if is_mkt else '🔴'} {ist.strftime('%d %b, %I:%M %p IST')}")
-    
+
+    st.markdown('<hr style="margin:6px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+
+    # ── REGIME STATUS CHIP ────────────────────────────────────────────────
     if st.session_state.regime:
         rg = st.session_state.regime
-        st.markdown(f"**{rg['regime_display']}**")
-        nv = rg.get("nifty_close", 0)
-        if isinstance(nv,(int,float)): st.caption(f"Nifty ₹{nv:,.0f} | Pos {rg['position_multiplier']*100:.0f}%")
-    
+        r_name = rg.get("regime","")
+        r_display = rg.get("regime_display","")
+        r_color = {"EXPANSION":"#00e676","ACCUMULATION":"#f5a623",
+                   "DISTRIBUTION":"#ff8c42","PANIC":"#ff3d5a"}.get(r_name,"#8b9bb4")
+        nv = rg.get("nifty_close",0)
+        nv_str = f"₹{nv:,.0f}" if isinstance(nv,(int,float)) else "-"
+        pos = rg.get("position_multiplier",1.0)
+        st.markdown(f"""
+        <div style="background:#111720;border:1px solid #1c2a3a;border-left:2px solid {r_color};
+                    border-radius:4px;padding:6px 9px;margin-bottom:5px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#4a5568;
+                        text-transform:uppercase;letter-spacing:0.1em;">Market Regime</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:0.8rem;font-weight:700;color:{r_color};">{r_display}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:#8b9bb4;margin-top:2px;">Nifty {nv_str} · Size {pos*100:.0f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── SIGNAL SCOREBOARD ─────────────────────────────────────────────────
     sigs = sum(len(v) for v in st.session_state.scan_results.values())
-    st.caption(f"Signals: {sigs} | Watch: {len(st.session_state.watchlist)}")
-    
-    # Signal tracker summary in sidebar
     tracker_df = load_tracker()
+    open_c = target_c = stop_c = 0
     if tracker_df is not None and not tracker_df.empty:
-        open_count = len(tracker_df[tracker_df["Status"] == "OPEN"])
-        target_count = len(tracker_df[tracker_df["Status"] == "TARGET"])
-        stop_count = len(tracker_df[tracker_df["Status"] == "STOPPED"])
-        st.caption(f"📊 Tracked: ⏳{open_count} 🟢{target_count} 🔴{stop_count}")
-    
-    st.markdown("---")
+        open_c = len(tracker_df[tracker_df["Status"] == "OPEN"])
+        target_c = len(tracker_df[tracker_df["Status"] == "TARGET"])
+        stop_c = len(tracker_df[tracker_df["Status"] == "STOPPED"])
+
+    st.markdown(f"""
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;">
+        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:5px 7px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#4a5568;text-transform:uppercase;letter-spacing:0.06em;">Signals</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.92rem;font-weight:700;color:#f5a623;">{sigs}</div>
+        </div>
+        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:5px 7px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#4a5568;text-transform:uppercase;letter-spacing:0.06em;">Watchlist</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.92rem;font-weight:700;color:#00d4e8;">{len(st.session_state.watchlist)}</div>
+        </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-bottom:6px;">
+        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:4px 5px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#4a5568;">Open</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#f5a623;">{open_c}</div>
+        </div>
+        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:4px 5px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#4a5568;">T1 Hit</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#00e676;">{target_c}</div>
+        </div>
+        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:4px 5px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#4a5568;">SL Hit</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#ff3d5a;">{stop_c}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── CONNECTION STATUS ─────────────────────────────────────────────────
     if st.session_state.breeze_connected:
-        st.markdown('<div class="bb bb-on">✅ Breeze Connected</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bb bb-on">⬤ &nbsp;BREEZE LIVE · Intraday Active</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="bb bb-off">⚪ Breeze Off — intraday disabled</div>', unsafe_allow_html=True)
-        if st.button("🔄 Retry Breeze", key="retry_breeze", use_container_width=True):
+        st.markdown('<div class="bb bb-off">○ &nbsp;BREEZE OFFLINE · Daily Only</div>', unsafe_allow_html=True)
+        if st.button("↺ Retry Breeze", key="retry_breeze", use_container_width=True):
             st.session_state.breeze_connected = False
             st.session_state.breeze_msg = ""
             st.session_state.breeze_engine = None
-            try_breeze()
-            st.rerun()
+            try_breeze(); st.rerun()
 
-    # v16: Supabase status
     render_supabase_status()
+    st.markdown('<hr style="margin:6px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
 
-    # v16: PF cache refresh
-    if st.button("🧠 Refresh Live PF", key="refresh_pf", use_container_width=True,
-                 help="Reload profit factors from Supabase after auto-learning runs"):
-        reset_pf_cache()
-        st.toast("✅ PF cache refreshed — next scan uses latest data")
-    
-    # Fundamental filter toggle
+    # ── UTILITY ───────────────────────────────────────────────────────────
+    if st.button("↻ Refresh PF Matrix", key="refresh_pf", use_container_width=True,
+                 help="Reload profit factors from Supabase after auto-learning"):
+        reset_pf_cache(); st.toast("✅ PF cache refreshed")
+
     st.session_state.fundamental_filter = st.checkbox(
-        "🔬 Fundamental Filter",
-        value=st.session_state.fundamental_filter,
+        "🔬 Fundamental Filter", value=st.session_state.fundamental_filter,
         key="sidebar_fund_toggle",
-        help="Adds grade A/B/C/F to each signal: EPS growth, Revenue growth, PE < 100, D/E < 2x. A/B = trade with confidence. C/F = weak fundamentals, use caution. Best for swing trades.")
+        help="Grade A/B/C/F per signal: EPS, Revenue, PE, D/E screening.")
 
-    
-    # v5.2: Strategy Health Status
     tracker_for_health = load_tracker()
     if tracker_for_health is not None and not tracker_for_health.empty:
         strategy_health.update_from_tracker(tracker_for_health)
@@ -716,15 +844,16 @@ with st.sidebar:
                 p = STRATEGY_PROFILES.get(strat_key, {})
                 health_items.append(f"{h['icon']} {p.get('name', strat_key)}: PF {h['pf']:.2f}")
         if health_items:
-            with st.expander("📊 Strategy Health", expanded=False):
-                for item in health_items:
-                    st.caption(item)
-    
+            with st.expander("Strategy Health", expanded=False):
+                for item in health_items: st.caption(item)
+
     if st.session_state.last_scan_time:
         age = (now_ist() - st.session_state.last_scan_time).total_seconds() / 60
-        color = "color:#00d26a" if age < 15 else "color:#ff8a65"
-        st.markdown(f'<small style="{color}">Last scan: {int(age)}m ago</small>', unsafe_allow_html=True)
-
+        color = "#00e676" if age < 15 else "#f5a623"
+        st.markdown(
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:0.6rem;color:{color};'
+            f'text-align:center;padding:4px;">Last scan: {int(age)}m ago</div>',
+            unsafe_allow_html=True)
 
 # ============================================================================
 # DAILY FOCUS PANEL — "What matters NOW"
