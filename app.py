@@ -649,17 +649,34 @@ def load_data():
     pb.progress(1.0, f"✅ {len(data)} stocks loaded!")
     return data, nifty, enriched
 
-# Persist page selection in URL query params
-qp = st.query_params
-default_page = qp.get("page", PAGES[0])
+
+# ============================================================================
+# NAVIGATION PAGES — must be defined before sidebar renders
+# ============================================================================
+PAGES = [
+    "📊 Dashboard",
+    "🧠 AI Deep Dive",
+    "🔎 Stock Lookup",
+    "── SCAN ──",
+    "🔍 Scanner Hub",
+    "📜 Signal History",
+    "📊 Performance",
+    "── ANALYSE ──",
+    "📈 Charts & RS",
+    "🔗 Option Chain",
+    "🚀 IPO Scanner",
+    "🧪 Backtest",
+    "── TRACK ──",
+    "🎮 Virtual Game",
+    "── ──",
+    "⚙️ Settings",
+    "👑 Admin",
+]
+_NAV_DIVIDERS = {"── SCAN ──", "── ANALYSE ──", "── TRACK ──", "── ──"}
 
 # ============================================================================
 # SIDEBAR — Professional Trading Terminal Navigation v20
 # ============================================================================
-qp = st.query_params
-default_page = qp.get("page", PAGES[0])
-_NAV_DIVIDERS_check = {p for p in PAGES if p not in [p2 for p2 in PAGES if p2 not in _NAV_DIVIDERS]}
-
 with st.sidebar:
     # ── BRAND HEADER ─────────────────────────────────────────────────────
     ist_now = now_ist()
