@@ -243,12 +243,13 @@ button[kind="header"], .stApp header, .stApp [data-testid="stHeader"] {
     [data-testid="collapsedControl"] { display: none !important; }
 }
 
-/* SIDEBAR — desktop: fixed 240px, no transform override */
+/* SIDEBAR — visual styles (apply everywhere) */
 section[data-testid="stSidebar"] {
     background: var(--bg-panel) !important;
     border-right: 1px solid var(--border) !important;
     padding-top: 0 !important;
 }
+/* DESKTOP: pin to 240px, never collapse */
 @media (min-width: 769px) {
     section[data-testid="stSidebar"] {
         min-width: 240px !important;
@@ -256,6 +257,9 @@ section[data-testid="stSidebar"] {
         transform: none !important;
     }
 }
+/* MOBILE: DO NOT override min-width/max-width here.
+   Streamlit JS sets inline style min-width:0 on collapse;
+   any CSS !important override here keeps the sidebar as a sliver. */
 section[data-testid="stSidebar"] > div:first-child { padding-top: 0 !important; }
 
 /* MAIN CONTENT */
@@ -420,90 +424,105 @@ hr { border: none !important; border-top: 1px solid var(--border) !important; ma
 /* SPINNER */
 .stSpinner > div { border-color: var(--amber) transparent transparent transparent !important; }
 
-/* ═══════════════════════════════════════════════
-   MOBILE — Let Streamlit's native drawer work.
-   We only style; we never fight the JS engine.
-   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   MOBILE  (≤ 768px)
+   RULE: Do NOT touch sidebar width/transform — Streamlit JS
+   owns those. Only style visuals + the two toggle buttons.
+   ═══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-    /* 1. Content area: full width, compact padding */
-    .main .block-container { padding: 0.8rem 0.8rem 4rem 0.8rem !important; }
+    /* ── 1. Main content: full width, compact padding ── */
+    .main .block-container {
+        padding: 0.8rem 0.8rem 4rem 0.8rem !important;
+    }
     .main { margin-left: 0 !important; width: 100% !important; }
-    .stMarkdown h1  { font-size: 1.3rem !important; }
+    .stMarkdown h1 { font-size: 1.3rem !important; }
     .pc .vl         { font-size: 0.88rem !important; }
 
-    /* 2. Sidebar: let Streamlit control its own transform/position.
-          Only add a shadow when it is visible. */
+    /* ── 2. Sidebar visual (NO width/transform — Streamlit JS controls those) ── */
     section[data-testid="stSidebar"] {
-        min-width: 82vw !important;
-        max-width: 88vw !important;
-        box-shadow: 6px 0 40px rgba(0,0,0,0.75) !important;
         overflow-y: auto !important;
+        /* Shadow only when sidebar is open (Streamlit adds it via boxShadow prop too) */
+        box-shadow: 6px 0 40px rgba(0,0,0,0.8) !important;
     }
 
-    /* 3. ── HAMBURGER (open button, shown when sidebar is CLOSED) ──
-          Streamlit renders [data-testid="collapsedControl"] as a floating
-          button when the sidebar is collapsed. Make it big and amber. */
+    /* ── 3. OPEN BUTTON — [data-testid="collapsedControl"] ──────────────────
+       Streamlit renders this OUTSIDE the sidebar, ONLY when sidebar is
+       collapsed. It's a fixed-position chevron-right button. We make it
+       a large amber pill so it's easy to tap. */
     [data-testid="collapsedControl"] {
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 99999 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
-        z-index: 9999 !important;
-        width: 44px !important;
-        height: 44px !important;
+        width: 48px !important;
+        height: 48px !important;
         background: var(--bg-panel) !important;
-        border: 1.5px solid var(--amber) !important;
-        border-radius: 8px !important;
-        box-shadow: 0 2px 16px rgba(245,166,35,0.25) !important;
+        border: 2px solid var(--amber) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 0 0 4px rgba(245,166,35,0.15), 0 4px 20px rgba(0,0,0,0.6) !important;
     }
-    [data-testid="collapsedControl"] svg,
+    /* The button and icon inside */
     [data-testid="collapsedControl"] button {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        color: var(--amber) !important;
+        fill: var(--amber) !important;
+        stroke: var(--amber) !important;
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    /* ── 4. CLOSE BUTTON — [data-testid="stSidebarCollapseButton"] ──────────
+       This lives INSIDE the sidebar header. Streamlit sets
+       visibility:visible on small screens — we just size it up. */
+    [data-testid="stSidebarCollapseButton"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        background: rgba(245,166,35,0.1) !important;
+        border: 1.5px solid rgba(245,166,35,0.5) !important;
+        border-radius: 8px !important;
+        margin: 4px !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button {
+        min-width: 44px !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    [data-testid="stSidebarCollapseButton"] svg {
         color: var(--amber) !important;
         fill: var(--amber) !important;
         stroke: var(--amber) !important;
         width: 22px !important;
         height: 22px !important;
     }
-
-    /* 4. ── CLOSE BUTTON (shown INSIDE the open sidebar) ──
-          Streamlit renders [data-testid="stSidebarCollapseButton"] inside
-          the sidebar header. Make it clearly tappable. */
-    [data-testid="stSidebarCollapseButton"] {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        position: sticky !important;
-        top: 10px !important;
-        float: right !important;
-        z-index: 9999 !important;
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        background: rgba(245,166,35,0.12) !important;
-        border: 1.5px solid var(--amber) !important;
-        border-radius: 8px !important;
-        margin: 8px 8px 0 auto !important;
-    }
-    [data-testid="stSidebarCollapseButton"] button,
-    [data-testid="stSidebarCollapseButton"] svg {
-        color: var(--amber) !important;
-        fill: var(--amber) !important;
-        stroke: var(--amber) !important;
-        width: 20px !important;
-        height: 20px !important;
-    }
-    /* Also catch the aria-label variant Streamlit sometimes uses */
+    /* Fallback: aria-label selector */
     section[data-testid="stSidebar"] button[aria-label="Close sidebar"] {
         display: flex !important;
+        visibility: visible !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
         color: var(--amber) !important;
-        background: rgba(245,166,35,0.12) !important;
-        border: 1.5px solid var(--amber) !important;
+        background: rgba(245,166,35,0.1) !important;
+        border: 1.5px solid rgba(245,166,35,0.5) !important;
         border-radius: 8px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
     }
 }
 </style>
