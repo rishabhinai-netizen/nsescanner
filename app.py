@@ -149,7 +149,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 st.set_page_config(
     page_title="NSE Scanner Pro", page_icon="🎯", layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None, "About": None}
 )
 
@@ -236,9 +236,12 @@ div[class*="stDeployButton"], div[class*="viewerBadge"], div[class*="StatusWidge
 button[kind="header"], .stApp header, .stApp [data-testid="stHeader"] {
     display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important;
 }
-[data-testid="stSidebarCollapseButton"], .st-emotion-cache-1ibsh2c,
-section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
-[data-testid="collapsedControl"] { display: none !important; }
+/* On DESKTOP only: hide the collapse arrow to keep sidebar always visible */
+@media (min-width: 769px) {
+    [data-testid="stSidebarCollapseButton"], .st-emotion-cache-1ibsh2c,
+    section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
+    [data-testid="collapsedControl"] { display: none !important; }
+}
 
 /* SIDEBAR */
 section[data-testid="stSidebar"] {
@@ -415,7 +418,48 @@ hr { border: none !important; border-top: 1px solid var(--border) !important; ma
     .main .block-container { padding: 0.8rem 0.8rem 2rem !important; }
     .stMarkdown h1 { font-size: 1.3rem !important; }
     .pc .vl { font-size: 0.88rem !important; }
-    section[data-testid="stSidebar"] { min-width: 200px !important; max-width: 200px !important; }
+    /* On mobile: sidebar slides in as overlay — remove fixed min-width */
+    section[data-testid="stSidebar"] {
+        min-width: 80vw !important;
+        max-width: 85vw !important;
+        position: fixed !important;
+        z-index: 999 !important;
+        height: 100vh !important;
+        top: 0 !important;
+        left: 0 !important;
+        box-shadow: 4px 0 32px rgba(0,0,0,0.7) !important;
+        overflow-y: auto !important;
+    }
+    /* Show hamburger button prominently on mobile */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        position: fixed !important;
+        top: 10px !important; left: 10px !important;
+        z-index: 1000 !important;
+        background: var(--bg-panel) !important;
+        border: 1px solid var(--border-bright) !important;
+        border-radius: var(--radius-sm) !important;
+        padding: 6px 8px !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.5) !important;
+    }
+    [data-testid="collapsedControl"] button {
+        color: var(--amber) !important;
+        font-size: 1.1rem !important;
+    }
+    /* Close button inside open sidebar — show and style it */
+    [data-testid="stSidebarCollapseButton"],
+    section[data-testid="stSidebar"] button[aria-label="Close sidebar"] {
+        display: flex !important;
+        position: absolute !important;
+        top: 10px !important; right: 10px !important;
+        background: rgba(245,166,35,0.1) !important;
+        border: 1px solid var(--amber) !important;
+        border-radius: var(--radius-sm) !important;
+        color: var(--amber) !important;
+        z-index: 1001 !important;
+    }
+    /* Main content fills full width when sidebar is collapsed/hidden */
+    .main { margin-left: 0 !important; width: 100% !important; }
 }
 </style>
 """, unsafe_allow_html=True)
