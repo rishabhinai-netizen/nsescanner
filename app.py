@@ -243,11 +243,18 @@ button[kind="header"], .stApp header, .stApp [data-testid="stHeader"] {
     [data-testid="collapsedControl"] { display: none !important; }
 }
 
-/* SIDEBAR */
+/* SIDEBAR — desktop: fixed 240px, no transform override */
 section[data-testid="stSidebar"] {
-    min-width: 240px !important; max-width: 240px !important;
-    transform: none !important; background: var(--bg-panel) !important;
-    border-right: 1px solid var(--border) !important; padding-top: 0 !important;
+    background: var(--bg-panel) !important;
+    border-right: 1px solid var(--border) !important;
+    padding-top: 0 !important;
+}
+@media (min-width: 769px) {
+    section[data-testid="stSidebar"] {
+        min-width: 240px !important;
+        max-width: 240px !important;
+        transform: none !important;
+    }
 }
 section[data-testid="stSidebar"] > div:first-child { padding-top: 0 !important; }
 
@@ -413,53 +420,91 @@ hr { border: none !important; border-top: 1px solid var(--border) !important; ma
 /* SPINNER */
 .stSpinner > div { border-color: var(--amber) transparent transparent transparent !important; }
 
-/* MOBILE */
+/* ═══════════════════════════════════════════════
+   MOBILE — Let Streamlit's native drawer work.
+   We only style; we never fight the JS engine.
+   ═══════════════════════════════════════════════ */
 @media (max-width: 768px) {
-    .main .block-container { padding: 0.8rem 0.8rem 2rem !important; }
-    .stMarkdown h1 { font-size: 1.3rem !important; }
-    .pc .vl { font-size: 0.88rem !important; }
-    /* On mobile: sidebar slides in as overlay — remove fixed min-width */
+
+    /* 1. Content area: full width, compact padding */
+    .main .block-container { padding: 0.8rem 0.8rem 4rem 0.8rem !important; }
+    .main { margin-left: 0 !important; width: 100% !important; }
+    .stMarkdown h1  { font-size: 1.3rem !important; }
+    .pc .vl         { font-size: 0.88rem !important; }
+
+    /* 2. Sidebar: let Streamlit control its own transform/position.
+          Only add a shadow when it is visible. */
     section[data-testid="stSidebar"] {
-        min-width: 80vw !important;
-        max-width: 85vw !important;
-        position: fixed !important;
-        z-index: 999 !important;
-        height: 100vh !important;
-        top: 0 !important;
-        left: 0 !important;
-        box-shadow: 4px 0 32px rgba(0,0,0,0.7) !important;
+        min-width: 82vw !important;
+        max-width: 88vw !important;
+        box-shadow: 6px 0 40px rgba(0,0,0,0.75) !important;
         overflow-y: auto !important;
     }
-    /* Show hamburger button prominently on mobile */
+
+    /* 3. ── HAMBURGER (open button, shown when sidebar is CLOSED) ──
+          Streamlit renders [data-testid="collapsedControl"] as a floating
+          button when the sidebar is collapsed. Make it big and amber. */
     [data-testid="collapsedControl"] {
         display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         position: fixed !important;
-        top: 10px !important; left: 10px !important;
-        z-index: 1000 !important;
+        top: 12px !important;
+        left: 12px !important;
+        z-index: 9999 !important;
+        width: 44px !important;
+        height: 44px !important;
         background: var(--bg-panel) !important;
-        border: 1px solid var(--border-bright) !important;
-        border-radius: var(--radius-sm) !important;
-        padding: 6px 8px !important;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.5) !important;
+        border: 1.5px solid var(--amber) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 16px rgba(245,166,35,0.25) !important;
     }
+    [data-testid="collapsedControl"] svg,
     [data-testid="collapsedControl"] button {
         color: var(--amber) !important;
-        font-size: 1.1rem !important;
+        fill: var(--amber) !important;
+        stroke: var(--amber) !important;
+        width: 22px !important;
+        height: 22px !important;
     }
-    /* Close button inside open sidebar — show and style it */
-    [data-testid="stSidebarCollapseButton"],
+
+    /* 4. ── CLOSE BUTTON (shown INSIDE the open sidebar) ──
+          Streamlit renders [data-testid="stSidebarCollapseButton"] inside
+          the sidebar header. Make it clearly tappable. */
+    [data-testid="stSidebarCollapseButton"] {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: sticky !important;
+        top: 10px !important;
+        float: right !important;
+        z-index: 9999 !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        background: rgba(245,166,35,0.12) !important;
+        border: 1.5px solid var(--amber) !important;
+        border-radius: 8px !important;
+        margin: 8px 8px 0 auto !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarCollapseButton"] svg {
+        color: var(--amber) !important;
+        fill: var(--amber) !important;
+        stroke: var(--amber) !important;
+        width: 20px !important;
+        height: 20px !important;
+    }
+    /* Also catch the aria-label variant Streamlit sometimes uses */
     section[data-testid="stSidebar"] button[aria-label="Close sidebar"] {
         display: flex !important;
-        position: absolute !important;
-        top: 10px !important; right: 10px !important;
-        background: rgba(245,166,35,0.1) !important;
-        border: 1px solid var(--amber) !important;
-        border-radius: var(--radius-sm) !important;
         color: var(--amber) !important;
-        z-index: 1001 !important;
+        background: rgba(245,166,35,0.12) !important;
+        border: 1.5px solid var(--amber) !important;
+        border-radius: 8px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
     }
-    /* Main content fills full width when sidebar is collapsed/hidden */
-    .main { margin-left: 0 !important; width: 100% !important; }
 }
 </style>
 """, unsafe_allow_html=True)
