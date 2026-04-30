@@ -149,7 +149,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 st.set_page_config(
     page_title="NSE Scanner Pro", page_icon="🎯", layout="wide",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="expanded",
     menu_items={"Get Help": None, "Report a bug": None, "About": None}
 )
 
@@ -236,30 +236,17 @@ div[class*="stDeployButton"], div[class*="viewerBadge"], div[class*="StatusWidge
 button[kind="header"], .stApp header, .stApp [data-testid="stHeader"] {
     display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important;
 }
-/* On DESKTOP only: hide the collapse arrow to keep sidebar always visible */
-@media (min-width: 769px) {
-    [data-testid="stSidebarCollapseButton"], .st-emotion-cache-1ibsh2c,
-    section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
-    [data-testid="collapsedControl"] { display: none !important; }
-}
+/* Hide collapse controls — sidebar is always pinned on desktop */
+[data-testid="stSidebarCollapseButton"], .st-emotion-cache-1ibsh2c,
+section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
+[data-testid="collapsedControl"] { display: none !important; }
 
-/* SIDEBAR — visual styles (apply everywhere) */
+/* SIDEBAR */
 section[data-testid="stSidebar"] {
-    background: var(--bg-panel) !important;
-    border-right: 1px solid var(--border) !important;
-    padding-top: 0 !important;
+    min-width: 240px !important; max-width: 240px !important;
+    transform: none !important; background: var(--bg-panel) !important;
+    border-right: 1px solid var(--border) !important; padding-top: 0 !important;
 }
-/* DESKTOP: pin to 240px, never collapse */
-@media (min-width: 769px) {
-    section[data-testid="stSidebar"] {
-        min-width: 240px !important;
-        max-width: 240px !important;
-        transform: none !important;
-    }
-}
-/* MOBILE: DO NOT override min-width/max-width here.
-   Streamlit JS sets inline style min-width:0 on collapse;
-   any CSS !important override here keeps the sidebar as a sliver. */
 section[data-testid="stSidebar"] > div:first-child { padding-top: 0 !important; }
 
 /* MAIN CONTENT */
@@ -424,106 +411,25 @@ hr { border: none !important; border-top: 1px solid var(--border) !important; ma
 /* SPINNER */
 .stSpinner > div { border-color: var(--amber) transparent transparent transparent !important; }
 
-/* ═══════════════════════════════════════════════════════
-   MOBILE  (≤ 768px)
-   RULE: Do NOT touch sidebar width/transform — Streamlit JS
-   owns those. Only style visuals + the two toggle buttons.
-   ═══════════════════════════════════════════════════════ */
+/* MOBILE ≤ 768px — Sidebar fully hidden; replaced by bottom nav */
 @media (max-width: 768px) {
+    /* 1. Hide the entire Streamlit sidebar — we use our own mobile nav */
+    section[data-testid="stSidebar"]          { display: none !important; }
+    [data-testid="stSidebarCollapseButton"]   { display: none !important; }
+    [data-testid="collapsedControl"]          { display: none !important; }
 
-    /* ── 1. Main content: full width, compact padding ── */
+    /* 2. Main content: full width, pad bottom for the floating nav bar */
     .main .block-container {
-        padding: 0.8rem 0.8rem 4rem 0.8rem !important;
+        padding: 0.6rem 0.7rem 5rem 0.7rem !important;
+        margin-left: 0 !important;
     }
-    .main { margin-left: 0 !important; width: 100% !important; }
-    .stMarkdown h1 { font-size: 1.3rem !important; }
-    .pc .vl         { font-size: 0.88rem !important; }
+    .main { margin-left: 0 !important; width: 100vw !important; }
+    section[data-testid="stMain"]  { margin-left: 0 !important; padding-left: 0 !important; }
+    .stApp > section               { margin-left: 0 !important; }
 
-    /* ── 2. Sidebar visual (NO width/transform — Streamlit JS controls those) ── */
-    section[data-testid="stSidebar"] {
-        overflow-y: auto !important;
-        /* Shadow only when sidebar is open (Streamlit adds it via boxShadow prop too) */
-        box-shadow: 6px 0 40px rgba(0,0,0,0.8) !important;
-    }
-
-    /* ── 3. OPEN BUTTON — [data-testid="collapsedControl"] ──────────────────
-       Streamlit renders this OUTSIDE the sidebar, ONLY when sidebar is
-       collapsed. It's a fixed-position chevron-right button. We make it
-       a large amber pill so it's easy to tap. */
-    [data-testid="collapsedControl"] {
-        position: fixed !important;
-        top: 10px !important;
-        left: 10px !important;
-        z-index: 99999 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 48px !important;
-        height: 48px !important;
-        background: var(--bg-panel) !important;
-        border: 2px solid var(--amber) !important;
-        border-radius: 10px !important;
-        box-shadow: 0 0 0 4px rgba(245,166,35,0.15), 0 4px 20px rgba(0,0,0,0.6) !important;
-    }
-    /* The button and icon inside */
-    [data-testid="collapsedControl"] button {
-        width: 100% !important;
-        height: 100% !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-    }
-    [data-testid="collapsedControl"] svg {
-        color: var(--amber) !important;
-        fill: var(--amber) !important;
-        stroke: var(--amber) !important;
-        width: 24px !important;
-        height: 24px !important;
-    }
-
-    /* ── 4. CLOSE BUTTON — [data-testid="stSidebarCollapseButton"] ──────────
-       This lives INSIDE the sidebar header. Streamlit sets
-       visibility:visible on small screens — we just size it up. */
-    [data-testid="stSidebarCollapseButton"] {
-        display: inline-flex !important;
-        visibility: visible !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        background: rgba(245,166,35,0.1) !important;
-        border: 1.5px solid rgba(245,166,35,0.5) !important;
-        border-radius: 8px !important;
-        margin: 4px !important;
-    }
-    [data-testid="stSidebarCollapseButton"] button {
-        min-width: 44px !important;
-        min-height: 44px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    [data-testid="stSidebarCollapseButton"] svg {
-        color: var(--amber) !important;
-        fill: var(--amber) !important;
-        stroke: var(--amber) !important;
-        width: 22px !important;
-        height: 22px !important;
-    }
-    /* Fallback: aria-label selector */
-    section[data-testid="stSidebar"] button[aria-label="Close sidebar"] {
-        display: flex !important;
-        visibility: visible !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        color: var(--amber) !important;
-        background: rgba(245,166,35,0.1) !important;
-        border: 1.5px solid rgba(245,166,35,0.5) !important;
-        border-radius: 8px !important;
-    }
+    /* 3. Smaller typography */
+    .stMarkdown h1 { font-size: 1.2rem !important; }
+    .pc .vl        { font-size: 0.88rem !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -538,7 +444,239 @@ st.markdown("""
 <meta name="theme-color" content="#080c10">
 """, unsafe_allow_html=True)
 
+# =
 # ============================================================================
+# MOBILE NAV — Custom bottom navigation bar for mobile (≤768px)
+# Pure HTML/CSS/JS — zero Streamlit reruns, zero sidebar JS conflict.
+# Navigation works by setting window.location with ?page= query param.
+# ============================================================================
+_mob_page = st.query_params.get("page", "📊 Dashboard")
+_mob_nav_html = f"""
+<style>
+/* ── Mobile Bottom Nav Bar ── */
+#mob-nav {{
+    display: none;
+}}
+@media (max-width: 768px) {{
+    #mob-nav {{
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 56px;
+        background: #0d1117;
+        border-top: 1px solid #1c2a3a;
+        z-index: 99999;
+        align-items: stretch;
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.7);
+    }}
+    #mob-nav .mnav-tab {{
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.52rem;
+        font-weight: 600;
+        color: #4a5568;
+        cursor: pointer;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        gap: 2px;
+        border: none;
+        background: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: color 0.15s, background 0.15s;
+        padding: 0 2px;
+    }}
+    #mob-nav .mnav-tab .micon {{
+        font-size: 1.15rem;
+        line-height: 1;
+    }}
+    #mob-nav .mnav-tab.active {{
+        color: #f5a623;
+        background: rgba(245,166,35,0.06);
+    }}
+    #mob-nav .mnav-tab:active {{
+        background: rgba(245,166,35,0.12);
+    }}
+    /* MORE button opens a full-screen drawer */
+    #mob-drawer-bg {{
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.65);
+        z-index: 99998;
+    }}
+    #mob-drawer {{
+        display: none;
+        position: fixed;
+        bottom: 56px; left: 0; right: 0;
+        background: #0d1117;
+        border-top: 1px solid #1c2a3a;
+        border-radius: 16px 16px 0 0;
+        z-index: 99999;
+        padding: 12px 0 8px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }}
+    #mob-drawer.open, #mob-drawer-bg.open {{
+        display: block;
+    }}
+    .mdrawer-section {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.52rem;
+        color: #f5a623;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        padding: 8px 20px 4px;
+        opacity: 0.7;
+    }}
+    .mdrawer-item {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 20px;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #8b9bb4;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.1s, color 0.1s;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }}
+    .mdrawer-item:active, .mdrawer-item:hover {{
+        background: rgba(245,166,35,0.08);
+        color: #f5a623;
+    }}
+    .mdrawer-item.active {{
+        color: #f5a623;
+        background: rgba(245,166,35,0.1);
+        border-left: 3px solid #f5a623;
+    }}
+    .mdrawer-drag {{
+        width: 36px; height: 4px;
+        background: #1c2a3a;
+        border-radius: 2px;
+        margin: 0 auto 10px;
+    }}
+    /* Page title bar on mobile - shows current page */
+    #mob-topbar {{
+        display: none;
+    }}
+    @media (max-width: 768px) {{
+        #mob-topbar {{
+            display: flex;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 46px;
+            background: #0d1117;
+            border-bottom: 1px solid #1c2a3a;
+            z-index: 9998;
+            align-items: center;
+            padding: 0 14px;
+            gap: 10px;
+        }}
+        #mob-topbar .mtop-title {{
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #e8edf5;
+            flex: 1;
+        }}
+        #mob-topbar .mtop-badge {{
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.52rem;
+            color: #f5a623;
+            background: rgba(245,166,35,0.1);
+            border: 1px solid rgba(245,166,35,0.25);
+            border-radius: 3px;
+            padding: 2px 6px;
+            letter-spacing: 0.06em;
+        }}
+        /* Push content below topbar */
+        .main .block-container {{
+            padding-top: 54px !important;
+        }}
+    }}
+}}
+</style>
+
+<!-- TOP BAR -->
+<div id="mob-topbar">
+  <div class="mtop-title">{_mob_page.split(" ", 1)[1] if " " in _mob_page else _mob_page}</div>
+  <div class="mtop-badge">NSE</div>
+</div>
+
+<!-- BOTTOM NAV BAR (5 quick tabs + MORE) -->
+<div id="mob-nav">
+  <button class="mnav-tab {'active' if _mob_page == '📊 Dashboard' else ''}" onclick="nav('📊 Dashboard')">
+    <span class="micon">📊</span>Dashboard
+  </button>
+  <button class="mnav-tab {'active' if _mob_page == '🔍 Scanner Hub' else ''}" onclick="nav('🔍 Scanner Hub')">
+    <span class="micon">🔍</span>Scanner
+  </button>
+  <button class="mnav-tab {'active' if _mob_page == '📜 Signal History' else ''}" onclick="nav('📜 Signal History')">
+    <span class="micon">📜</span>Signals
+  </button>
+  <button class="mnav-tab {'active' if _mob_page == '📊 Performance' else ''}" onclick="nav('📊 Performance')">
+    <span class="micon">📈</span>Perf
+  </button>
+  <button class="mnav-tab {'active' if _mob_page not in ['📊 Dashboard','🔍 Scanner Hub','📜 Signal History','📊 Performance'] else ''}" onclick="toggleDrawer()">
+    <span class="micon">☰</span>More
+  </button>
+</div>
+
+<!-- DRAWER BACKDROP -->
+<div id="mob-drawer-bg" onclick="closeDrawer()"></div>
+
+<!-- FULL MENU DRAWER -->
+<div id="mob-drawer">
+  <div class="mdrawer-drag"></div>
+
+  <div class="mdrawer-section">Main</div>
+  <button class="mdrawer-item {'active' if _mob_page == '🧠 AI Deep Dive' else ''}" onclick="nav('🧠 AI Deep Dive')">🧠 &nbsp;AI Deep Dive</button>
+  <button class="mdrawer-item {'active' if _mob_page == '🔎 Stock Lookup' else ''}" onclick="nav('🔎 Stock Lookup')">🔎 &nbsp;Stock Lookup</button>
+
+  <div class="mdrawer-section">Analyse</div>
+  <button class="mdrawer-item {'active' if _mob_page == '📈 Charts & RS' else ''}" onclick="nav('📈 Charts & RS')">📈 &nbsp;Charts & RS</button>
+  <button class="mdrawer-item {'active' if _mob_page == '🔗 Option Chain' else ''}" onclick="nav('🔗 Option Chain')">🔗 &nbsp;Option Chain</button>
+  <button class="mdrawer-item {'active' if _mob_page == '🚀 IPO Scanner' else ''}" onclick="nav('🚀 IPO Scanner')">🚀 &nbsp;IPO Scanner</button>
+  <button class="mdrawer-item {'active' if _mob_page == '🧪 Backtest' else ''}" onclick="nav('🧪 Backtest')">🧪 &nbsp;Backtest</button>
+
+  <div class="mdrawer-section">Track</div>
+  <button class="mdrawer-item {'active' if _mob_page == '🎮 Virtual Game' else ''}" onclick="nav('🎮 Virtual Game')">🎮 &nbsp;Virtual Game</button>
+
+  <div class="mdrawer-section">System</div>
+  <button class="mdrawer-item {'active' if _mob_page == '⚙️ Settings' else ''}" onclick="nav('⚙️ Settings')">⚙️ &nbsp;Settings</button>
+</div>
+
+<script>
+function nav(page) {{
+    closeDrawer();
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', page);
+    window.location.href = url.toString();
+}}
+function toggleDrawer() {{
+    const d = document.getElementById('mob-drawer');
+    const bg = document.getElementById('mob-drawer-bg');
+    d.classList.toggle('open');
+    bg.classList.toggle('open');
+}}
+function closeDrawer() {{
+    document.getElementById('mob-drawer').classList.remove('open');
+    document.getElementById('mob-drawer-bg').classList.remove('open');
+}}
+</script>
+"""
+st.markdown(_mob_nav_html, unsafe_allow_html=True)
+
+# ===========================================================================
 for k, v in {
     "watchlist":[], "scan_results":{}, "regime":None,
     "data_loaded":False, "stock_data":{}, "enriched_data":{},
