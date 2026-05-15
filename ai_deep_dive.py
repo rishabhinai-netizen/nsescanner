@@ -1226,7 +1226,7 @@ def _render_deep_dive_results(ticker, m, df, regime, sent, rec, sig_ctx, analysi
             'padding:18px 24px;text-align:center">'
             '<div style="font-size:.75rem;color:#888;letter-spacing:2px;margin-bottom:8px">'
             'SWARM CONVICTION</div>'
-            f'<div style="height:12px;background:#0d1117;border-radius:6px;'
+            f'<div style="height:12px;background:#e2e8f0;border-radius:6px;'
             f'margin-bottom:10px;overflow:hidden">'
             f'<div style="height:100%;width:{gauge_val}%;'
             f'background:linear-gradient(90deg,#ef5350,#ff9800,#26a69a);'

@@ -50,14 +50,14 @@ def render_supabase_status():
         if sb:
             st.markdown(
                 '<div style="padding:4px 10px;border-radius:6px;font-size:0.72rem;'
-                'background:#0d3320;border:1px solid #1b5e20;color:#81c784;">'
+                'background:#dcfce7;border:1px solid #86efac;color:#15803d;">'
                 '✅ Supabase Connected</div>',
                 unsafe_allow_html=True
             )
         else:
             st.markdown(
                 '<div style="padding:4px 10px;border-radius:6px;font-size:0.72rem;'
-                'background:#1a1d23;border:1px solid #555;color:#888;">'
+                'background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;">'
                 '⚪ Supabase: Not configured</div>',
                 unsafe_allow_html=True
             )
@@ -93,9 +93,9 @@ def page_performance():
     pnl_per_lakh = expectancy / 100 * 100000  # expectancy % on ₹1L capital
     total_sim_pnl = closed * pnl_per_lakh
     
-    color = "#26a69a" if expectancy >= 0 else "#ef5350"
+    color = "#16a34a" if expectancy >= 0 else "#dc2626"
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1117,#161b22);border:1px solid #333;
+    <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid #cbd5e1;
     border-radius:12px;padding:16px 20px;margin:8px 0">
     <div style="font-size:.75rem;color:#888;letter-spacing:2px;margin-bottom:8px">
     ₹1,00,000 PER SIGNAL — FORWARD TEST SIMULATION</div>
@@ -113,7 +113,7 @@ def page_performance():
     <div style="font-size:1.3rem;font-weight:700;color:{color}">₹{total_sim_pnl:+,.0f}</div>
     <div style="color:#aaa;font-size:.7rem">{closed} trades × ₹1L each</div></div>
     <div><div style="color:#888;font-size:.7rem">Open Positions</div>
-    <div style="font-size:1.3rem;font-weight:700;color:#ff9800">{stats.get("open",0)}</div>
+    <div style="font-size:1.3rem;font-weight:700;color:#d97706">{stats.get("open",0)}</div>
     <div style="color:#aaa;font-size:.7rem">unrealised P&L shown below ↓</div></div>
     </div></div>""", unsafe_allow_html=True)
 
@@ -227,9 +227,9 @@ def _render_open_positions_live():
             float(r["P&L on ₹1L"].replace("₹","").replace(",","").replace("+",""))
             for r in rows if r["P&L on ₹1L"] not in ("—", "")
         ) if rows else 0
-        unreal_color = "#26a69a" if total_unreal_rs >= 0 else "#ef5350"
+        unreal_color = "#16a34a" if total_unreal_rs >= 0 else "#dc2626"
         st.markdown(
-            f'<div style="background:#1a1d23;border:1px solid #333;border-radius:8px;'
+            f'<div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;'
             f'padding:10px 16px;margin:6px 0;display:flex;gap:24px;flex-wrap:wrap">'
             f'<span>📡 Live prices: <b>{live_count}/{len(rows)}</b></span>'
             f'<span>🟢 In profit: <b>{in_profit}/{len(rows)}</b></span>'
@@ -259,7 +259,7 @@ def _render_equity_curve(df: pd.DataFrame):
     fig.add_trace(go.Scatter(
         x=closed[date_col], y=closed["_cumulative"].round(2),
         mode="lines", name="Cumulative Sum of Trade P&Ls (not portfolio %)",
-        line=dict(color="#FF6B35", width=2),
+        line=dict(color="#ea580c", width=2),
         fill="tozeroy",
         fillcolor="rgba(255,107,53,0.08)",
     ))
@@ -273,7 +273,7 @@ def _render_equity_curve(df: pd.DataFrame):
         template="plotly_dark", height=240,
         margin=dict(t=20, b=20, l=40, r=10),
         xaxis_title="", yaxis_title="Cumulative %",
-        paper_bgcolor="#0E1117", plot_bgcolor="#0E1117",
+        paper_bgcolor="#ffffff", plot_bgcolor="#f8fafc",
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -329,10 +329,10 @@ def _render_strategy_breakdown(stats: dict):
 
         def _color_pf(val):
             if not isinstance(val, (int, float)): return ""
-            if val >= 1.5: return "background-color:#0d3320;color:#00d26a"
-            if val >= 1.0: return "background-color:#1a2d1a;color:#81c784"
-            if val >= 0.7: return "background-color:#3d3a1a;color:#ffd700"
-            return "background-color:#3d1a1a;color:#ff4757"
+            if val >= 1.5: return "background-color:#dcfce7;color:#15803d"
+            if val >= 1.0: return "background-color:#f0fdf4;color:#16a34a"
+            if val >= 0.7: return "background-color:#fefce8;color:#ca8a04"
+            return "background-color:#fef2f2;color:#dc2626"
 
         styled = pd.DataFrame(matrix_rows).style.map(_color_pf, subset=regimes)
         st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -575,7 +575,7 @@ def page_portfolio():
                 fig.update_layout(
                     template="plotly_dark", height=300,
                     margin=dict(t=20, b=20, l=20, r=20),
-                    paper_bgcolor="#0E1117",
+                    paper_bgcolor="#ffffff",
                     showlegend=False,
                 )
                 st.plotly_chart(fig, use_container_width=True)
@@ -585,7 +585,7 @@ def page_portfolio():
                 sorted_pos = sorted(positions, key=lambda x: x["pnl_pct"])
                 names = [p["symbol"] for p in sorted_pos]
                 pnls  = [p["pnl_pct"] for p in sorted_pos]
-                colors= ["#ff4757" if v < 0 else "#00d26a" for v in pnls]
+                colors= ["#dc2626" if v < 0 else "#16a34a" for v in pnls]
                 fig2 = go.Figure(go.Bar(
                     x=pnls, y=names, orientation="h",
                     marker_color=colors, text=[f"{v:+.1f}%" for v in pnls],
@@ -594,7 +594,7 @@ def page_portfolio():
                 fig2.update_layout(
                     template="plotly_dark", height=300,
                     margin=dict(t=20, b=20, l=60, r=60),
-                    paper_bgcolor="#0E1117",
+                    paper_bgcolor="#ffffff",
                     xaxis_title="P&L %",
                 )
                 st.plotly_chart(fig2, use_container_width=True)

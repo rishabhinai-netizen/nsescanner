@@ -195,32 +195,32 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@200;300;400;500;600;700;800&display=swap');
 
 :root {
-    --bg-base:      #080c10;
-    --bg-panel:     #0d1117;
-    --bg-card:      #111720;
-    --bg-hover:     #161d28;
-    --bg-selected:  #0a1f35;
-    --border:       #1c2a3a;
-    --border-bright:#243447;
-    --amber:        #f5a623;
-    --amber-dim:    #c47d0e;
-    --amber-glow:   rgba(245,166,35,0.12);
-    --cyan:         #00d4e8;
-    --cyan-dim:     #0099aa;
-    --green:        #00e676;
-    --green-dim:    #00b359;
-    --red:          #ff3d5a;
-    --red-dim:      #cc1f3a;
-    --gold:         #ffd700;
-    --text-primary: #e8edf5;
-    --text-secondary:#8b9bb4;
-    --text-muted:   #4a5568;
+    --bg-base:      #ffffff;
+    --bg-panel:     #f8fafc;
+    --bg-card:      #f1f5f9;
+    --bg-hover:     #e8f0fe;
+    --bg-selected:  #dbeafe;
+    --border:       #cbd5e1;
+    --border-bright:#94a3b8;
+    --amber:        #d97706;
+    --amber-dim:    #b45309;
+    --amber-glow:   rgba(217,119,6,0.10);
+    --cyan:         #0284c7;
+    --cyan-dim:     #0369a1;
+    --green:        #16a34a;
+    --green-dim:    #15803d;
+    --red:          #dc2626;
+    --red-dim:      #b91c1c;
+    --gold:         #ca8a04;
+    --text-primary: #0f172a;
+    --text-secondary:#475569;
+    --text-muted:   #94a3b8;
     --font-display: 'Outfit', sans-serif;
     --font-body:    'Space Grotesk', sans-serif;
     --font-mono:    'JetBrains Mono', monospace;
     --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
-    --shadow-card: 0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03);
-    --shadow-amber: 0 0 20px rgba(245,166,35,0.15), 0 0 60px rgba(245,166,35,0.05);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.04);
+    --shadow-amber: 0 0 20px rgba(217,119,6,0.12), 0 0 60px rgba(217,119,6,0.04);
 }
 
 /* BASE */
@@ -287,14 +287,14 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] { font-family: var(--f
 .pc .vl.y { color: var(--gold) !important; }
 
 /* FOCUS PANEL */
-.focus { background: linear-gradient(135deg, #0a1520, #0d1a2a, #0a1018) !important; border: 1px solid var(--border) !important; border-left: 3px solid var(--amber) !important; border-radius: var(--radius-lg) !important; padding: 1.2rem 1.5rem !important; margin: 0.5rem 0 1rem !important; box-shadow: var(--shadow-card); position: relative; overflow: hidden; }
+.focus { background: linear-gradient(135deg, #fffbeb, #fef3c7, #fff8e8) !important; border: 1px solid var(--border) !important; border-left: 3px solid var(--amber) !important; border-radius: var(--radius-lg) !important; padding: 1.2rem 1.5rem !important; margin: 0.5rem 0 1rem !important; box-shadow: var(--shadow-card); position: relative; overflow: hidden; }
 .focus h3 { font-family: var(--font-display) !important; font-size: 0.72rem !important; font-weight: 700 !important; color: var(--amber) !important; text-transform: uppercase !important; letter-spacing: 0.15em !important; margin: 0 0 0.5rem 0 !important; -webkit-text-fill-color: var(--amber) !important; }
 .focus .regime { font-family: var(--font-display) !important; font-size: 1rem !important; font-weight: 600 !important; color: var(--text-primary) !important; margin: 0.4rem 0 !important; }
 .focus .tip { font-family: var(--font-mono) !important; font-size: 0.68rem !important; color: var(--text-muted) !important; margin-top: 0.5rem !important; border-top: 1px solid var(--border) !important; padding-top: 0.5rem !important; }
 
 /* STRATEGY CARDS */
 .sc { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; padding: 0.8rem 1rem !important; margin: 4px 0 !important; transition: all 0.2s ease !important; }
-.sc:hover { border-color: var(--amber) !important; background: var(--bg-hover) !important; box-shadow: 0 0 16px rgba(245,166,35,0.08) !important; transform: translateY(-1px) !important; }
+.sc:hover { border-color: var(--amber) !important; background: var(--bg-hover) !important; box-shadow: 0 0 16px rgba(217,119,6,0.08) !important; transform: translateY(-1px) !important; }
 .sc.blocked { opacity: 0.35 !important; border-color: var(--red-dim) !important; }
 .sc.ideal { border-left: 2px solid var(--green) !important; }
 .sc.caution { border-left: 2px solid var(--amber) !important; }
@@ -302,35 +302,35 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] { font-family: var(--f
 
 /* BADGES */
 .bg { display: inline-flex !important; align-items: center !important; padding: 2px 8px !important; border-radius: 2px !important; font-family: var(--font-mono) !important; font-size: 0.58rem !important; font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; }
-.bg-s { background: rgba(0,212,232,0.1) !important; color: var(--cyan) !important; border: 1px solid rgba(0,212,232,0.2) !important; }
-.bg-i { background: rgba(245,166,35,0.1) !important; color: var(--amber) !important; border: 1px solid rgba(245,166,35,0.2) !important; }
-.bg-p { background: rgba(0,230,118,0.1) !important; color: var(--green) !important; border: 1px solid rgba(0,230,118,0.2) !important; }
-.bg-o { background: rgba(255,215,0,0.1) !important; color: var(--gold) !important; border: 1px solid rgba(255,215,0,0.2) !important; }
-.bg-blocked { background: rgba(255,61,90,0.1) !important; color: var(--red) !important; border: 1px solid rgba(255,61,90,0.2) !important; }
-.bg-ideal { background: rgba(0,230,118,0.1) !important; color: var(--green) !important; border: 1px solid rgba(0,230,118,0.2) !important; }
-.bg-caution { background: rgba(245,166,35,0.1) !important; color: var(--amber) !important; border: 1px solid rgba(245,166,35,0.2) !important; }
-.sqi-elite { background: rgba(255,215,0,0.12) !important; color: var(--gold) !important; font-weight: 700 !important; border: 1px solid rgba(255,215,0,0.25) !important; }
-.sqi-strong { background: rgba(0,212,232,0.1) !important; color: var(--cyan) !important; border: 1px solid rgba(0,212,232,0.2) !important; }
-.sqi-moderate { background: rgba(245,166,35,0.1) !important; color: var(--amber) !important; border: 1px solid rgba(245,166,35,0.2) !important; }
-.sqi-weak { background: rgba(255,61,90,0.1) !important; color: var(--red) !important; border: 1px solid rgba(255,61,90,0.2) !important; }
+.bg-s { background: rgba(2,132,199,0.08) !important; color: var(--cyan) !important; border: 1px solid rgba(2,132,199,0.25) !important; }
+.bg-i { background: rgba(217,119,6,0.08) !important; color: var(--amber) !important; border: 1px solid rgba(217,119,6,0.25) !important; }
+.bg-p { background: rgba(22,163,74,0.08) !important; color: var(--green) !important; border: 1px solid rgba(22,163,74,0.25) !important; }
+.bg-o { background: rgba(202,138,4,0.08) !important; color: var(--gold) !important; border: 1px solid rgba(202,138,4,0.25) !important; }
+.bg-blocked { background: rgba(220,38,38,0.08) !important; color: var(--red) !important; border: 1px solid rgba(220,38,38,0.25) !important; }
+.bg-ideal { background: rgba(22,163,74,0.08) !important; color: var(--green) !important; border: 1px solid rgba(22,163,74,0.25) !important; }
+.bg-caution { background: rgba(217,119,6,0.08) !important; color: var(--amber) !important; border: 1px solid rgba(217,119,6,0.25) !important; }
+.sqi-elite { background: rgba(202,138,4,0.10) !important; color: var(--gold) !important; font-weight: 700 !important; border: 1px solid rgba(202,138,4,0.30) !important; }
+.sqi-strong { background: rgba(2,132,199,0.08) !important; color: var(--cyan) !important; border: 1px solid rgba(2,132,199,0.25) !important; }
+.sqi-moderate { background: rgba(217,119,6,0.08) !important; color: var(--amber) !important; border: 1px solid rgba(217,119,6,0.25) !important; }
+.sqi-weak { background: rgba(220,38,38,0.08) !important; color: var(--red) !important; border: 1px solid rgba(220,38,38,0.25) !important; }
 
 /* STALE */
-.stale { background: rgba(245,166,35,0.06) !important; border: 1px solid rgba(245,166,35,0.25) !important; border-radius: var(--radius-md) !important; padding: 0.6rem 1rem !important; color: var(--amber) !important; font-family: var(--font-mono) !important; font-size: 0.72rem !important; }
+.stale { background: rgba(217,119,6,0.06) !important; border: 1px solid rgba(217,119,6,0.25) !important; border-radius: var(--radius-md) !important; padding: 0.6rem 1rem !important; color: var(--amber) !important; font-family: var(--font-mono) !important; font-size: 0.72rem !important; }
 
 /* BUTTONS */
 .stButton > button { font-family: var(--font-body) !important; font-size: 0.78rem !important; font-weight: 600 !important; border-radius: var(--radius-sm) !important; transition: all 0.15s ease !important; border: 1px solid var(--border) !important; background: var(--bg-card) !important; color: var(--text-secondary) !important; padding: 0.4rem 1rem !important; }
-.stButton > button:hover { border-color: var(--amber) !important; color: var(--amber) !important; background: rgba(245,166,35,0.06) !important; box-shadow: 0 0 12px rgba(245,166,35,0.12) !important; }
-.stButton > button[kind="primary"] { background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.08)) !important; border: 1px solid var(--amber) !important; color: var(--amber) !important; box-shadow: 0 0 16px rgba(245,166,35,0.1) !important; }
-.stButton > button[kind="primary"]:hover { background: linear-gradient(135deg, rgba(245,166,35,0.25), rgba(245,166,35,0.15)) !important; box-shadow: 0 0 24px rgba(245,166,35,0.2) !important; transform: translateY(-1px) !important; }
+.stButton > button:hover { border-color: var(--amber) !important; color: var(--amber) !important; background: rgba(217,119,6,0.06) !important; box-shadow: 0 0 12px rgba(217,119,6,0.12) !important; }
+.stButton > button[kind="primary"] { background: linear-gradient(135deg, rgba(217,119,6,0.12), rgba(217,119,6,0.06)) !important; border: 1px solid var(--amber) !important; color: var(--amber) !important; box-shadow: 0 0 16px rgba(217,119,6,0.1) !important; }
+.stButton > button[kind="primary"]:hover { background: linear-gradient(135deg, rgba(217,119,6,0.20), rgba(217,119,6,0.12)) !important; box-shadow: 0 0 24px rgba(217,119,6,0.18) !important; transform: translateY(-1px) !important; }
 section[data-testid="stSidebar"] .stButton button { text-align: left !important; background: transparent !important; border: 1px solid transparent !important; border-radius: var(--radius-sm) !important; color: var(--text-secondary) !important; font-family: var(--font-body) !important; font-size: 0.78rem !important; font-weight: 500 !important; padding: 0.45rem 0.8rem !important; margin: 1px 0 !important; }
 section[data-testid="stSidebar"] .stButton button:hover { background: var(--bg-hover) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-section[data-testid="stSidebar"] .stButton button[kind="primary"] { background: linear-gradient(135deg, var(--bg-selected), rgba(10,31,53,0.8)) !important; border-color: var(--amber) !important; color: var(--amber) !important; font-weight: 600 !important; box-shadow: 0 0 12px rgba(245,166,35,0.1) !important; }
+section[data-testid="stSidebar"] .stButton button[kind="primary"] { background: linear-gradient(135deg, var(--bg-selected), rgba(219,234,254,0.8)) !important; border-color: var(--amber) !important; color: var(--amber) !important; font-weight: 600 !important; box-shadow: 0 0 12px rgba(217,119,6,0.1) !important; }
 
 /* ALERTS */
-.stSuccess { background: rgba(0,230,118,0.06) !important; border: 1px solid rgba(0,230,118,0.2) !important; border-left: 3px solid var(--green) !important; border-radius: var(--radius-md) !important; color: var(--green) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
-.stWarning { background: rgba(245,166,35,0.06) !important; border: 1px solid rgba(245,166,35,0.2) !important; border-left: 3px solid var(--amber) !important; border-radius: var(--radius-md) !important; color: var(--amber) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
-.stError { background: rgba(255,61,90,0.06) !important; border: 1px solid rgba(255,61,90,0.2) !important; border-left: 3px solid var(--red) !important; border-radius: var(--radius-md) !important; color: var(--red) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
-.stInfo { background: rgba(0,212,232,0.05) !important; border: 1px solid rgba(0,212,232,0.15) !important; border-left: 3px solid var(--cyan) !important; border-radius: var(--radius-md) !important; color: var(--cyan) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stSuccess { background: rgba(22,163,74,0.06) !important; border: 1px solid rgba(22,163,74,0.25) !important; border-left: 3px solid var(--green) !important; border-radius: var(--radius-md) !important; color: var(--green) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stWarning { background: rgba(217,119,6,0.06) !important; border: 1px solid rgba(217,119,6,0.25) !important; border-left: 3px solid var(--amber) !important; border-radius: var(--radius-md) !important; color: var(--amber) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stError { background: rgba(220,38,38,0.06) !important; border: 1px solid rgba(220,38,38,0.25) !important; border-left: 3px solid var(--red) !important; border-radius: var(--radius-md) !important; color: var(--red) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
+.stInfo { background: rgba(2,132,199,0.05) !important; border: 1px solid rgba(2,132,199,0.20) !important; border-left: 3px solid var(--cyan) !important; border-radius: var(--radius-md) !important; color: var(--cyan) !important; font-family: var(--font-body) !important; font-size: 0.8rem !important; }
 
 /* EXPANDERS */
 details { border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; background: var(--bg-panel) !important; margin: 4px 0 !important; }
@@ -427,7 +427,7 @@ st.markdown("""
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NSE Scanner">
-<meta name="theme-color" content="#080c10">
+<meta name="theme-color" content="#ffffff">
 """, unsafe_allow_html=True)
 
 # ============================================================================
@@ -685,31 +685,31 @@ with st.sidebar:
     # ── BRAND HEADER ─────────────────────────────────────────────────────
     ist_now = now_ist()
     is_mkt_open = dtime(9,15) <= ist_now.time() <= dtime(15,30) and ist_now.weekday() < 5
-    mkt_color = "#00e676" if is_mkt_open else "#ff3d5a"
+    mkt_color = "#16a34a" if is_mkt_open else "#dc2626"
     mkt_label = "NSE LIVE" if is_mkt_open else "NSE CLOSED"
 
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1117,#111720);border-bottom:1px solid #1c2a3a;
+    <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-bottom:1px solid #cbd5e1;
                 margin:-1rem -1rem 0.8rem -1rem;padding:1rem 1.2rem 0.9rem;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <div style="width:30px;height:30px;background:linear-gradient(135deg,#f5a623,#c47d0e);
+            <div style="width:30px;height:30px;background:linear-gradient(135deg,#d97706,#b45309);
                         border-radius:7px;display:flex;align-items:center;justify-content:center;
-                        font-size:15px;box-shadow:0 0 14px rgba(245,166,35,0.35);">🎯</div>
+                        font-size:15px;box-shadow:0 0 14px rgba(217,119,6,0.30);">🎯</div>
             <div>
                 <div style="font-family:'Outfit',sans-serif;font-size:0.92rem;font-weight:700;
-                            color:#e8edf5;letter-spacing:-0.01em;line-height:1.1;">NSE Scanner Pro</div>
+                            color:#0f172a;letter-spacing:-0.01em;line-height:1.1;">NSE Scanner Pro</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;
-                            color:#4a5568;letter-spacing:0.1em;text-transform:uppercase;">Intelligence Suite · v20</div>
+                            color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Intelligence Suite · v20</div>
             </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.35);
-                    border:1px solid #1c2a3a;border-radius:4px;padding:5px 9px;">
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.80);
+                    border:1px solid #cbd5e1;border-radius:4px;padding:5px 9px;">
             <div style="width:6px;height:6px;border-radius:50%;background:{mkt_color};
                         box-shadow:0 0 7px {mkt_color};flex-shrink:0;"></div>
             <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;
                          color:{mkt_color};font-weight:600;letter-spacing:0.1em;">{mkt_label}</span>
             <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;
-                         color:#4a5568;margin-left:auto;">{ist_now.strftime('%H:%M IST')}</span>
+                         color:#94a3b8;margin-left:auto;">{ist_now.strftime('%H:%M IST')}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -723,21 +723,21 @@ with st.sidebar:
         _plan_label = {"admin":"ADMIN","pro":"PRO","free":"FREE"}.get(_plan,"FREE")
         _name = _user.get("name","Trader")[:18]
         st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:8px;background:#111720;
-                    border:1px solid #1c2a3a;border-radius:6px;padding:7px 10px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:8px;background:#f1f5f9;
+                    border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;margin-bottom:6px;">
             <div style="width:24px;height:24px;border-radius:50%;
                         background:linear-gradient(135deg,{_plan_color}22,{_plan_color}11);
                         border:1px solid {_plan_color}44;display:flex;align-items:center;
                         justify-content:center;font-size:10px;">👤</div>
             <div style="flex:1;min-width:0;">
                 <div style="font-family:'Space Grotesk',sans-serif;font-size:0.75rem;font-weight:600;
-                            color:#e8edf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_name}</div>
+                            color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_name}</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:0.56rem;
                             color:{_plan_color};font-weight:600;letter-spacing:0.08em;">{_plan_label}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-    st.markdown('<hr style="margin:0 0 0.5rem 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+    st.markdown('<hr style="margin:0 0 0.5rem 0;border-color:#cbd5e1;">', unsafe_allow_html=True)
 
     # ── NAVIGATION ────────────────────────────────────────────────────────
     st.markdown('<style>div[data-testid="stSidebarNav"]{display:none}</style>', unsafe_allow_html=True)
@@ -754,7 +754,7 @@ with st.sidebar:
             if label:
                 st.markdown(f'<div class="nav-section">{label}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<hr style="margin:4px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+                st.markdown('<hr style="margin:4px 0;border-color:#cbd5e1;">', unsafe_allow_html=True)
         else:
             active = (p == default_page)
             btn = st.button(p, key=f"nav_{p}", use_container_width=True,
@@ -769,11 +769,11 @@ with st.sidebar:
 
     # ── SIGN OUT ──────────────────────────────────────────────────────────
     if get_current_user():
-        st.markdown('<hr style="margin:4px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+        st.markdown('<hr style="margin:4px 0;border-color:#cbd5e1;">', unsafe_allow_html=True)
         if st.button("🚪 Sign Out", key="sidebar_logout", use_container_width=True):
             logout()
 
-    st.markdown('<hr style="margin:6px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+    st.markdown('<hr style="margin:6px 0;border-color:#cbd5e1;">', unsafe_allow_html=True)
 
     # ── REGIME STATUS CHIP ────────────────────────────────────────────────
     if st.session_state.regime:
@@ -781,17 +781,17 @@ with st.sidebar:
         r_name = rg.get("regime","")
         r_display = rg.get("regime_display","")
         r_color = {"EXPANSION":"#00e676","ACCUMULATION":"#f5a623",
-                   "DISTRIBUTION":"#ff8c42","PANIC":"#ff3d5a"}.get(r_name,"#8b9bb4")
+                   "DISTRIBUTION":"#ea580c","PANIC":"#dc2626"}.get(r_name,"#64748b")
         nv = rg.get("nifty_close",0)
         nv_str = f"₹{nv:,.0f}" if isinstance(nv,(int,float)) else "-"
         pos = rg.get("position_multiplier",1.0)
         st.markdown(f"""
-        <div style="background:#111720;border:1px solid #1c2a3a;border-left:2px solid {r_color};
+        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-left:2px solid {r_color};
                     border-radius:4px;padding:6px 9px;margin-bottom:5px;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#4a5568;
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#94a3b8;
                         text-transform:uppercase;letter-spacing:0.1em;">Market Regime</div>
             <div style="font-family:'Space Grotesk',sans-serif;font-size:0.8rem;font-weight:700;color:{r_color};">{r_display}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:#8b9bb4;margin-top:2px;">Nifty {nv_str} · Size {pos*100:.0f}%</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:#64748b;margin-top:2px;">Nifty {nv_str} · Size {pos*100:.0f}%</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -806,27 +806,27 @@ with st.sidebar:
 
     st.markdown(f"""
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;">
-        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:5px 7px;text-align:center;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#4a5568;text-transform:uppercase;letter-spacing:0.06em;">Signals</div>
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:5px 7px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;">Signals</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.92rem;font-weight:700;color:#f5a623;">{sigs}</div>
         </div>
-        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:5px 7px;text-align:center;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#4a5568;text-transform:uppercase;letter-spacing:0.06em;">Watchlist</div>
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:5px 7px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.54rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;">Watchlist</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.92rem;font-weight:700;color:#00d4e8;">{len(st.session_state.watchlist)}</div>
         </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-bottom:6px;">
-        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:4px 5px;text-align:center;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#4a5568;">Open</div>
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:4px 5px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#94a3b8;">Open</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#f5a623;">{open_c}</div>
         </div>
-        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:4px 5px;text-align:center;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#4a5568;">T1 Hit</div>
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:4px 5px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#94a3b8;">T1 Hit</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#00e676;">{target_c}</div>
         </div>
-        <div style="background:#111720;border:1px solid #1c2a3a;border-radius:4px;padding:4px 5px;text-align:center;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#4a5568;">SL Hit</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#ff3d5a;">{stop_c}</div>
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:4px 5px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:#94a3b8;">SL Hit</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;color:#dc2626;">{stop_c}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -843,7 +843,7 @@ with st.sidebar:
             try_breeze(); st.rerun()
 
     render_supabase_status()
-    st.markdown('<hr style="margin:6px 0;border-color:#1c2a3a;">', unsafe_allow_html=True)
+    st.markdown('<hr style="margin:6px 0;border-color:#cbd5e1;">', unsafe_allow_html=True)
 
     # ── UTILITY ───────────────────────────────────────────────────────────
     if st.button("↻ Refresh PF Matrix", key="refresh_pf", use_container_width=True,
@@ -947,7 +947,7 @@ def render_focus_panel():
     
     st.markdown(f"""<div class="focus">
         <h3>🎯 {focus_title}</h3>
-        <div style="color:#fafafa; font-size:0.9rem;">{focus_action}</div>
+        <div style="color:#0f172a; font-size:0.9rem;">{focus_action}</div>
         {"<div class='regime'>" + regime_str + "</div>" if regime_str else ""}
         <div class="tip">💡 {focus_tip}</div>
     </div>""", unsafe_allow_html=True)
@@ -1001,8 +1001,8 @@ def page_dashboard():
                 nb = " 🔌" if p.get("requires_intraday") else ""
                 st.markdown(f'<div class="sc"><strong>{p["icon"]} {p["name"]}</strong>{nb}<br>'
                     f'<span class="bg bg-{"i" if p["type"]=="Intraday" else "s"}">{p["type"]}</span> '
-                    f'<span style="color:#888;font-size:0.7em">{p["hold"]}</span><br>'
-                    f'<span style="color:#00d26a">Win {p["win_rate"]}%</span></div>', unsafe_allow_html=True)
+                    f'<span style="color:#64748b;font-size:0.7em">{p["hold"]}</span><br>'
+                    f'<span style="color:#16a34a">Win {p["win_rate"]}%</span></div>', unsafe_allow_html=True)
         return
     
     # === REGIME ===
@@ -1063,10 +1063,10 @@ def page_dashboard():
             # Color formatting via styling
             def _color_pf(val):
                 if not isinstance(val, (int, float)): return ""
-                if val >= 1.5: return "background-color: #0d3320; color: #00d26a"
-                elif val >= 1.0: return "background-color: #1a2d1a; color: #81c784"
-                elif val >= 0.7: return "background-color: #3d3a1a; color: #ffd700"
-                else: return "background-color: #3d1a1a; color: #ff4757"
+                if val >= 1.5: return "background-color: #dcfce7; color: #15803d"
+                elif val >= 1.0: return "background-color: #f0fdf4; color: #16a34a"
+                elif val >= 0.7: return "background-color: #fefce8; color: #ca8a04"
+                else: return "background-color: #fef2f2; color: #dc2626"
             
             styled = matrix_df.style.map(_color_pf, subset=regimes)
             st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -1291,16 +1291,16 @@ def page_scanner_hub():
             bc = {"Swing":"bg-s","Intraday":"bg-i","Positional":"bg-p","Overnight":"bg-o"}.get(p["type"],"bg-s")
             
             if needs_breeze and not st.session_state.breeze_connected:
-                data_tag = '<small style="color:#ff4757">🔌 Needs Breeze</small>'
+                data_tag = '<small style="color:#dc2626">🔌 Needs Breeze</small>'
             elif needs_breeze:
-                data_tag = '<small style="color:#00d26a">🔴 LIVE</small>'
+                data_tag = '<small style="color:#16a34a">🔴 LIVE</small>'
             else:
-                data_tag = '<small style="color:#5dade2">📊 Daily</small>'
+                data_tag = '<small style="color:#0284c7">📊 Daily</small>'
             
             st.markdown(f'<div class="sc {fit_class}"><strong>{p["icon"]} {p["name"]}</strong><br>'
                 f'<span class="bg {bc}">{p["type"]}</span> {fit_badge}<br>'
-                f'<span style="color:#00d26a;font-size:0.8em">Win {p["win_rate"]}%</span> · '
-                f'<span style="color:#FF6B35;font-size:0.8em">+{p["expectancy"]}%</span><br>{data_tag}</div>',
+                f'<span style="color:#16a34a;font-size:0.8em">Win {p["win_rate"]}%</span> · '
+                f'<span style="color:#ea580c;font-size:0.8em">+{p["expectancy"]}%</span><br>{data_tag}</div>',
                 unsafe_allow_html=True)
             
             # Disable button if blocked or needs breeze
@@ -1414,7 +1414,7 @@ def page_scanner_hub():
                 if sqi_val is not None:
                     sqi_col1, sqi_col2 = st.columns([10, 1])
                     with sqi_col1:
-                        grade_color = {"ELITE":"gold","STRONG":"#5dade2","MODERATE":"#ffd700","WEAK":"#ff4757"}.get(sqi_grade,"white")
+                        grade_color = {"ELITE":"gold","STRONG":"#5dade2","MODERATE":"#ffd700","WEAK":"#dc2626"}.get(sqi_grade,"#0f172a")
                         st.markdown(
                                     f'**{sqi_icon} Signal Quality: <span style="color:{grade_color}">' +
                                     f'{sqi_val:.0f}/100 — {sqi_grade}</span>**' +
@@ -1568,11 +1568,11 @@ def page_charts_rs():
                             fig.add_trace(go.Bar(
                                 x=vp["volumes"], y=vp["price_levels"],
                                 orientation='h', name="Volume",
-                                marker_color=["#FF6B35" if p == vp["poc"] else "#5dade2" for p in vp["price_levels"]]
+                                marker_color=["#ea580c" if p == vp["poc"] else "#0284c7" for p in vp["price_levels"]]
                             ))
-                            fig.add_hline(y=vp["poc"], line_color="#FF6B35", annotation_text="POC")
-                            fig.add_hline(y=vp["vah"], line_color="#00d26a", line_dash="dash", annotation_text="VAH")
-                            fig.add_hline(y=vp["val"], line_color="#ff4757", line_dash="dash", annotation_text="VAL")
+                            fig.add_hline(y=vp["poc"], line_color="#ea580c", annotation_text="POC")
+                            fig.add_hline(y=vp["vah"], line_color="#16a34a", line_dash="dash", annotation_text="VAH")
+                            fig.add_hline(y=vp["val"], line_color="#dc2626", line_dash="dash", annotation_text="VAL")
                             fig.update_layout(template="plotly_dark", title=f"{vp_sym} Volume Profile ({vp_days}d)",
                                               height=500, margin=dict(t=40, b=30))
                             st.plotly_chart(fig, use_container_width=True)
@@ -2014,7 +2014,7 @@ def _render_backtest_result(result):
         eq_df = pd.DataFrame(result.equity_curve)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=eq_df["date"], y=eq_df["equity"], mode="lines+markers",
-                                  name="Net P&L %", line=dict(color="#FF6B35", width=2),
+                                  name="Net P&L %", line=dict(color="#ea580c", width=2),
                                   marker=dict(size=5)))
         fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
         fig.update_layout(template="plotly_dark", title="Equity Curve (Net P&L % after costs)",
