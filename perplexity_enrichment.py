@@ -1,19 +1,28 @@
 """
-perplexity_enrichment.py — News & Fundamental Context for NSE Scanner Pro
-=========================================================================
-Uses Google Gemini API for stock analysis. Two modes:
-  - With SEARCH GROUNDING: Live news from Google Search (Gemini 2.0 Flash)
-  - FALLBACK: Training-data based fundamental analysis (always works)
+perplexity_enrichment.py — News & Fundamental Context (v2: Claude)
+===================================================================
+v2 change: Migrated from Google Gemini to Anthropic Claude.
 
-Get free key: https://aistudio.google.com/apikey
-Add GEMINI_API_KEY to Streamlit Secrets + GitHub Secrets.
+For live news grounding we use Claude's web_search tool. Falls back to
+training-data answers if web_search unavailable on the API tier.
+
+Setup: Add ANTHROPIC_API_KEY to Streamlit Secrets + GitHub Secrets.
+Get a key: https://console.anthropic.com/settings/keys
 """
 
-import os, json, requests, streamlit as st
+import os, json, streamlit as st
 from datetime import date
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+# ── Detect API key availability ──────────────────────────────────────────
+def _get_anthropic_key() -> str:
+    try:
+        v = st.secrets.get("ANTHROPIC_API_KEY", "")
+        if v: return v
+    except Exception:
+        pass
+    return os.environ.get("ANTHROPIC_API_KEY", "")
+
+ANTHROPIC_API_KEY = _get_anthropic_key()
 
 CATALYST_TYPES = [
     "Q results / earnings surprise", "Management guidance",
@@ -25,38 +34,62 @@ CATALYST_TYPES = [
 ]
 
 
-def _call_gemini(prompt: str, use_search: bool = True) -> dict:
+def _call_claude(prompt: str, use_search: bool = True) -> dict:
     """
-    Call Gemini API. Tries search grounding first, falls back to base model.
-    Returns raw JSON dict from API or raises exception.
+    Call Claude (Haiku 4.5 default). Optional web_search tool for live news.
+    Returns a dict {'text': str, 'sources': list, 'is_live': bool}.
     """
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY not set")
+    if not ANTHROPIC_API_KEY:
+        raise ValueError("ANTHROPIC_API_KEY not set")
 
-    # Gemini 2.0 Flash with Google Search grounding
+    from anthropic import Anthropic
+    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+
+    tools = []
     if use_search:
-        url     = f"{BASE_URL}/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "tools":    [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.05, "maxOutputTokens": 400},
-        }
-        r = requests.post(url, json=payload, timeout=20)
-        if r.status_code == 400:
-            # Search grounding not available — fall back to base model
-            return _call_gemini(prompt, use_search=False)
-        r.raise_for_status()
-        return r.json()
+        tools = [{"type": "web_search_20250305", "name": "web_search"}]
 
-    # Fallback: Gemini 1.5 Flash, no search tool (uses training data)
-    url     = f"{BASE_URL}/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 400},
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            temperature=0.1,
+            tools=tools,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as e:
+        # If web_search tool not enabled on this API tier, retry without it
+        if "tool" in str(e).lower() or "web_search" in str(e).lower():
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=500,
+                temperature=0.1,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        else:
+            raise
+
+    # Extract text + any web sources
+    text_parts = []
+    sources = []
+    for block in resp.content:
+        btype = getattr(block, "type", "")
+        if btype == "text":
+            text_parts.append(getattr(block, "text", ""))
+        elif btype == "web_search_tool_result":
+            # Source URLs from web search
+            content = getattr(block, "content", None) or []
+            for item in (content if isinstance(content, list) else []):
+                u = (getattr(item, "url", "") or
+                     (item.get("url", "") if isinstance(item, dict) else ""))
+                if u:
+                    sources.append(u)
+
+    return {
+        "text": "\n".join(text_parts).strip(),
+        "sources": sources[:3],
+        "is_live": len(sources) > 0,
     }
-    r = requests.post(url, json=payload, timeout=15)
-    r.raise_for_status()
-    return r.json()
 
 
 def get_signal_context(symbol: str, strategy: str, signal_direction: str) -> dict:
@@ -64,15 +97,15 @@ def get_signal_context(symbol: str, strategy: str, signal_direction: str) -> dic
     Get AI analysis for why a stock is in play.
     Returns {catalyst, catalyst_type, factors, sentiment, confidence, sources, is_live}
     """
-    if not GEMINI_API_KEY:
-        return {"error": "GEMINI_API_KEY not set. Add it in Streamlit Secrets."}
+    if not ANTHROPIC_API_KEY:
+        return {"error": "ANTHROPIC_API_KEY not set. Add it in Streamlit Secrets."}
 
     today = date.today().strftime("%d %B %Y")
     prompt = f"""Today is {today}. You are a precise NSE India market analyst.
 
 The stock {symbol} (NSE) triggered a {signal_direction} signal using the {strategy} pattern.
 
-Search for and report the most likely reason this stock is in focus. Look for:
+Search for the most likely reason this stock is in focus. Look for:
 1. Recent Q results / earnings (PAT, revenue vs estimates)
 2. Management guidance or concall highlights
 3. Large FII/DII buy or sell activity
@@ -89,26 +122,29 @@ Respond ONLY with valid JSON (no markdown fences):
 {{"catalyst": "specific one-sentence reason with data", "catalyst_type": "one of: {' / '.join(CATALYST_TYPES[:8])}", "factors": ["factor 1 with data", "factor 2 with data"], "sentiment": "BULLISH or BEARISH or NEUTRAL", "confidence": "HIGH or MEDIUM or LOW"}}"""
 
     try:
-        data     = _call_gemini(prompt, use_search=True)
-        raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-        raw_text = raw_text.strip().replace("```json", "").replace("```", "").strip()
+        data = _call_claude(prompt, use_search=True)
+        raw_text = data["text"].strip()
+        if raw_text.startswith("```"):
+            lines = raw_text.split("\n")
+            if lines[0].startswith("```"): lines = lines[1:]
+            if lines and lines[-1].startswith("```"): lines = lines[:-1]
+            raw_text = "\n".join(lines).strip()
 
-        # Extract grounding sources if search was used
-        sources   = []
-        grounding = data["candidates"][0].get("groundingMetadata", {})
-        for chunk in grounding.get("groundingChunks", [])[:3]:
-            uri = chunk.get("web", {}).get("uri", "")
-            if uri:
-                sources.append(uri)
+        # Some models add prose before JSON — find the JSON substring
+        try:
+            parsed = json.loads(raw_text)
+        except json.JSONDecodeError:
+            start = raw_text.index("{")
+            end = raw_text.rindex("}") + 1
+            parsed = json.loads(raw_text[start:end])
 
-        parsed              = json.loads(raw_text)
-        parsed["sources"]   = sources
-        parsed["is_live"]   = len(sources) > 0   # True = search grounded, False = training data
+        parsed["sources"] = data["sources"]
+        parsed["is_live"] = data["is_live"]
         return parsed
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
         return {
-            "catalyst":      raw_text[:300] if "raw_text" in dir() else "Parse error",
+            "catalyst":      "Parse error",
             "catalyst_type": "other", "factors": [],
             "sentiment":     "NEUTRAL", "confidence": "LOW",
             "sources": [], "is_live": False,
@@ -119,34 +155,37 @@ Respond ONLY with valid JSON (no markdown fences):
 
 def get_sector_context(sector: str) -> str:
     """One-line sector theme. Used in Dashboard sector cards."""
-    if not GEMINI_API_KEY:
+    if not ANTHROPIC_API_KEY:
         return ""
-    today  = date.today().strftime("%d %B %Y")
+    today = date.today().strftime("%d %B %Y")
     prompt = (
         f"Today is {today}. In ONE sentence, what is the main specific news driving "
         f"the {sector} sector in India's NSE today? Name actual companies or events. "
         f"If nothing found, say 'No sector-specific news today'."
     )
     try:
-        data = _call_gemini(prompt, use_search=True)
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        data = _call_claude(prompt, use_search=True)
+        return data["text"]
     except Exception:
         return ""
 
 
 def enrich_telegram_alert(base_message: str, symbol: str, strategy: str, signal_dir: str) -> str:
     """Appends AI news context to an existing Telegram alert. Never breaks alerts on failure."""
-    ctx = get_signal_context(symbol, strategy, signal_dir)
+    try:
+        ctx = get_signal_context(symbol, strategy, signal_dir)
+    except Exception:
+        return base_message
     if "error" in ctx or not ctx.get("catalyst"):
         return base_message
     if ctx.get("confidence") == "LOW" and not ctx.get("sources"):
         return base_message
 
-    sent_icon = {"BULLISH": "🟢", "BEARISH": "🔴", "NEUTRAL": "🟡"}.get(ctx.get("sentiment",""), "⚪")
+    sent_icon = {"BULLISH": "🟢", "BEARISH": "🔴", "NEUTRAL": "🟡"}.get(ctx.get("sentiment", ""), "⚪")
     live_tag  = "🔍 Live" if ctx.get("is_live") else "📚 Training"
     ctype     = ctx.get("catalyst_type", "")
 
-    msg = f"\n\n📰 <b>[{ctype}]</b> {ctx.get('catalyst','—')}\n"
+    msg = f"\n\n📰 <b>[{ctype}]</b> {ctx.get('catalyst', '—')}\n"
     msg += f"{sent_icon} {ctx.get('sentiment','—')} · {ctx.get('confidence','—')} · {live_tag}\n"
     for f in ctx.get("factors", []):
         msg += f"• {f}\n"
@@ -156,31 +195,27 @@ def enrich_telegram_alert(base_message: str, symbol: str, strategy: str, signal_
     return base_message + msg
 
 
-@st.cache_data(ttl=21600, show_spinner=False)   # Cache 6 hours — prevents 429 on re-renders
-def _cached_gemini_context(symbol: str, strategy: str, signal_dir: str, _date_key: str) -> dict:
+@st.cache_data(ttl=21600, show_spinner=False)
+def _cached_claude_context(symbol: str, strategy: str, signal_dir: str, _date_key: str) -> dict:
     """Cache wrapper — _date_key ensures cache resets each day automatically."""
     return get_signal_context(symbol, strategy, signal_dir)
 
 
 def render_signal_context_card(symbol: str, strategy: str, signal_dir: str):
-    """
-    Streamlit card showing AI news analysis for a stock.
-    Uses st.cache_data (6hr TTL) — safe against Streamlit re-renders causing repeated API calls.
-    Drop into any page.
-    """
-    if not GEMINI_API_KEY:
-        st.caption("💡 Add `GEMINI_API_KEY` in Streamlit Secrets to enable live news analysis.")
-        st.code('GEMINI_API_KEY = "AIza..."', language="toml")
+    """Streamlit card showing AI news analysis for a stock."""
+    if not ANTHROPIC_API_KEY:
+        st.caption("💡 Add `ANTHROPIC_API_KEY` in Streamlit Secrets to enable live news analysis.")
+        st.code('ANTHROPIC_API_KEY = "sk-ant-..."', language="toml")
         return
 
     with st.spinner(f"Searching news for {symbol}..."):
-        ctx = _cached_gemini_context(symbol, strategy, signal_dir, str(date.today()))
+        ctx = _cached_claude_context(symbol, strategy, signal_dir, str(date.today()))
 
     if "error" in ctx:
         st.warning(f"⚠️ Analysis failed: {ctx['error']}")
-        st.caption("This is cached — click Retry only once. Repeated calls waste free API quota.")
+        st.caption("This is cached — click Retry only once.")
         if st.button("🔄 Retry once", key=f"retry_{symbol}_{date.today()}"):
-            _cached_gemini_context.clear()
+            _cached_claude_context.clear()
             st.rerun()
         return
 

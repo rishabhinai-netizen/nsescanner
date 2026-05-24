@@ -771,40 +771,68 @@ What does this mean for stop placement? Avoid stops inside daily noise.]
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _call_groq(key, prompt):
-    from openai import OpenAI
-    client = OpenAI(api_key=key, base_url="https://api.groq.com/openai/v1")
-    r = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role":"system","content":_SYS},{"role":"user","content":prompt}],
-        temperature=0.6, max_tokens=6000,
-    )
-    return r.choices[0].message.content
+    """LEGACY — kept for signature compatibility, no longer used.
+    v2 routes everything to Claude via ai_engine.py.
+    """
+    raise NotImplementedError("Use _call_claude_via_engine instead")
 
 def _call_gemini(key, model, prompt):
-    import google.generativeai as genai
-    genai.configure(api_key=key)
-    m = genai.GenerativeModel(model_name=model, system_instruction=_SYS)
-    return m.generate_content(prompt).text
+    """LEGACY — kept for signature compatibility, no longer used."""
+    raise NotImplementedError("Use _call_claude_via_engine instead")
 
 def _run_ai(ticker, m, regime, sent, rec, sig, groq_key, gemini_key, gemini_model):
-    prompt = _build_prompt(ticker, m, regime, sent, rec, sig)
-    if groq_key:
-        try:
-            with st.spinner("🚀 Running 3-agent swarm analysis via Groq…"):
-                out = _call_groq(groq_key, prompt)
-            return out
-        except Exception as e:
-            st.warning(f"⚠️ Groq failed: {e} — switching to Gemini…")
-    if gemini_key:
-        try:
-            with st.spinner(f"🔄 Running analysis via {gemini_model}…"):
-                out = _call_gemini(gemini_key, gemini_model, prompt)
-            return out
-        except Exception as e:
-            st.error(f"❌ Both APIs failed: {e}")
-            return None
-    st.error("❌ No API keys. Add GROQ_API_KEY or GOOGLE_API_KEY to Streamlit Secrets.")
-    return None
+    """v2: All AI calls routed to Claude via ai_engine.py.
+    
+    If a scanner signal context is provided → uses analyze_signal (Haiku, cheap).
+    Otherwise → uses deep_dive (Sonnet, premium).
+    Returns rendered markdown.
+    """
+    from ai_engine import (
+        analyze_signal, deep_dive,
+        render_signal_verdict, render_deep_dive,
+    )
+    
+    # Check if user wants premium (Sonnet) — read from session state, default False
+    use_premium = st.session_state.get("ai_use_premium", False)
+    
+    try:
+        if sig:
+            with st.spinner(f"🧠 Claude {'Sonnet 4.6' if use_premium else 'Haiku 4.5'} validating signal…"):
+                verdict = analyze_signal(
+                    symbol=ticker,
+                    strategy=sig.get("strategy", ""),
+                    signal=sig.get("signal", "BUY"),
+                    cmp=m.get("current_price", 0),
+                    entry=float(sig.get("entry") or m.get("current_price", 0)),
+                    stop_loss=float(sig.get("sl") or 0),
+                    target_1=float(sig.get("t1") or 0),
+                    target_2=float(sig.get("t2") or 0),
+                    rr=float(sig.get("rr") or 0),
+                    rsi=m.get("rsi_14", 50),
+                    volume_ratio=m.get("volume_ratio", 1.0),
+                    sqi=float(sig.get("sqi") or 0),
+                    sqi_grade=sig.get("sqi_grade", "?"),
+                    rs_rating=float(sig.get("rs") or 50),
+                    sector=sig.get("sector", ""),
+                    regime=regime.get("regime", "UNKNOWN"),
+                    regime_score=regime.get("score", 0),
+                    regime_fit=sig.get("regime_fit", "OK"),
+                    reasons=(sig.get("reasons") or [sig.get("reason", "Scanner signal")]),
+                    use_premium=use_premium,
+                    sector_quadrant=regime.get("sector_quadrant"),
+                )
+            return render_signal_verdict(verdict) if verdict else None
+        else:
+            with st.spinner("🧠 Claude Sonnet 4.6 deep-diving…"):
+                dd_result = deep_dive(
+                    symbol=ticker, metrics=m, regime=regime,
+                    sentiment=sent, recommendation=rec,
+                    signal_context=None,
+                )
+            return render_deep_dive(dd_result) if dd_result else None
+    except Exception as e:
+        st.error(f"❌ Claude API call failed: {e}")
+        return None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -906,14 +934,34 @@ def page_ai_deep_dive():
     st.markdown('<div class="dd-title">🧠 AI DEEP DIVE</div>', unsafe_allow_html=True)
     st.caption("Exhaustive Multi-Agent Swarm Analysis · ATLAS (Technical) · ORACLE (Flow/Sentiment) · SENTINEL (Risk)")
 
-    # API keys
+    # API keys — v2 uses Claude only
     try:
-        groq_key   = st.secrets.get("GROQ_API_KEY","")
-        gemini_key = st.secrets.get("GOOGLE_API_KEY","")
-    except: groq_key=gemini_key=""
-    if not groq_key and not gemini_key:
-        st.error("❌ No API keys. Add GROQ_API_KEY + GOOGLE_API_KEY to Streamlit Secrets.")
+        anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    except Exception:
+        anthropic_key = ""
+    import os as _os
+    anthropic_key = anthropic_key or _os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        st.error("❌ ANTHROPIC_API_KEY missing. Add it to Streamlit Secrets to enable AI Deep Dive.")
+        st.info("Get a key at https://console.anthropic.com/settings/keys")
         return
+    # Legacy keys kept for backward-compat references later in the function
+    groq_key = ""
+    gemini_key = ""
+
+    # ── Premium model toggle ──
+    st.sidebar.markdown("### 🧠 AI Settings")
+    st.session_state["ai_use_premium"] = st.sidebar.checkbox(
+        "Use Sonnet 4.6 (premium, ~5x cost)",
+        value=st.session_state.get("ai_use_premium", False),
+        help="Sonnet 4.6 gives deeper reasoning. Default Haiku 4.5 is fast and cheap (~₹0.35/call)."
+    )
+    from ai_engine import get_cost_summary, reset_cost_tracker as _reset_cost
+    _cost = get_cost_summary()
+    st.sidebar.metric("Claude calls (session)", _cost["calls"])
+    st.sidebar.metric("Cost", f"${_cost['total_usd']:.4f}", delta=f"~₹{_cost['total_inr']:.2f}")
+    if st.sidebar.button("Reset cost tracker", key="dd_cost_reset"):
+        _reset_cost(); st.rerun()
 
     # Load Supabase signals
     with st.spinner("Loading open signals from Supabase…"):
@@ -1142,8 +1190,8 @@ def page_ai_deep_dive():
     # ── AI Analysis ────────────────────────────────────────────────────────
     st.divider()
     st.subheader(f"🤖 Swarm Analysis — {ticker}")
-    _gm = gemini_model if 'gemini_model' in dir() else "gemini-2.0-flash"
-    st.caption(f"Groq llama-3.3-70b (primary) · Gemini 2.0 Flash (fallback) · {len(_build_prompt(ticker,m,regime,sent,rec,sig_ctx).split())} word prompt")
+    _gm = "claude-haiku-4-5" if not st.session_state.get("ai_use_premium") else "claude-sonnet-4-6"
+    st.caption(f"🧠 {_gm} · {'Premium reasoning' if 'sonnet' in _gm else 'Cost-efficient screening'} · Cached system prompt")
 
     # ── Rate limit: 30s between analysis calls per session ─────────────────
     import time as _time

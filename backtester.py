@@ -217,125 +217,306 @@ def _check_signal(df: pd.DataFrame, latest, strategy: str,
     return None
 
 
+# ============================================================
+# SIGNAL CHECKERS — v2: now use compute_smart_targets parity with live scanner
+# ============================================================
+
+def _compute_smart_targets_bt(df, entry, stop_loss, signal="BUY", lookback=60):
+    """
+    Identical to compute_smart_targets in scanners.py, inlined here to avoid
+    circular imports during backtest enrichment.
+    """
+    risk = abs(entry - stop_loss)
+    if risk <= 0:
+        return {"t1": entry, "t2": entry, "t3": entry, "rr": 0}
+
+    atr = df["atr_14"].iloc[-1] if "atr_14" in df.columns else risk
+    high_52w = df["high"].max()
+    low_52w = df["low"].min()
+
+    if signal == "BUY":
+        highs = df["high"].iloc[-lookback:]
+        resistance_levels = []
+        for i in range(2, len(highs) - 2):
+            if (highs.iloc[i] > highs.iloc[i-1] and highs.iloc[i] > highs.iloc[i-2] and
+                highs.iloc[i] > highs.iloc[i+1] and highs.iloc[i] > highs.iloc[i+2]):
+                if highs.iloc[i] > entry * 1.01:
+                    resistance_levels.append(highs.iloc[i])
+        for window in [20, 50]:
+            if len(df) >= window:
+                recent_high = df["high"].iloc[-window:].max()
+                if recent_high > entry * 1.01:
+                    resistance_levels.append(recent_high)
+        if high_52w > entry * 1.01:
+            resistance_levels.append(high_52w)
+        swing_low = df["low"].iloc[-lookback:].min()
+        swing_range = entry - swing_low
+        if swing_range > 0:
+            resistance_levels.extend([entry + swing_range * 0.618, entry + swing_range * 1.618])
+        resistance_levels = sorted(set(r for r in resistance_levels if r > entry * 1.005))
+
+        if len(resistance_levels) >= 3:
+            t1, t2, t3 = resistance_levels[0], resistance_levels[1], resistance_levels[2]
+        elif len(resistance_levels) == 2:
+            t1, t2 = resistance_levels[0], resistance_levels[1]
+            t3 = entry + 4 * risk
+        elif len(resistance_levels) == 1:
+            t1 = resistance_levels[0]
+            t2 = entry + 2.5 * risk
+            t3 = entry + 4 * risk
+        else:
+            t1 = entry + 1.5 * atr
+            t2 = entry + 3 * atr
+            t3 = entry + 5 * atr
+
+        min_t1 = entry + 1.5 * risk
+        if t1 < min_t1:
+            t1 = min_t1
+        if t2 <= t1:
+            t2 = t1 + risk
+        if t3 <= t2:
+            t3 = t2 + risk
+        rr = (t2 - entry) / risk if risk > 0 else 0
+    else:
+        lows = df["low"].iloc[-lookback:]
+        support_levels = []
+        for i in range(2, len(lows) - 2):
+            if (lows.iloc[i] < lows.iloc[i-1] and lows.iloc[i] < lows.iloc[i-2] and
+                lows.iloc[i] < lows.iloc[i+1] and lows.iloc[i] < lows.iloc[i+2]):
+                if lows.iloc[i] < entry * 0.99:
+                    support_levels.append(lows.iloc[i])
+        for window in [20, 50]:
+            if len(df) >= window:
+                recent_low = df["low"].iloc[-window:].min()
+                if recent_low < entry * 0.99:
+                    support_levels.append(recent_low)
+        swing_high = df["high"].iloc[-lookback:].max()
+        swing_range = swing_high - entry
+        if swing_range > 0:
+            support_levels.extend([entry - swing_range * 0.618, entry - swing_range * 1.618])
+        support_levels = sorted(set(s for s in support_levels if s < entry * 0.995), reverse=True)
+
+        if len(support_levels) >= 3:
+            t1, t2, t3 = support_levels[0], support_levels[1], support_levels[2]
+        elif len(support_levels) == 2:
+            t1, t2 = support_levels[0], support_levels[1]
+            t3 = entry - 4 * risk
+        elif len(support_levels) == 1:
+            t1 = support_levels[0]
+            t2 = entry - 2.5 * risk
+            t3 = entry - 4 * risk
+        else:
+            t1 = entry - 1.5 * atr
+            t2 = entry - 3 * atr
+            t3 = entry - 5 * atr
+
+        min_t1 = entry - 1.5 * risk
+        if t1 > min_t1:
+            t1 = min_t1
+        if t2 >= t1:
+            t2 = t1 - risk
+        if t3 >= t2:
+            t3 = t2 - risk
+        rr = (entry - t2) / risk if risk > 0 else 0
+
+    rr = max(1.0, min(rr, 8.0))
+    return {"t1": round(t1, 2), "t2": round(t2, 2), "t3": round(t3, 2), "rr": round(rr, 1)}
+
+
+# ============================================================
+# REPLACEMENT SIGNAL CHECKERS for backtester.py
+# ============================================================
+
 def _check_vcp(df, latest, symbol):
-    if len(df) < 200: return None
+    """VCP signal check — uses smart targets matching live scanner."""
+    if len(df) < 200:
+        return None
     close = float(latest.get("close", 0))
     sma50 = float(latest.get("sma_50", 0))
-    sma200= float(latest.get("sma_200", 0))
-    if close < sma50 or sma50 < sma200: return None
+    sma200 = float(latest.get("sma_200", 0))
+    if close < sma50 or sma50 < sma200:
+        return None
     pct_52wh = float(latest.get("pct_from_52w_high", -50))
-    if pct_52wh < -25: return None
+    if pct_52wh < -25:
+        return None
 
-    # Volatility compression: std_10 / std_50
     std10 = float(df["close"].iloc[-10:].std()) if len(df) >= 10 else 999
     std50 = float(df["close"].iloc[-50:].std()) if len(df) >= 50 else 999
-    if std50 <= 0 or (std10 / std50) > 0.50: return None
+    if std50 <= 0 or (std10 / std50) > 0.50:
+        return None
 
     vol_sma20 = float(latest.get("vol_sma_20", 1) or 1)
-    avg_vol5  = float(df["volume"].iloc[-5:].mean()) if len(df) >= 5 else vol_sma20
-    if avg_vol5 / vol_sma20 > 0.70: return None
+    avg_vol5 = float(df["volume"].iloc[-5:].mean()) if len(df) >= 5 else vol_sma20
+    if avg_vol5 / vol_sma20 > 0.70:
+        return None
 
     pivot = round(float(df["high"].iloc[-25:].max()), 2)
     entry = close if close >= pivot * 0.998 else pivot
-    atr   = float(latest.get("atr_14", close * 0.02) or close * 0.02)
-    sl    = round(float(df["low"].iloc[-15:].min()) * 0.995, 2)
-    risk  = entry - sl
-    if risk <= 0 or (risk / entry * 100) > 8: return None
+    sl = round(float(df["low"].iloc[-15:].min()) * 0.995, 2)
+    risk = entry - sl
+    if risk <= 0 or (risk / entry * 100) > 8:
+        return None
 
-    return BacktestTrade(symbol=symbol, strategy="VCP", signal="BUY",
-        entry_date=str(df.index[-1].date()), entry_price=round(entry, 2),
-        stop_loss=sl, target_1=round(entry + 2*risk, 2), target_2=round(entry + 3.5*risk, 2))
+    # ── FIX: Use smart targets, not hardcoded multiples ──
+    tgts = _compute_smart_targets_bt(df, entry, sl, "BUY")
+    return BacktestTrade(
+        symbol=symbol, strategy="VCP", signal="BUY",
+        entry_date=str(df.index[-1].date()),
+        entry_price=round(entry, 2),
+        stop_loss=sl,
+        target_1=tgts["t1"],
+        target_2=tgts["t2"],
+    )
 
 
 def _check_ema21(df, latest, symbol):
-    if len(df) < 60: return None
+    if len(df) < 60:
+        return None
     close = float(latest.get("close", 0))
     ema21 = float(latest.get("ema_21", 0))
     sma50 = float(latest.get("sma_50", 0))
-    sma200= float(latest.get("sma_200", 0))
-    if close < sma50 or sma50 < sma200: return None
-    if ema21 <= 0: return None
+    sma200 = float(latest.get("sma_200", 0))
+    if close < sma50 or sma50 < sma200:
+        return None
+    if ema21 <= 0:
+        return None
     ema_dist = (close - ema21) / ema21 * 100
-    if ema_dist > 3 or ema_dist < -2: return None
-    if float(latest.get("low", close)) > ema21 * 1.01: return None
-    if close < ema21 or close < float(latest.get("open", close)): return None
+    if ema_dist > 3 or ema_dist < -2:
+        return None
+    if float(latest.get("low", close)) > ema21 * 1.01:
+        return None
+    if close < ema21 or close < float(latest.get("open", close)):
+        return None
 
-    atr  = float(latest.get("atr_14", close * 0.02) or close * 0.02)
-    sl   = round(min(float(latest.get("low", close)), ema21) - 0.5 * atr, 2)
+    atr = float(latest.get("atr_14", close * 0.02) or close * 0.02)
+    sl = round(min(float(latest.get("low", close)), ema21) - 0.5 * atr, 2)
     risk = close - sl
-    if risk <= 0: return None
-    return BacktestTrade(symbol=symbol, strategy="EMA21_Bounce", signal="BUY",
-        entry_date=str(df.index[-1].date()), entry_price=round(close, 2),
-        stop_loss=sl, target_1=round(close + 1.5*risk, 2), target_2=round(close + 2.5*risk, 2))
+    if risk <= 0:
+        return None
+
+    tgts = _compute_smart_targets_bt(df, close, sl, "BUY")
+    return BacktestTrade(
+        symbol=symbol, strategy="EMA21_Bounce", signal="BUY",
+        entry_date=str(df.index[-1].date()),
+        entry_price=round(close, 2),
+        stop_loss=sl,
+        target_1=tgts["t1"],
+        target_2=tgts["t2"],
+    )
 
 
 def _check_52wh(df, latest, symbol):
-    if len(df) < 200: return None
+    if len(df) < 200:
+        return None
     close = float(latest.get("close", 0))
     sma50 = float(latest.get("sma_50", 0))
-    sma200= float(latest.get("sma_200", 0))
-    if close < sma50 or sma50 < sma200: return None
-    if float(latest.get("pct_from_52w_high", -50)) < -3: return None
+    sma200 = float(latest.get("sma_200", 0))
+    if close < sma50 or sma50 < sma200:
+        return None
+    if float(latest.get("pct_from_52w_high", -50)) < -3:
+        return None
     prev_high = float(df["high"].iloc[-20:-1].max()) if len(df) >= 21 else 0
-    if close <= prev_high: return None
-    vol_ratio = float(latest.get("volume", 0)) / (float(latest.get("vol_sma_20", 1) or 1))
-    if vol_ratio < 1.5: return None
+    if close <= prev_high:
+        return None
+    vol_sma20 = float(latest.get("vol_sma_20", 1) or 1)
+    if float(latest.get("volume", 0)) / (vol_sma20 + 1) < 1.5:
+        return None
 
-    atr  = float(latest.get("atr_14", close * 0.02) or close * 0.02)
-    sl   = round(prev_high - 0.5 * atr, 2)
+    atr = float(latest.get("atr_14", close * 0.02) or close * 0.02)
+    sl = round(prev_high - 0.5 * atr, 2)
+    if close - sl <= 0:
+        sl = round(close - 1.5 * atr, 2)
     risk = close - sl
-    if risk <= 0: sl = round(close - 1.5*atr, 2); risk = close - sl
-    if risk <= 0: return None
-    return BacktestTrade(symbol=symbol, strategy="52WH_Breakout", signal="BUY",
-        entry_date=str(df.index[-1].date()), entry_price=round(close, 2),
-        stop_loss=sl, target_1=round(close + 2*risk, 2), target_2=round(close + 3.5*risk, 2))
+    if risk <= 0:
+        return None
+
+    tgts = _compute_smart_targets_bt(df, close, sl, "BUY")
+    return BacktestTrade(
+        symbol=symbol, strategy="52WH_Breakout", signal="BUY",
+        entry_date=str(df.index[-1].date()),
+        entry_price=round(close, 2),
+        stop_loss=sl,
+        target_1=tgts["t1"],
+        target_2=tgts["t2"],
+    )
 
 
 def _check_short(df, latest, symbol):
-    if len(df) < 60: return None
-    if len(df) < 2: return None
-    prev  = df.iloc[-2]
+    if len(df) < 60:
+        return None
+    if df is None or len(df) < 2:
+        return None
+    prev = df.iloc[-2]
     close = float(latest.get("close", 0))
-    atr   = float(latest.get("atr_14", close * 0.02) or close * 0.02)
     resistance = float(df["high"].iloc[-20:-2].max()) if len(df) >= 22 else 0
-    if float(prev.get("high", 0)) < resistance: return None
-    if close >= resistance: return None
-    if close >= float(latest.get("open", close)): return None
-    if close >= float(prev.get("close", close)): return None
+    if float(prev.get("high", 0)) < resistance:
+        return None
+    if close >= resistance:
+        return None
+    if close >= float(latest.get("open", close)):
+        return None
+    if close >= float(prev.get("close", close)):
+        return None
+    vol_sma20 = float(latest.get("vol_sma_20", 1) or 1)
+    if float(latest.get("volume", 0)) / (vol_sma20 + 1) < 1.0:
+        return None
 
-    sl   = round(max(float(latest.get("high", close)), float(prev.get("high", close))) + atr * 0.3, 2)
+    atr = float(latest.get("atr_14", close * 0.02) or close * 0.02)
+    sl = round(max(float(latest.get("high", close)), float(prev.get("high", close))) + atr * 0.3, 2)
     risk = sl - close
-    if risk <= 0: return None
-    return BacktestTrade(symbol=symbol, strategy="Failed_Breakout_Short", signal="SHORT",
-        entry_date=str(df.index[-1].date()), entry_price=round(close, 2),
-        stop_loss=sl, target_1=round(close - 1.5*risk, 2), target_2=round(close - 2.5*risk, 2))
+    if risk <= 0:
+        return None
+
+    tgts = _compute_smart_targets_bt(df, close, sl, "SHORT")
+    return BacktestTrade(
+        symbol=symbol, strategy="Failed_Breakout_Short", signal="SHORT",
+        entry_date=str(df.index[-1].date()),
+        entry_price=round(close, 2),
+        stop_loss=sl,
+        target_1=tgts["t1"],
+        target_2=tgts["t2"],
+    )
 
 
 def _check_ath(df, latest, symbol):
-    if len(df) < 50: return None
-    close  = float(latest.get("close", 0))
-    high_d = float(latest.get("high", 0))
-    ema21  = float(latest.get("ema_21", 0))
-    if high_d <= 0 or close < ema21: return None
-    if (high_d - close) / high_d * 100 > 1.0: return None
-    if float(latest.get("pct_from_52w_high", -50)) < -5: return None
-    if close < float(latest.get("open", close)): return None
-    vol_ratio = float(latest.get("volume", 0)) / (float(latest.get("vol_sma_20", 1) or 1))
-    if vol_ratio < 1.0: return None
+    if len(df) < 50:
+        return None
+    close = float(latest.get("close", 0))
+    high = float(latest.get("high", 0))
+    if high == 0:
+        return None
+    close_vs_high = (high - close) / high * 100
+    if close_vs_high > 1.0:
+        return None
+    ema21 = float(latest.get("ema_21", 0))
+    if close < ema21:
+        return None
+    if float(latest.get("pct_from_52w_high", -50)) < -5:
+        return None
+    if close < float(latest.get("open", close)):
+        return None
+    vol_sma20 = float(latest.get("vol_sma_20", 1) or 1)
+    if float(latest.get("volume", 0)) / (vol_sma20 + 1) < 1.0:
+        return None
 
-    atr  = float(latest.get("atr_14", close * 0.02) or close * 0.02)
-    sl   = round(float(latest.get("low", close - atr)), 2)
+    atr = float(latest.get("atr_14", close * 0.02) or close * 0.02)
+    sl = round(float(latest.get("low", close)), 2)
+    if close - sl <= 0:
+        sl = round(close - atr, 2)
     risk = close - sl
-    if risk <= 0: sl = round(close - atr, 2); risk = atr
-    if risk <= 0: return None
-    return BacktestTrade(symbol=symbol, strategy="Last30Min_ATH", signal="BUY",
-        entry_date=str(df.index[-1].date()), entry_price=round(close, 2),
-        stop_loss=sl, target_1=round(close + 1.5*risk, 2), target_2=round(close + 2.5*risk, 2))
+    if risk <= 0:
+        return None
 
+    tgts = _compute_smart_targets_bt(df, close, sl, "BUY")
+    return BacktestTrade(
+        symbol=symbol, strategy="Last30Min_ATH", signal="BUY",
+        entry_date=str(df.index[-1].date()),
+        entry_price=round(close, 2),
+        stop_loss=sl,
+        target_1=tgts["t1"],
+        target_2=tgts["t2"],
+    )
 
-# ============================================================
-# STATS COMPUTATION
-# ============================================================
 
 def _compute_stats(trades: List[BacktestTrade], strategy: str, symbol: str,
                    lookback: int, cost_model: CostModel = DEFAULT_COSTS) -> BacktestResult:

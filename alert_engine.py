@@ -36,7 +36,7 @@ from fno_list import get_fno_tag
 # Optional: Perplexity news enrichment
 try:
     from perplexity_enrichment import enrich_telegram_alert
-    PERPLEXITY_ENABLED = bool(os.environ.get("GEMINI_API_KEY", ""))
+    PERPLEXITY_ENABLED = bool(os.environ.get("ANTHROPIC_API_KEY", ""))
 except ImportError:
     PERPLEXITY_ENABLED = False
     def enrich_telegram_alert(msg, symbol, strategy, direction): return msg
