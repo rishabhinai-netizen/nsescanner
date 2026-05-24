@@ -289,10 +289,15 @@ def load_tracker() -> Optional[pd.DataFrame]:
 
 def update_open_signals_live(data_dict: dict) -> int:
     """
-    Check OPEN signals against current prices in data_dict.
-    Updates Supabase + CSV. Returns count of updated signals.
+    FIXED v2: Check OPEN signals against price action that occurred STRICTLY
+    AFTER the signal date. This prevents the day-0 false-stop bug where same-day
+    intraday range was triggering phantom stops.
+
+    Returns count of signals updated.
     """
+
     today = date.today().isoformat()
+    today_date = date.today()
     all_signals = load_signals()
     if all_signals is None or all_signals.empty:
         return 0
@@ -314,81 +319,123 @@ def update_open_signals_live(data_dict: dict) -> int:
         if stock_df is None or stock_df.empty:
             continue
 
-        # Use price history SINCE the signal date (not just last 5 bars)
         sig_date_str = str(row.get("Date", row.get("date", today)))
         try:
-            sig_date = pd.Timestamp(sig_date_str)
-            since_signal = stock_df[stock_df.index >= sig_date] if not stock_df.empty else stock_df
-            if since_signal.empty:
-                since_signal = stock_df.iloc[-5:]   # fallback
+            sig_date = pd.Timestamp(sig_date_str).normalize()
         except Exception:
-            since_signal = stock_df.iloc[-5:]
+            continue
 
-        recent_high = float(since_signal["high"].max()) if "high" in since_signal.columns and not since_signal.empty else 0
-        recent_low  = float(since_signal["low"].min())  if "low"  in since_signal.columns and not since_signal.empty else 0
-        close       = float(stock_df.iloc[-1].get("close", 0))
+        # ── CRITICAL FIX: bars STRICTLY AFTER signal date ──
+        # Normalize stock_df.index to handle tz/time variations
+        df_idx = pd.to_datetime(stock_df.index)
+        if df_idx.tz is not None:
+            df_idx_norm = df_idx.tz_convert("Asia/Kolkata").tz_localize(None).normalize()
+        else:
+            df_idx_norm = df_idx.normalize()
+
+        mask = df_idx_norm > sig_date
+        after_signal = stock_df.loc[mask.values] if hasattr(mask, "values") else stock_df[mask]
+
+        if after_signal.empty:
+            # No data after signal date yet — leave OPEN
+            continue
 
         try:
-            entry  = float(row.get("Entry", row.get("entry", 0)) or 0)
-            sl     = float(row.get("SL",    row.get("sl",    0)) or 0)
-            t1     = float(row.get("T1",    row.get("t1",    0)) or 0)
+            entry = float(row.get("Entry", row.get("entry", 0)) or 0)
+            sl = float(row.get("SL", row.get("sl", 0)) or 0)
+            t1 = float(row.get("T1", row.get("t1", 0)) or 0)
             signal = row.get("Signal", row.get("signal", "BUY"))
         except (ValueError, TypeError):
             continue
 
-        if entry <= 0:
+        if entry <= 0 or sl <= 0 or t1 <= 0:
             continue
 
-        # Days held — for expiry logic
-        try:
-            days_held = (date.today() - pd.Timestamp(sig_date_str).date()).days
-        except Exception:
-            days_held = 0
-
-        # Strategy-specific max hold (EMA bounce = 15d, breakout/short = 25d)
+        days_held = (today_date - sig_date.date()).days
         strategy_name = str(row.get("Strategy", row.get("strategy", "")))
         max_hold = 15 if "EMA21" in strategy_name or "Last30" in strategy_name else 25
 
+        # First-touch wins. Walk bars chronologically to honor no-lookahead.
         update = None
-        if signal == "BUY":
-            # Check T1 FIRST — if both SL and T1 were touched, T1 wins (assume best execution)
-            if recent_high >= t1 > 0:
-                update = dict(status="TARGET", exit_date=today,
-                              exit_price=round(t1, 2),
-                              exit_reason="Target 1 Hit",
-                              pnl_pct=round((t1 / entry - 1) * 100, 2))
-            elif recent_low <= sl > 0:
-                update = dict(status="STOPPED", exit_date=today,
-                              exit_price=round(sl, 2),
-                              exit_reason="Stop Loss Hit",
-                              pnl_pct=round((sl / entry - 1) * 100, 2))
-            elif days_held > max_hold:
-                update = dict(status="EXPIRED", exit_date=today,
-                              exit_price=round(close, 2),
-                              exit_reason=f"Expired ({days_held}d > {max_hold}d max)",
-                              pnl_pct=round((close / entry - 1) * 100, 2))
-        elif signal == "SHORT":
-            # T1 check first (if both triggered, T1 wins)
-            if recent_low <= t1 > 0:
-                update = dict(status="TARGET", exit_date=today,
-                              exit_price=round(t1, 2),
-                              exit_reason="Target 1 Hit",
-                              pnl_pct=round((entry - t1) / entry * 100, 2))   # positive = profit
-            elif recent_high >= sl > 0:
-                update = dict(status="STOPPED", exit_date=today,
-                              exit_price=round(sl, 2),
-                              exit_reason="Stop Loss Hit",
-                              pnl_pct=round((entry - sl) / entry * 100, 2))   # negative = loss
-            elif days_held > max_hold:
-                update = dict(status="EXPIRED", exit_date=today,
-                              exit_price=round(close, 2),
-                              exit_reason=f"Expired ({days_held}d > {max_hold}d max)",
-                              pnl_pct=round((entry - close) / entry * 100, 2))
+        for bar_date, bar in after_signal.iterrows():
+            bar_high = float(bar.get("high", bar.get("High", 0)))
+            bar_low = float(bar.get("low", bar.get("Low", 0)))
+            bar_open = float(bar.get("open", bar.get("Open", 0)))
+
+            if signal == "BUY":
+                sl_hit = bar_low <= sl
+                t1_hit = bar_high >= t1
+                if sl_hit and t1_hit:
+                    # Both touched same bar — use open to disambiguate
+                    if bar_open >= entry:
+                        update = dict(status="TARGET", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                      exit_price=round(t1, 2),
+                                      exit_reason="Target 1 Hit (gap-up open)",
+                                      pnl_pct=round((t1 / entry - 1) * 100, 2))
+                    else:
+                        update = dict(status="STOPPED", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                      exit_price=round(sl, 2),
+                                      exit_reason="Stop Loss Hit (gap-down open)",
+                                      pnl_pct=round((sl / entry - 1) * 100, 2))
+                    break
+                elif t1_hit:
+                    update = dict(status="TARGET", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                  exit_price=round(t1, 2),
+                                  exit_reason="Target 1 Hit",
+                                  pnl_pct=round((t1 / entry - 1) * 100, 2))
+                    break
+                elif sl_hit:
+                    update = dict(status="STOPPED", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                  exit_price=round(sl, 2),
+                                  exit_reason="Stop Loss Hit",
+                                  pnl_pct=round((sl / entry - 1) * 100, 2))
+                    break
+            elif signal == "SHORT":
+                sl_hit = bar_high >= sl
+                t1_hit = bar_low <= t1
+                if sl_hit and t1_hit:
+                    if bar_open <= entry:
+                        update = dict(status="TARGET", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                      exit_price=round(t1, 2),
+                                      exit_reason="Target 1 Hit (gap-down open)",
+                                      pnl_pct=round((entry - t1) / entry * 100, 2))
+                    else:
+                        update = dict(status="STOPPED", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                      exit_price=round(sl, 2),
+                                      exit_reason="Stop Loss Hit (gap-up open)",
+                                      pnl_pct=round((entry - sl) / entry * 100, 2))
+                    break
+                elif t1_hit:
+                    update = dict(status="TARGET", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                  exit_price=round(t1, 2),
+                                  exit_reason="Target 1 Hit",
+                                  pnl_pct=round((entry - t1) / entry * 100, 2))
+                    break
+                elif sl_hit:
+                    update = dict(status="STOPPED", exit_date=str(bar_date.date() if hasattr(bar_date, "date") else bar_date),
+                                  exit_price=round(sl, 2),
+                                  exit_reason="Stop Loss Hit",
+                                  pnl_pct=round((entry - sl) / entry * 100, 2))
+                    break
+
+        # If no exit and held too long → EXPIRED
+        if update is None and days_held > max_hold:
+            last_close = float(after_signal.iloc[-1].get("close", after_signal.iloc[-1].get("Close", 0)))
+            last_date = after_signal.index[-1]
+            last_date_str = str(last_date.date() if hasattr(last_date, "date") else last_date)
+            if signal == "BUY":
+                pnl_pct = round((last_close / entry - 1) * 100, 2)
+            else:
+                pnl_pct = round((entry - last_close) / entry * 100, 2)
+            update = dict(status="EXPIRED", exit_date=last_date_str,
+                          exit_price=round(last_close, 2),
+                          exit_reason=f"Expired ({days_held}d > {max_hold}d max)",
+                          pnl_pct=pnl_pct)
 
         if update:
-            sig_date = str(row.get("Date", row.get("date", today)))
+            sig_date_db = str(row.get("Date", row.get("date", today)))
             strategy = row.get("Strategy", row.get("strategy", ""))
-            updates_for_sb.append({"date": sig_date, "strategy": strategy,
+            updates_for_sb.append({"date": sig_date_db, "strategy": strategy,
                                    "symbol": sym, **update})
             updated += 1
 
@@ -398,17 +445,14 @@ def update_open_signals_live(data_dict: dict) -> int:
         for upd in updates_for_sb:
             try:
                 sb.table("signals").update({
-                    "status":       upd["status"],
-                    "exit_date":    upd["exit_date"],
-                    "exit_price":   upd["exit_price"],
-                    "exit_reason":  upd["exit_reason"],
-                    "pnl_pct":      upd["pnl_pct"],
+                    "status": upd["status"],
+                    "exit_date": upd["exit_date"],
+                    "exit_price": upd["exit_price"],
+                    "exit_reason": upd["exit_reason"],
+                    "pnl_pct": upd["pnl_pct"],
                 }).eq("date", upd["date"]).eq("strategy", upd["strategy"]).eq("symbol", upd["symbol"]).execute()
             except Exception as e:
                 logger.warning(f"Supabase update failed for {upd['symbol']}: {e}")
-
-    # Also update CSV files
-    _update_csv_outcomes(updates_for_sb)
 
     return updated
 

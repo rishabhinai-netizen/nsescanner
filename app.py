@@ -1148,11 +1148,13 @@ def page_dashboard():
     if st.button("🚀 Run All Swing Scanners", type="primary"):
         with st.spinner("Scanning with regime + RS filters..."):
             results = run_all_scanners(
-                st.session_state.stock_data, st.session_state.nifty_data, True,
+                st.session_state.stock_data, st.session_state.nifty_data,
+                daily_only=False,   # v2: include intraday scanners when Breeze is connected
                 regime=st.session_state.regime if st.session_state.regime_filter else None,
                 has_intraday=st.session_state.breeze_connected,
                 sector_rankings=st.session_state.sector_rankings,
                 min_rs=st.session_state.rs_filter,
+                breeze=st.session_state.get("breeze_engine"),  # v2
             )
             st.session_state.scan_results = results
             st.session_state.last_scan_time = now_ist()
@@ -1320,11 +1322,13 @@ def page_scanner_hub():
         if selected == "ALL":
             with st.spinner("Scanning (regime + RS filtered)..."):
                 st.session_state.scan_results = run_all_scanners(
-                    st.session_state.stock_data, n, True,
+                    st.session_state.stock_data, n,
+                    daily_only=False,   # v2: include intraday scanners
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
-                    min_rs=st.session_state.rs_filter)
+                    min_rs=st.session_state.rs_filter,
+                    breeze=st.session_state.get("breeze_engine"))
         else:
             with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']}..."):
                 st.session_state.scan_results[selected] = run_scanner(
@@ -1332,7 +1336,8 @@ def page_scanner_hub():
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
-                    min_rs=st.session_state.rs_filter)
+                    min_rs=st.session_state.rs_filter,
+                    breeze=st.session_state.get("breeze_engine"))
         st.session_state.last_scan_time = now_ist()
         # Auto-save signals to log
         all_sigs = [r for sigs in st.session_state.scan_results.values() for r in sigs]

@@ -1,10 +1,10 @@
-name: Daily NSE Scanner
+name: Daily NSE Scanner v2
 
 on:
   schedule:
-    - cron: '0 11 * * 1-5'
-    - cron: '30 13 * * 1-5'
-    - cron: '0 9 * * 0'
+    - cron: '0 11 * * 1-5'   # 4:30 PM IST — EOD quick scan (Nifty 200)
+    - cron: '30 13 * * 1-5'  # 7:00 PM IST — Full EOD scan (Nifty 500) + tracker
+    - cron: '0 9 * * 0'      # 2:30 PM IST Sunday — auto-learner
   workflow_dispatch:
     inputs:
       mode:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write   # only write permission needed for CSV commit
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,13 +39,18 @@ jobs:
           (github.event_name == 'schedule' && github.event.schedule == '0 11 * * 1-5') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'eod')
         env:
+          # Notification stack
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Persistence
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Breeze for intraday strategies (token expires daily — keep updated)
           BREEZE_API_KEY: ${{ secrets.BREEZE_API_KEY }}
           BREEZE_API_SECRET: ${{ secrets.BREEZE_API_SECRET }}
           BREEZE_SESSION_TOKEN: ${{ secrets.BREEZE_SESSION_TOKEN }}
+          # Claude API (replaces GROQ_API_KEY, GOOGLE_API_KEY, GEMINI_API_KEY)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python auto_scanner.py --mode eod --universe nifty200
 
       - name: Full scan + tracker (7:00 PM IST slot)
@@ -60,6 +65,7 @@ jobs:
           BREEZE_API_KEY: ${{ secrets.BREEZE_API_KEY }}
           BREEZE_API_SECRET: ${{ secrets.BREEZE_API_SECRET }}
           BREEZE_SESSION_TOKEN: ${{ secrets.BREEZE_SESSION_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           python auto_scanner.py --mode eod --universe nifty500
           python auto_scanner.py --track

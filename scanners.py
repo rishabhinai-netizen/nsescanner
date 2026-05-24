@@ -19,6 +19,13 @@ import logging
 
 from data_engine import Indicators, now_ist
 
+# v2: Real intraday strategy implementations (replaces the stubs below)
+from intraday_scanners import (
+    scan_orb_intraday as _real_scan_orb,
+    scan_vwap_reclaim_intraday as _real_scan_vwap,
+    scan_lunch_low_intraday as _real_scan_lunch,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -298,94 +305,174 @@ def compute_smart_targets(df: pd.DataFrame, entry: float, stop_loss: float,
 
 STRATEGY_PROFILES = {
     "ORB": {
-        "name": "Opening Range Breakout", "icon": "🔓", "type": "Intraday",
-        "hold": "2-6 hours", "win_rate": 58.2, "expectancy": 0.47,
-        "profit_factor": 1.72, "best_time": "9:30-10:30 AM",
-        "time_window": (time(9,30), time(10,30)),
-        "description": "Price breaks above first 15-min high with volume + VWAP",
+        "name": "Opening Range Breakout",
+        "icon": "🔓",
+        "type": "Intraday",
+        "hold": "2-6 hours",
+        "win_rate_prior": 58.0,          # Backtest prior — overridden by live data
+        "expectancy_prior": 0.47,
+        "profit_factor_prior": 1.72,
+        "best_time": "9:30-10:30 AM",
+        "time_window": (time(9, 30), time(10, 30)),
+        "description": "Price breaks above first 15-min high with 2x volume",
         "requires_intraday": True,
+        "requires_breeze": True,
+        "implemented": True,             # ✅ v2 implemented (was stub in v15)
         "ideal_regimes": ["EXPANSION"],
         "ok_regimes": ["ACCUMULATION"],
         "blocked_regimes": ["PANIC"],
     },
     "VWAP_Reclaim": {
-        "name": "VWAP Reclaim", "icon": "📈", "type": "Intraday",
-        "hold": "2-4 hours", "win_rate": 61.8, "expectancy": 0.39,
-        "profit_factor": 1.84, "best_time": "10:00 AM - 12:30 PM",
-        "time_window": (time(10,0), time(12,30)),
-        "description": "Price reclaims VWAP from below with volume surge",
+        "name": "VWAP Reclaim",
+        "icon": "📈",
+        "type": "Intraday",
+        "hold": "2-4 hours",
+        "win_rate_prior": 60.0,
+        "expectancy_prior": 0.39,
+        "profit_factor_prior": 1.65,
+        "best_time": "10:15 AM - 12:30 PM",
+        "time_window": (time(10, 15), time(12, 30)),
+        "description": "Stock reclaims VWAP from below on volume surge",
         "requires_intraday": True,
+        "requires_breeze": True,
+        "implemented": True,             # ✅ v2 implemented
+        "ideal_regimes": ["EXPANSION", "ACCUMULATION"],
+        "ok_regimes": ["DISTRIBUTION"],
+        "blocked_regimes": ["PANIC"],
+    },
+    "Lunch_Low": {
+        "name": "Lunch Low Reversal",
+        "icon": "🍽️",
+        "type": "Intraday",
+        "hold": "2-3 hours",
+        "win_rate_prior": 55.0,
+        "expectancy_prior": 0.28,
+        "profit_factor_prior": 1.45,
+        "best_time": "12:30-1:30 PM",
+        "time_window": (time(12, 30), time(13, 30)),
+        "description": "Reversal buy at lunch-hour intraday low (mean reversion)",
+        "requires_intraday": True,
+        "requires_breeze": True,
+        "implemented": True,             # ✅ v2 implemented
         "ideal_regimes": ["EXPANSION", "ACCUMULATION"],
         "ok_regimes": ["DISTRIBUTION"],
         "blocked_regimes": ["PANIC"],
     },
     "Last30Min_ATH": {
-        "name": "Last 30 Min ATH", "icon": "⭐", "type": "Overnight",
-        "hold": "Overnight", "win_rate": 68.4, "expectancy": 0.89,
-        "profit_factor": 2.1, "best_time": "3:00-3:25 PM",
-        "time_window": (time(15,0), time(15,25)),
+        "name": "Last 30 Min ATH",
+        "icon": "⭐",
+        "type": "Overnight",
+        "hold": "Overnight (gap-up bet)",
+        "win_rate_prior": 60.0,
+        "expectancy_prior": 0.89,
+        "profit_factor_prior": 1.85,
+        "best_time": "3:00-3:25 PM",
+        "time_window": (time(15, 0), time(15, 25)),
         "description": "Stock at all-time high in last 30 min — overnight momentum",
         "requires_intraday": False,
+        "requires_breeze": False,
+        "implemented": True,
         "ideal_regimes": ["EXPANSION"],
         "ok_regimes": ["ACCUMULATION"],
         "blocked_regimes": ["PANIC", "DISTRIBUTION"],
     },
-    "Lunch_Low": {
-        "name": "Lunch Low Buy", "icon": "🍽️", "type": "Intraday",
-        "hold": "2-3 hours", "win_rate": 56.3, "expectancy": 0.28,
-        "profit_factor": 1.52, "best_time": "12:30-1:30 PM",
-        "time_window": (time(12,30), time(13,30)),
-        "description": "Reversal buy at lunch-hour low — mean reversion",
-        "requires_intraday": True,
-        "ideal_regimes": ["EXPANSION", "ACCUMULATION"],
-        "ok_regimes": ["DISTRIBUTION"],
-        "blocked_regimes": ["PANIC"],
-    },
     "VCP": {
-        "name": "VCP (Minervini v2)", "icon": "🏆", "type": "Swing",
-        "hold": "15-40 days", "win_rate": 45.0, "expectancy": 3.5,
-        "profit_factor": 1.8, "best_time": "Post-Market (3:30 PM+)",
-        "time_window": None,  # Any time
-        "description": "Volatility Contraction Pattern — tight base, volume dry-up, breakout confirmation",
+        "name": "VCP (Minervini v2)",
+        "icon": "🏆",
+        "type": "Swing",
+        "hold": "15-40 days",
+        "win_rate_prior": 50.0,          # Honest prior — overridden by live data
+        "expectancy_prior": 2.5,
+        "profit_factor_prior": 1.65,
+        "best_time": "Post-Market (3:30 PM+)",
+        "time_window": None,
+        "description": "Volatility Contraction Pattern — std₁₀/std₅₀ < 0.50 + volume dry-up + breakout",
         "requires_intraday": False,
+        "requires_breeze": False,
+        "implemented": True,
         "ideal_regimes": ["EXPANSION", "ACCUMULATION"],
         "ok_regimes": [],
         "blocked_regimes": ["PANIC", "DISTRIBUTION"],
     },
     "EMA21_Bounce": {
-        "name": "21 EMA Bounce", "icon": "🔄", "type": "Swing",
-        "hold": "5-15 days", "win_rate": 40.0, "expectancy": 2.14,
-        "profit_factor": 1.96, "best_time": "Post-Market (3:30 PM+)",
+        "name": "21 EMA Bounce",
+        "icon": "🔄",
+        "type": "Swing",
+        "hold": "5-15 days",
+        "win_rate_prior": 50.0,
+        "expectancy_prior": 1.85,
+        "profit_factor_prior": 1.60,
+        "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,
-        "description": "Pullback to 21 EMA in strong uptrend — best long strategy by backtest",
+        "description": "Pullback to 21 EMA in confirmed uptrend with bounce confirmation",
         "requires_intraday": False,
+        "requires_breeze": False,
+        "implemented": True,
         "ideal_regimes": ["EXPANSION"],
         "ok_regimes": ["ACCUMULATION"],
-        "blocked_regimes": ["PANIC"],
+        "blocked_regimes": ["PANIC", "DISTRIBUTION"],
     },
     "52WH_Breakout": {
-        "name": "52-Week High Breakout", "icon": "🚀", "type": "Positional",
-        "hold": "20-60 days", "win_rate": 35.0, "expectancy": 5.82,
-        "profit_factor": 1.86, "best_time": "Post-Market (3:30 PM+)",
+        "name": "52-Week High Breakout",
+        "icon": "🚀",
+        "type": "Positional",
+        "hold": "20-60 days",
+        "win_rate_prior": 40.0,
+        "expectancy_prior": 4.5,
+        "profit_factor_prior": 1.75,
+        "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,
-        "description": "Breaking to new 52-week highs with volume — rare but high reward",
+        "description": "Breaking 52-week high with 1.5x volume + RS ≥ 75",
         "requires_intraday": False,
+        "requires_breeze": False,
+        "implemented": True,
         "ideal_regimes": ["EXPANSION"],
         "ok_regimes": ["ACCUMULATION"],
         "blocked_regimes": ["PANIC", "DISTRIBUTION"],
     },
     "Failed_Breakout_Short": {
-        "name": "Failed Breakout Short", "icon": "📉", "type": "Swing",
-        "hold": "3-10 days", "win_rate": 24.0, "expectancy": 3.12,
-        "profit_factor": 1.60, "best_time": "Post-Market (3:30 PM+)",
+        "name": "Failed Breakout Short",
+        "icon": "📉",
+        "type": "Swing",
+        "hold": "3-10 days",
+        "win_rate_prior": 60.0,
+        "expectancy_prior": 2.8,
+        "profit_factor_prior": 1.65,
+        "best_time": "Post-Market (3:30 PM+)",
         "time_window": None,
-        "description": "Attempted breakout that reversed — most consistent strategy across regimes",
+        "description": "Attempted breakout reversed — most consistent strategy across regimes",
         "requires_intraday": False,
+        "requires_breeze": False,
+        "implemented": True,
         "ideal_regimes": ["DISTRIBUTION", "PANIC"],
         "ok_regimes": ["ACCUMULATION"],
         "blocked_regimes": [],  # Shorts work everywhere
     },
 }
+
+
+# Backward-compat aliases so code reading p["win_rate"] / p["profit_factor"] / p["expectancy"]
+# (without _prior suffix) still works after the v2 rename.
+for _strat_key, _strat_val in STRATEGY_PROFILES.items():
+    if "win_rate" not in _strat_val and "win_rate_prior" in _strat_val:
+        _strat_val["win_rate"] = _strat_val["win_rate_prior"]
+    if "profit_factor" not in _strat_val and "profit_factor_prior" in _strat_val:
+        _strat_val["profit_factor"] = _strat_val["profit_factor_prior"]
+    if "expectancy" not in _strat_val and "expectancy_prior" in _strat_val:
+        _strat_val["expectancy"] = _strat_val["expectancy_prior"]
+
+
+def get_profile(strategy: str, live_pf: float = None) -> dict:
+    """Get profile with optional live PF override."""
+    p = STRATEGY_PROFILES_V2.get(strategy, {}).copy()
+    if live_pf is not None and live_pf > 0:
+        p["live_pf"] = round(live_pf, 2)
+        p["pf_source"] = "live"
+    else:
+        p["live_pf"] = p.get("profit_factor_prior", 1.0)
+        p["pf_source"] = "prior"
+    return p
+
 
 
 # ============================================================================
@@ -1117,29 +1204,22 @@ def scan_approaching_setups(df: pd.DataFrame, symbol: str,
 # INTRADAY SCANNERS — REQUIRE BREEZE (No Proxy Fallback)
 # ============================================================================
 
-def scan_orb_intraday(df: pd.DataFrame, symbol: str, 
-                      has_intraday: bool = False) -> Optional[ScanResult]:
-    """ORB — REQUIRES real intraday data. Returns None without Breeze."""
-    if not has_intraday:
-        return None  # DO NOT GUESS from daily candles
-    # Real ORB logic would use 15-min candle data from Breeze
-    return None
+def scan_orb_intraday(df: pd.DataFrame, symbol: str,
+                      has_intraday: bool = False, breeze=None) -> Optional[ScanResult]:
+    """ORB — v2: Real implementation via intraday_scanners.scan_orb_intraday."""
+    return _real_scan_orb(df, symbol, has_intraday=has_intraday, breeze=breeze)
 
 
 def scan_vwap_reclaim_intraday(df: pd.DataFrame, symbol: str,
-                                has_intraday: bool = False) -> Optional[ScanResult]:
-    """VWAP Reclaim — REQUIRES real intraday data."""
-    if not has_intraday:
-        return None
-    return None
+                                has_intraday: bool = False, breeze=None) -> Optional[ScanResult]:
+    """VWAP Reclaim — v2: Real implementation."""
+    return _real_scan_vwap(df, symbol, has_intraday=has_intraday, breeze=breeze)
 
 
 def scan_lunch_low_intraday(df: pd.DataFrame, symbol: str,
-                             has_intraday: bool = False) -> Optional[ScanResult]:
-    """Lunch Low — REQUIRES real intraday data."""
-    if not has_intraday:
-        return None
-    return None
+                             has_intraday: bool = False, breeze=None) -> Optional[ScanResult]:
+    """Lunch Low — v2: Real implementation."""
+    return _real_scan_lunch(df, symbol, has_intraday=has_intraday, breeze=breeze)
 
 
 # ============================================================================
@@ -1235,7 +1315,8 @@ def run_scanner(scanner_name: str, data_dict: Dict[str, pd.DataFrame],
                 has_intraday: bool = False,
                 sector_rankings: Dict[str, float] = None,
                 min_rs: float = 0,
-                compute_sqi_flag: bool = True) -> List[ScanResult]:
+                compute_sqi_flag: bool = True,
+                breeze=None) -> List[ScanResult]:
     """
     Run a single scanner with regime/RS/sector filtering and SQI ranking.
     
@@ -1283,7 +1364,7 @@ def run_scanner(scanner_name: str, data_dict: Dict[str, pd.DataFrame],
             
             # Call scanner
             if scanner_name in INTRADAY_SCANNERS:
-                result = scanner_func(enriched, symbol, has_intraday=has_intraday)
+                result = scanner_func(enriched, symbol, has_intraday=has_intraday, breeze=breeze)
             else:
                 result = scanner_func(enriched, symbol)
             
@@ -1379,7 +1460,8 @@ def run_all_scanners(data_dict: Dict[str, pd.DataFrame],
                      has_intraday: bool = False,
                      sector_rankings: Dict[str, float] = None,
                      min_rs: float = 70,
-                     compute_sqi_flag: bool = True) -> Dict[str, List[ScanResult]]:
+                     compute_sqi_flag: bool = True,
+                     breeze=None) -> Dict[str, List[ScanResult]]:
     """Run all scanners with regime/RS/sector filters and SQI ranking."""
     results = {}
     scanners = DAILY_SCANNERS if daily_only else ALL_SCANNERS
@@ -1387,7 +1469,7 @@ def run_all_scanners(data_dict: Dict[str, pd.DataFrame],
     for name in scanners:
         res = run_scanner(name, data_dict, nifty_df, regime, 
                           has_intraday, sector_rankings, min_rs,
-                          compute_sqi_flag)
+                          compute_sqi_flag, breeze=breeze)
         if res:
             results[name] = res
     
