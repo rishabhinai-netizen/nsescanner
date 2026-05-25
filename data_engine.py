@@ -300,23 +300,37 @@ class BreezeEngine:
     
     def fetch_intraday(self, symbol: str, interval: str = "5minute",
                        days_back: int = 5) -> Optional[pd.DataFrame]:
-        """Fetch intraday data from Breeze API."""
+        """Fetch intraday data from Breeze API.
+
+        v2 fix: NSE trading symbol → Breeze internal stock_code via
+        breeze_symbol_map.to_breeze_code(). Previously sent the NSE symbol
+        raw, which Breeze rejected for most stocks, so every intraday scan
+        silently returned None.
+        """
         if not self.connected or self.breeze is None:
             return None
         try:
+            try:
+                from breeze_symbol_map import to_breeze_code
+                stock_code = to_breeze_code(symbol)
+            except Exception:
+                stock_code = symbol
+
             from_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%dT07:00:00.000Z")
             to_date = datetime.now().strftime("%Y-%m-%dT23:59:59.000Z")
-            
+
             data = self.breeze.get_historical_data_v2(
                 interval=interval,
                 from_date=from_date,
                 to_date=to_date,
-                stock_code=symbol,
+                stock_code=stock_code,
                 exchange_code="NSE",
                 product_type="cash"
             )
             if data and "Success" in str(data.get("Status", "")):
                 df = pd.DataFrame(data["Success"])
+                if df.empty:
+                    return None
                 df["datetime"] = pd.to_datetime(df["datetime"])
                 df = df.set_index("datetime")
                 df = df.rename(columns={

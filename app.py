@@ -440,7 +440,9 @@ for k, v in {
     "telegram_token":"", "telegram_chat_id":"",
     "journal":None, "last_scan_time":None, "sector_rankings":{},
     "rrg_data": {},  # v15: RRG sector rotation data
-    "rs_filter": 70, "regime_filter": True,
+    "rs_filter": 50, "regime_filter": False,
+    "soft_gate": True,  # v3: regime/PF gate downgrades signals instead of zeroing them
+    "scan_diagnostics": {},  # v3: per-strategy funnel counts for the last scan
     "fundamental_filter": False, "fundamental_cache": {},
     "approaching_setups": [],
     "oc_results": {},    # v15: Option Chain results cache
@@ -1135,17 +1137,22 @@ def page_dashboard():
     
     # === QUICK SCAN ===
     st.markdown("### ⚡ Quick Scan")
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns([1.3, 1, 1])
     with c1:
         st.session_state.rs_filter = st.slider("Min RS Rating (Long signals only)", 0, 95,
             st.session_state.rs_filter, 5, key="dash_rs",
             help=tip("rs_rating") + " **Note:** SHORT signals are never filtered by RS — weak stocks are ideal short candidates.")
     with c2:
-        st.session_state.regime_filter = st.checkbox("Block strategies not suited for current regime",
+        st.session_state.regime_filter = st.checkbox("Tag regime fit on signals",
             value=st.session_state.regime_filter, key="dash_regime",
-            help=tip("regime_fit"))
+            help="When ON, every signal carries an IDEAL/CAUTION/BLOCKED regime tag and confidence is adjusted. When OFF, regime context is ignored entirely.")
+    with c3:
+        st.session_state.soft_gate = st.checkbox("Soft gate (recommended)",
+            value=st.session_state.soft_gate, key="dash_softgate",
+            help="ON: regime-blocked / low-PF strategies still produce signals, just with reduced confidence and a warning. OFF: those strategies return zero signals (old behaviour — caused empty scan results in DISTRIBUTION/PANIC regimes).")
     
     if st.button("🚀 Run All Swing Scanners", type="primary"):
+        diagnostics = {}
         with st.spinner("Scanning with regime + RS filters..."):
             results = run_all_scanners(
                 st.session_state.stock_data, st.session_state.nifty_data,
@@ -1155,8 +1162,11 @@ def page_dashboard():
                 sector_rankings=st.session_state.sector_rankings,
                 min_rs=st.session_state.rs_filter,
                 breeze=st.session_state.get("breeze_engine"),  # v2
+                hard_gate=not st.session_state.soft_gate,
+                diagnostics=diagnostics,
             )
             st.session_state.scan_results = results
+            st.session_state.scan_diagnostics = diagnostics
             st.session_state.last_scan_time = now_ist()
             # Auto-save signals to log
             all_sigs = [r for sigs in results.values() for r in sigs]
@@ -1164,6 +1174,55 @@ def page_dashboard():
             send_scan_alerts(results)
             st.rerun()
     
+    # Always render the funnel after a scan — even if zero signals.
+    # This is the single most important UX fix: the user can SEE where
+    # signals were filtered out instead of staring at "no results".
+    diag = st.session_state.get("scan_diagnostics") or {}
+    if diag:
+        total_raw = sum(d.get("raw", 0) for d in diag.values())
+        total_final = sum(d.get("final", 0) for d in diag.values())
+        total_errors = sum(d.get("errors", 0) for d in diag.values())
+        with st.expander(
+            f"🔬 Scan Funnel — {total_raw} raw → {total_final} final"
+            + (f" · {total_errors} errors" if total_errors else ""),
+            expanded=(total_final == 0)
+        ):
+            if total_final == 0 and total_raw == 0:
+                st.warning(
+                    "**No raw signals produced by any scanner.** "
+                    "Likely causes: (1) market is genuinely setup-poor today, "
+                    "(2) stock universe data is stale — try Refresh Data, or "
+                    "(3) data quality issue. Errors column will be non-zero "
+                    "if an exception is being raised."
+                )
+            elif total_final == 0:
+                st.warning(
+                    f"**{total_raw} raw signals were filtered down to zero.** "
+                    "Try lowering the RS filter, turning off 'Tag regime fit', "
+                    "or making sure Soft Gate is ON."
+                )
+            funnel_rows = []
+            for strat, d in diag.items():
+                p = STRATEGY_PROFILES.get(strat, {})
+                funnel_rows.append({
+                    "Strategy": f"{p.get('icon','')} {p.get('name', strat)}",
+                    "Raw": d.get("raw", 0),
+                    "RS-filtered": d.get("rs_filtered", 0),
+                    "Regime-dim": d.get("regime_blocked", 0),
+                    "PF-dim": d.get("pf_gated", 0),
+                    "Sector-dim": d.get("sector_dimmed", 0),
+                    "Errors": d.get("errors", 0),
+                    "Final": d.get("final", 0),
+                    "Soft-gated?": "Yes" if d.get("soft_gated") else "—",
+                })
+            st.dataframe(pd.DataFrame(funnel_rows), use_container_width=True, hide_index=True)
+            st.caption(
+                "Raw = signals produced before filters · "
+                "RS-filtered = dropped for failing min-RS gate · "
+                "Regime-dim / PF-dim = confidence reduced (soft-gate ON) or dropped (soft-gate OFF) · "
+                "Final = what you see below."
+            )
+
     if st.session_state.scan_results:
         # Confluence section
         confluence = detect_confluence(st.session_state.scan_results)
@@ -1305,9 +1364,10 @@ def page_scanner_hub():
                 f'<span style="color:#ea580c;font-size:0.8em">+{p["expectancy"]}%</span><br>{data_tag}</div>',
                 unsafe_allow_html=True)
             
-            # Disable button if blocked or needs breeze
-            disabled = (fit_class == "blocked" and st.session_state.regime_filter) or \
-                       (needs_breeze and not st.session_state.breeze_connected)
+            # Disable button if it needs Breeze and Breeze isn't connected.
+            # Regime-block is no longer hard-disabled — the soft gate handles
+            # downgrading. User can still scan and SEE there were no setups.
+            disabled = needs_breeze and not st.session_state.breeze_connected
             if st.button("Scan" if not disabled else "🚫", key=f"s_{k}",
                          use_container_width=True, disabled=disabled,
                          help=tip(k)):
@@ -1319,6 +1379,7 @@ def page_scanner_hub():
     
     if selected:
         n = st.session_state.nifty_data
+        diagnostics = {}
         if selected == "ALL":
             with st.spinner("Scanning (regime + RS filtered)..."):
                 st.session_state.scan_results = run_all_scanners(
@@ -1328,7 +1389,9 @@ def page_scanner_hub():
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
                     min_rs=st.session_state.rs_filter,
-                    breeze=st.session_state.get("breeze_engine"))
+                    breeze=st.session_state.get("breeze_engine"),
+                    hard_gate=not st.session_state.soft_gate,
+                    diagnostics=diagnostics)
         else:
             with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']}..."):
                 st.session_state.scan_results[selected] = run_scanner(
@@ -1337,7 +1400,10 @@ def page_scanner_hub():
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
                     min_rs=st.session_state.rs_filter,
-                    breeze=st.session_state.get("breeze_engine"))
+                    breeze=st.session_state.get("breeze_engine"),
+                    hard_gate=not st.session_state.soft_gate,
+                    diagnostics=diagnostics)
+        st.session_state.scan_diagnostics = diagnostics
         st.session_state.last_scan_time = now_ist()
         # Auto-save signals to log
         all_sigs = [r for sigs in st.session_state.scan_results.values() for r in sigs]

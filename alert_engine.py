@@ -246,16 +246,37 @@ def check_exit_alerts(data_dict: dict) -> int:
 
 
 def check_entry_alerts(data_dict: dict, nifty_df, regime: dict) -> int:
-    """Check all stocks for fresh scan signals and fire entry Telegram alerts."""
+    """Check all stocks for fresh scan signals and fire entry Telegram alerts.
+
+    v3 approach: use SOFT gate so we don't starve in DISTRIBUTION/PANIC
+    regimes, but only fire Telegram for SQI ≥ 60 (STRONG+) OR confluence.
+    This balances responsiveness against noise:
+      - Streamlit UI sees all setups (good for discovery)
+      - Telegram fires only for high-conviction setups OR confluence
+      - You still get alerts even when the regime model is wrong about
+        sector rotation
+    """
+    diag: Dict = {}
     results = run_all_scanners(
         data_dict, nifty_df,
         daily_only=True,
         regime=regime,
         has_intraday=False,
         sector_rankings={},
-        min_rs=65,
+        min_rs=55,
         compute_sqi_flag=True,
+        hard_gate=False,        # v3: soft gate
+        diagnostics=diag,
     )
+
+    # Log the funnel so we can see exactly what the alert engine saw
+    for s, d in diag.items():
+        log.info(
+            f"funnel {s}: raw={d['raw']} rs_filt={d['rs_filtered']} "
+            f"regime_dim={d['regime_blocked']} pf_dim={d['pf_gated']} "
+            f"errors={d['errors']} final={d['final']} "
+            f"{'(soft-gated)' if d['soft_gated'] else ''}"
+        )
 
     if not results:
         return 0
@@ -271,7 +292,8 @@ def check_entry_alerts(data_dict: dict, nifty_df, regime: dict) -> int:
     confluence = {sym: pairs for sym, pairs in symbol_strategies.items() if len(pairs) >= 2}
     fired = 0
 
-    # Send confluence alerts first (highest priority)
+    # Confluence: fire regardless of SQI (multi-strategy confirmation is the
+    # signal in itself).
     for sym, pairs in confluence.items():
         strats = [p[0] for p in pairs]
         cmp    = pairs[0][1].cmp
@@ -282,23 +304,27 @@ def check_entry_alerts(data_dict: dict, nifty_df, regime: dict) -> int:
                 fired += 1
                 log.info(f"CONFLUENCE alert: {sym} — {strats}")
 
-    # Individual strategy alerts
+    # Individual alerts: SQI floor depends on regime fit
+    # - IDEAL fit  → SQI ≥ 55
+    # - OK fit     → SQI ≥ 60
+    # - CAUTION    → SQI ≥ 65
+    # - BLOCKED    → SQI ≥ 75 (counter-trend; must be exceptional)
+    sqi_floors = {"IDEAL": 55, "OK": 60, "CAUTION": 65, "BLOCKED": 75}
     for strategy, signals in results.items():
         for r in signals:
-            # Only fire for STRONG/ELITE SQI signals
             sqi_val = getattr(r, "sqi", 50)
-            if sqi_val < 50:
+            floor = sqi_floors.get(getattr(r, "regime_fit", "OK"), 60)
+            if sqi_val < floor:
                 continue
             if already_alerted(r.symbol, strategy, "TRIGGER"):
                 continue
             msg = fmt_entry_alert(r)
-            # Enrich with Gemini news context for all signals with SQI >= 50
-            if PERPLEXITY_ENABLED and sqi_val >= 50:
+            if PERPLEXITY_ENABLED and sqi_val >= 60:
                 msg = enrich_telegram_alert(msg, r.symbol, r.strategy, r.signal)
             if send_telegram(msg):
                 mark_alerted(r.symbol, strategy, "TRIGGER", r.entry)
                 fired += 1
-                log.info(f"ENTRY alert: {r.symbol} {strategy} SQI:{sqi_val}")
+                log.info(f"ENTRY alert: {r.symbol} {strategy} SQI:{sqi_val} fit={r.regime_fit}")
 
     return fired
 

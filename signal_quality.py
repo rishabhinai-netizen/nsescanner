@@ -228,8 +228,14 @@ def compute_sqi(
 
 
 def is_strategy_allowed(strategy: str, regime: str, min_pf: float = 1.0) -> bool:
+    """Return True if strategy is allowed in this regime.
+
+    v2 fix: missing strategy/regime entries default to 1.0 (allowed)
+    rather than 0.5 (silently gated). This prevents new strategies or
+    regimes from being invisibly excluded from scans.
+    """
     live_pf_dict = _load_live_pf()
-    pf = live_pf_dict.get(strategy, {}).get(regime, 0.5)
+    pf = live_pf_dict.get(strategy, {}).get(regime, 1.0)
     return pf >= min_pf
 
 

@@ -1316,85 +1316,130 @@ def run_scanner(scanner_name: str, data_dict: Dict[str, pd.DataFrame],
                 sector_rankings: Dict[str, float] = None,
                 min_rs: float = 0,
                 compute_sqi_flag: bool = True,
-                breeze=None) -> List[ScanResult]:
+                breeze=None,
+                hard_gate: bool = False,
+                enriched_nifty: pd.DataFrame = None,
+                diagnostics: dict = None) -> List[ScanResult]:
     """
     Run a single scanner with regime/RS/sector filtering and SQI ranking.
-    
-    v2 changes:
-    - Strategy×Regime profit factor gating (blocks strategies with PF < 1.0 in current regime)
-    - Signal Quality Index computation and sorting
-    - Auto-dim integration from strategy health tracker
-    - RS acceleration computation
+
+    v3 changes (signal-leak fix):
+    - hard_gate=False (default): regime/PF mismatches DOWNGRADE confidence
+      and SQI rather than zeroing the strategy. Set hard_gate=True to keep
+      the old blocking behaviour for the alert engine.
+    - enriched_nifty passed in once and reused for every symbol (was being
+      re-enriched 500× per scanner — a real perf killer).
+    - diagnostics dict (optional) captures per-strategy funnel counts:
+        raw, regime_blocked, pf_gated, rs_filtered, sector_dimmed,
+        errors, final. Lets the UI show *why* signals disappeared.
+    - Exceptions during per-symbol scanning are now logged at DEBUG level
+      and counted in diagnostics["errors"] instead of silently swallowed.
     """
     scanner_func = ALL_SCANNERS.get(scanner_name) or DAILY_SCANNERS.get(scanner_name)
     if not scanner_func:
         return []
-    
+
     current_regime = regime.get("regime", "UNKNOWN") if regime else "UNKNOWN"
-    
+
+    # Per-scanner diagnostic counters
+    diag = {
+        "raw": 0, "regime_blocked": 0, "pf_gated": 0,
+        "rs_filtered": 0, "sector_dimmed": 0, "errors": 0, "final": 0,
+        "soft_gated": False,  # True if regime/PF would have hard-blocked us
+    }
+
     # ── Strategy × Regime Profit Factor Gate ──
-    # Block strategies with PF < 1.0 in current regime
     from signal_quality import is_strategy_allowed, compute_sqi as _compute_sqi
-    if current_regime != "UNKNOWN" and not is_strategy_allowed(scanner_name, current_regime, min_pf=0.7):
-        logger.info(f"Scanner {scanner_name} GATED by {current_regime} regime (PF < 0.7)")
-        return []
-    
-    # Check if this strategy is blocked by current regime
+    pf_gated = (current_regime != "UNKNOWN"
+                and not is_strategy_allowed(scanner_name, current_regime, min_pf=0.7))
+
+    # Regime block check
+    regime_blocked = False
     if regime:
-        blocked = regime.get("blocked_strategies", [])
-        if scanner_name in blocked:
-            logger.info(f"Scanner {scanner_name} BLOCKED by {current_regime} regime")
-            return []
-    
-    # Determine regime fit for this scanner
+        if scanner_name in regime.get("blocked_strategies", []):
+            regime_blocked = True
+
+    # Hard-gate path (alert engine / backtests) — preserve old behaviour
+    if hard_gate and (pf_gated or regime_blocked):
+        logger.info(f"Scanner {scanner_name} HARD-GATED in {current_regime} "
+                    f"(pf_gated={pf_gated}, regime_blocked={regime_blocked})")
+        if diagnostics is not None:
+            diag["soft_gated"] = False
+            diagnostics[scanner_name] = diag
+        return []
+
+    # Soft-gate path: let signals through but flag and downgrade
+    if pf_gated or regime_blocked:
+        diag["soft_gated"] = True
+        logger.info(f"Scanner {scanner_name} SOFT-GATED in {current_regime} "
+                    f"(pf_gated={pf_gated}, regime_blocked={regime_blocked}) — "
+                    f"signals will be downgraded but not blocked")
+
     def get_regime_fit(scanner_name: str, regime: dict) -> str:
         if not regime: return "OK"
         if scanner_name in regime.get("allowed_strategies", []): return "IDEAL"
         if scanner_name in regime.get("caution_strategies", []): return "CAUTION"
         if scanner_name in regime.get("blocked_strategies", []): return "BLOCKED"
         return "OK"
-    
-    # Get strategy health for auto-dim
+
     health = strategy_health.get_health(scanner_name)
-    
+
+    # ── Pre-enrich Nifty ONCE (was being done per-symbol — huge perf win) ──
+    if enriched_nifty is None and nifty_df is not None:
+        try:
+            enriched_nifty = Indicators.enrich_dataframe(nifty_df)
+        except Exception as e:
+            logger.warning(f"Could not enrich Nifty df: {e}")
+            enriched_nifty = None
+
     results = []
     for symbol, df in data_dict.items():
         try:
-            enriched = Indicators.enrich_dataframe(df)
-            
-            # Call scanner
+            # If the data dict already has an enriched frame, use it
+            if df is None or len(df) < 30:
+                continue
+            if "sma_50" in df.columns and "rsi_14" in df.columns:
+                enriched = df
+            else:
+                enriched = Indicators.enrich_dataframe(df)
+
             if scanner_name in INTRADAY_SCANNERS:
                 result = scanner_func(enriched, symbol, has_intraday=has_intraday, breeze=breeze)
             else:
                 result = scanner_func(enriched, symbol)
-            
+
             if result is None:
                 continue
-            
-            # Compute RS rating
+
+            diag["raw"] += 1
+
+            # RS rating (uses pre-enriched Nifty)
             rs_accel = 0.0
-            if nifty_df is not None:
-                enriched_nifty = Indicators.enrich_dataframe(nifty_df)
-                result.rs_rating = Indicators.relative_strength(enriched, enriched_nifty)
-                rs_accel = Indicators.rs_acceleration(enriched, enriched_nifty, lookback=21)
-            
-            # RS FILTER: Long signals require RS > min_rs
+            if enriched_nifty is not None:
+                try:
+                    result.rs_rating = Indicators.relative_strength(enriched, enriched_nifty)
+                    rs_accel = Indicators.rs_acceleration(enriched, enriched_nifty, lookback=21)
+                except Exception as _rs_e:
+                    logger.debug(f"RS calc failed for {symbol}: {_rs_e}")
+
+            # RS filter applies to BUY only
             if result.signal == "BUY" and min_rs > 0 and result.rs_rating < min_rs:
+                diag["rs_filtered"] += 1
                 continue
-            
-            # SECTOR FILTER: Only buy in top-performing sectors
+
+            # Sector filter
             from stock_universe import get_sector
             result.sector = get_sector(symbol)
             if sector_rankings and result.signal == "BUY":
                 sector_rank = sector_rankings.get(result.sector, 50)
-                if sector_rank < 30:  # Bottom 30% sectors
+                if sector_rank < 30:
                     result.confidence = max(result.confidence - 15, 20)
                     result.reasons.append(f"⚠️ Weak sector ({result.sector}) — reduced confidence")
-                elif sector_rank > 70:  # Top 30% sectors
+                    diag["sector_dimmed"] += 1
+                elif sector_rank > 70:
                     result.confidence = min(result.confidence + 5, 95)
                     result.reasons.append(f"✅ Strong sector tailwind ({result.sector})")
-            
-            # Regime fit tag
+
             fit = get_regime_fit(scanner_name, regime)
             result.regime_fit = fit
             if fit == "IDEAL":
@@ -1403,53 +1448,70 @@ def run_scanner(scanner_name: str, data_dict: Dict[str, pd.DataFrame],
             elif fit == "CAUTION":
                 result.confidence = max(result.confidence - 10, 25)
                 result.reasons.append(f"⚠️ Regime: {current_regime} — use smaller size")
-            
-            # ── Compute SQI ──
+
+            # ── Soft-gate penalty: regime-blocked / PF-gated signals stay
+            # visible but lose confidence. They will rank LAST after SQI sort. ──
+            if regime_blocked:
+                result.confidence = max(result.confidence - 20, 15)
+                result.reasons.append(f"🚫 Regime {current_regime} normally blocks this strategy")
+                diag["regime_blocked"] += 1
+            if pf_gated:
+                result.confidence = max(result.confidence - 15, 15)
+                result.reasons.append(f"📉 Low historical PF in {current_regime} — counter-trend trade")
+                diag["pf_gated"] += 1
+
+            # SQI
             if compute_sqi_flag:
-                vol_compression = Indicators.volatility_compression_ratio(enriched, 10, 50)
-                vol_dd = Indicators.volume_down_day_ratio(enriched, 20)
-                
-                sqi_result = _compute_sqi(
-                    strategy=scanner_name,
-                    regime=current_regime,
-                    rs_rating=result.rs_rating,
-                    rs_acceleration=rs_accel,
-                    vol_compression_ratio=vol_compression,
-                    volume_ratio=result.volume_ratio,
-                    confidence=result.confidence,
-                    vol_down_day_ratio=vol_dd,
-                    weekly_aligned=result.weekly_aligned,
-                    rolling_pf=health.get("pf"),
-                )
-                
-                # Attach SQI to result (using dynamic attributes)
-                result.sqi = sqi_result.sqi
-                result.sqi_grade = sqi_result.grade
-                result.sqi_icon = sqi_result.grade_icon
-                result.sqi_breakdown = sqi_result.breakdown
-                
-                # Auto-dim: add warning if strategy is weak
+                try:
+                    vol_compression = Indicators.volatility_compression_ratio(enriched, 10, 50)
+                    vol_dd = Indicators.volume_down_day_ratio(enriched, 20)
+                    sqi_result = _compute_sqi(
+                        strategy=scanner_name,
+                        regime=current_regime,
+                        rs_rating=result.rs_rating,
+                        rs_acceleration=rs_accel,
+                        vol_compression_ratio=vol_compression,
+                        volume_ratio=result.volume_ratio,
+                        confidence=result.confidence,
+                        vol_down_day_ratio=vol_dd,
+                        weekly_aligned=result.weekly_aligned,
+                        rolling_pf=health.get("pf"),
+                    )
+                    result.sqi = sqi_result.sqi
+                    result.sqi_grade = sqi_result.grade
+                    result.sqi_icon = sqi_result.grade_icon
+                    result.sqi_breakdown = sqi_result.breakdown
+                except Exception as _sqi_e:
+                    logger.debug(f"SQI failed for {symbol}/{scanner_name}: {_sqi_e}")
+                    result.sqi = float(result.confidence)
+                    result.sqi_grade = "MODERATE"
+                    result.sqi_icon = "⚡"
+                    result.sqi_breakdown = "SQI unavailable"
+
                 if health.get("warning"):
                     result.reasons.append(health["warning"])
-                    # Reduce SQI by strategy health weight
                     result.sqi = round(result.sqi * health.get("sqi_weight", 1.0), 1)
-                
-                # RS acceleration note
+
                 if rs_accel > 0.3:
                     result.reasons.append(f"📈 RS accelerating (+{rs_accel:.2f}/day)")
                 elif rs_accel < -0.3:
                     result.reasons.append(f"📉 RS decelerating ({rs_accel:.2f}/day)")
-            
+
             results.append(result)
-            
+
         except Exception as e:
+            diag["errors"] += 1
+            logger.debug(f"Scanner {scanner_name} error on {symbol}: {e}")
             continue
-    
-    # Sort by SQI (if computed) then confidence
+
     if compute_sqi_flag:
         results.sort(key=lambda x: getattr(x, 'sqi', x.confidence), reverse=True)
     else:
         results.sort(key=lambda x: x.confidence, reverse=True)
+
+    diag["final"] = len(results)
+    if diagnostics is not None:
+        diagnostics[scanner_name] = diag
     return results
 
 
@@ -1461,18 +1523,45 @@ def run_all_scanners(data_dict: Dict[str, pd.DataFrame],
                      sector_rankings: Dict[str, float] = None,
                      min_rs: float = 70,
                      compute_sqi_flag: bool = True,
-                     breeze=None) -> Dict[str, List[ScanResult]]:
-    """Run all scanners with regime/RS/sector filters and SQI ranking."""
+                     breeze=None,
+                     hard_gate: bool = False,
+                     diagnostics: dict = None) -> Dict[str, List[ScanResult]]:
+    """
+    Run all scanners with regime/RS/sector filters and SQI ranking.
+
+    v3 changes (signal-leak fix):
+    - hard_gate=False (default) — UI never shows zero just because regime/PF
+      disagree. Set hard_gate=True for the alert engine where you only want
+      conviction signals to fire Telegram.
+    - Nifty enriched ONCE for all scanners (was being re-enriched per
+      symbol per scanner — eg 500 * 5 = 2,500 redundant enrichments).
+    - diagnostics dict (optional) accumulates per-strategy funnel counts:
+        diagnostics["VCP"] = {"raw":12,"regime_blocked":0,"pf_gated":0,
+                              "rs_filtered":11,"errors":0,"final":1, ...}
+    """
     results = {}
     scanners = DAILY_SCANNERS if daily_only else ALL_SCANNERS
-    
+
+    # Pre-enrich Nifty once
+    enriched_nifty = None
+    if nifty_df is not None:
+        try:
+            enriched_nifty = Indicators.enrich_dataframe(nifty_df)
+        except Exception as e:
+            logger.warning(f"run_all_scanners: Nifty pre-enrichment failed: {e}")
+
     for name in scanners:
-        res = run_scanner(name, data_dict, nifty_df, regime, 
-                          has_intraday, sector_rankings, min_rs,
-                          compute_sqi_flag, breeze=breeze)
+        res = run_scanner(
+            name, data_dict, nifty_df, regime,
+            has_intraday, sector_rankings, min_rs,
+            compute_sqi_flag, breeze=breeze,
+            hard_gate=hard_gate,
+            enriched_nifty=enriched_nifty,
+            diagnostics=diagnostics,
+        )
         if res:
             results[name] = res
-    
+
     return results
 
 
