@@ -1154,14 +1154,16 @@ def page_dashboard():
     if st.button("🚀 Run All Swing Scanners", type="primary"):
         diagnostics = {}
         with st.spinner("Scanning with regime + RS filters..."):
+            # FIX: use pre-enriched data — avoids re-computing indicators 500x per scanner
+            _scan_data = st.session_state.enriched_data or st.session_state.stock_data
             results = run_all_scanners(
-                st.session_state.stock_data, st.session_state.nifty_data,
-                daily_only=False,   # v2: include intraday scanners when Breeze is connected
+                _scan_data, st.session_state.nifty_data,
+                daily_only=not st.session_state.get("breeze_connected", False),
                 regime=st.session_state.regime if st.session_state.regime_filter else None,
                 has_intraday=st.session_state.breeze_connected,
                 sector_rankings=st.session_state.sector_rankings,
                 min_rs=st.session_state.rs_filter,
-                breeze=st.session_state.get("breeze_engine"),  # v2
+                breeze=st.session_state.get("breeze_engine"),
                 hard_gate=not st.session_state.soft_gate,
                 diagnostics=diagnostics,
             )
@@ -1380,11 +1382,13 @@ def page_scanner_hub():
     if selected:
         n = st.session_state.nifty_data
         diagnostics = {}
+        # FIX: use pre-enriched data — avoids re-computing indicators 500x per scanner
+        _hub_data = st.session_state.enriched_data or st.session_state.stock_data
         if selected == "ALL":
             with st.spinner("Scanning (regime + RS filtered)..."):
                 st.session_state.scan_results = run_all_scanners(
-                    st.session_state.stock_data, n,
-                    daily_only=False,   # v2: include intraday scanners
+                    _hub_data, n,
+                    daily_only=not st.session_state.get("breeze_connected", False),
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,
@@ -1395,7 +1399,7 @@ def page_scanner_hub():
         else:
             with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']}..."):
                 st.session_state.scan_results[selected] = run_scanner(
-                    selected, st.session_state.stock_data, n,
+                    selected, _hub_data, n,
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
                     has_intraday=st.session_state.breeze_connected,
                     sector_rankings=st.session_state.sector_rankings,

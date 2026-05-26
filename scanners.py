@@ -464,7 +464,7 @@ for _strat_key, _strat_val in STRATEGY_PROFILES.items():
 
 def get_profile(strategy: str, live_pf: float = None) -> dict:
     """Get profile with optional live PF override."""
-    p = STRATEGY_PROFILES_V2.get(strategy, {}).copy()
+    p = STRATEGY_PROFILES.get(strategy, {}).copy()
     if live_pf is not None and live_pf > 0:
         p["live_pf"] = round(live_pf, 2)
         p["pf_source"] = "live"
