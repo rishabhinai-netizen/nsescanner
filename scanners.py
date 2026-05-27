@@ -359,7 +359,7 @@ STRATEGY_PROFILES = {
         "blocked_regimes": ["PANIC"],
     },
     "Last30Min_ATH": {
-        "name": "Last 30 Min ATH",
+        "name": "Near 52W High (EOD)",
         "icon": "⭐",
         "type": "Overnight",
         "hold": "Overnight (gap-up bet)",
@@ -368,7 +368,7 @@ STRATEGY_PROFILES = {
         "profit_factor_prior": 1.85,
         "best_time": "3:00-3:25 PM",
         "time_window": (time(15, 0), time(15, 25)),
-        "description": "Stock at all-time high in last 30 min — overnight momentum",
+        "description": "Stock closing within 5% of 52-week high at EOD — overnight momentum carry",
         "requires_intraday": False,
         "requires_breeze": False,
         "implemented": True,
@@ -976,7 +976,7 @@ def scan_52wh_breakout(df: pd.DataFrame, symbol: str) -> Optional[ScanResult]:
 
 
 def scan_last30min_ath(df: pd.DataFrame, symbol: str) -> Optional[ScanResult]:
-    """Last 30 Min ATH — stock near day's high at close."""
+    """Near 52W High (EOD) — stock closing within 5% of 52-week high."""
     if df is None or len(df) < 50:
         return None
     

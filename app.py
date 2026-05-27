@@ -924,7 +924,7 @@ def render_focus_panel():
         focus_action = "Review open positions. Prepare for close."
         focus_tip = "Start identifying BTST candidates for 3:20 PM entry."
     elif t < dtime(15,30):
-        focus_title = "⭐ Power Hour — Last 30 Min ATH"
+        focus_title = "⭐ Power Hour — Near 52W High (EOD)"
         focus_action = "Run ATH scanner NOW → Buy strongest stocks at 3:25 PM"
         focus_tip = "This is the BTST window. Overnight gap-up probability is highest here."
     else:
@@ -1153,9 +1153,35 @@ def page_dashboard():
     
     if st.button("🚀 Run All Swing Scanners", type="primary"):
         diagnostics = {}
-        with st.spinner("Scanning with regime + RS filters..."):
-            # FIX: use pre-enriched data — avoids re-computing indicators 500x per scanner
-            _scan_data = st.session_state.enriched_data or st.session_state.stock_data
+        # ── Auto-load data if session state was reset ──────────────────────
+        _enriched = st.session_state.get("enriched_data") or {}
+        _raw      = st.session_state.get("stock_data") or {}
+        if len(_enriched) == 0 and len(_raw) == 0:
+            with st.spinner("⏳ Data not loaded — fetching now..."):
+                _raw, _nifty, _enriched = load_data()
+                st.session_state.stock_data   = _raw
+                st.session_state.nifty_data   = _nifty
+                st.session_state.enriched_data = _enriched
+                st.session_state.data_loaded  = True
+                breadth = compute_market_breadth(_enriched)
+                st.session_state.regime = detect_market_regime(_nifty, breadth)
+                st.session_state.sector_rankings = compute_sector_ranks()
+        elif len(_enriched) == 0:
+            # raw exists but enriched is empty — rebuild enriched from raw
+            with st.spinner("⚙️ Computing indicators..."):
+                from data_engine import Indicators as _Ind
+                _enriched = {}
+                for _s, _df in _raw.items():
+                    try: _enriched[_s] = _Ind.enrich_dataframe(_df)
+                    except: _enriched[_s] = _df
+                st.session_state.enriched_data = _enriched
+
+        _scan_data = _enriched if len(_enriched) > 0 else _raw
+        if len(_scan_data) == 0:
+            st.error("❌ No stock data available. Please click **Load / Refresh Data** first.")
+            st.stop()
+
+        with st.spinner(f"🔍 Scanning {len(_scan_data)} stocks across all strategies..."):
             results = run_all_scanners(
                 _scan_data, st.session_state.nifty_data,
                 daily_only=not st.session_state.get("breeze_connected", False),
@@ -1170,11 +1196,10 @@ def page_dashboard():
             st.session_state.scan_results = results
             st.session_state.scan_diagnostics = diagnostics
             st.session_state.last_scan_time = now_ist()
-            # Auto-save signals to log
             all_sigs = [r for sigs in results.values() for r in sigs]
-            saved = save_signals_today(all_sigs, st.session_state.regime)
+            save_signals_today(all_sigs, st.session_state.regime)
             send_scan_alerts(results)
-            st.rerun()
+        st.rerun()
     
     # Always render the funnel after a scan — even if zero signals.
     # This is the single most important UX fix: the user can SEE where
@@ -1382,10 +1407,33 @@ def page_scanner_hub():
     if selected:
         n = st.session_state.nifty_data
         diagnostics = {}
-        # FIX: use pre-enriched data — avoids re-computing indicators 500x per scanner
-        _hub_data = st.session_state.enriched_data or st.session_state.stock_data
+        # Use pre-enriched data (avoids re-computing indicators per scanner)
+        _hub_enriched = st.session_state.get("enriched_data") or {}
+        _hub_raw      = st.session_state.get("stock_data") or {}
+        if len(_hub_enriched) == 0 and len(_hub_raw) == 0:
+            with st.spinner("⏳ Data not loaded — fetching now..."):
+                _hub_raw, n, _hub_enriched = load_data()
+                st.session_state.stock_data    = _hub_raw
+                st.session_state.nifty_data    = n
+                st.session_state.enriched_data = _hub_enriched
+                st.session_state.data_loaded   = True
+                breadth = compute_market_breadth(_hub_enriched)
+                st.session_state.regime = detect_market_regime(n, breadth)
+                st.session_state.sector_rankings = compute_sector_ranks()
+        elif len(_hub_enriched) == 0:
+            with st.spinner("⚙️ Computing indicators..."):
+                from data_engine import Indicators as _Ind2
+                _hub_enriched = {}
+                for _s2, _df2 in _hub_raw.items():
+                    try: _hub_enriched[_s2] = _Ind2.enrich_dataframe(_df2)
+                    except: _hub_enriched[_s2] = _df2
+                st.session_state.enriched_data = _hub_enriched
+        _hub_data = _hub_enriched if len(_hub_enriched) > 0 else _hub_raw
+        if len(_hub_data) == 0:
+            st.error("❌ No stock data available. Please click **Load / Refresh Data** first.")
+            st.stop()
         if selected == "ALL":
-            with st.spinner("Scanning (regime + RS filtered)..."):
+            with st.spinner(f"🔍 Scanning {len(_hub_data)} stocks across all strategies..."):
                 st.session_state.scan_results = run_all_scanners(
                     _hub_data, n,
                     daily_only=not st.session_state.get("breeze_connected", False),
@@ -1397,7 +1445,7 @@ def page_scanner_hub():
                     hard_gate=not st.session_state.soft_gate,
                     diagnostics=diagnostics)
         else:
-            with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']}..."):
+            with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']} on {len(_hub_data)} stocks..."):
                 st.session_state.scan_results[selected] = run_scanner(
                     selected, _hub_data, n,
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
