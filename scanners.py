@@ -1571,15 +1571,23 @@ def collect_approaching_setups(data_dict: Dict[str, pd.DataFrame],
     """
     Scan all stocks for approaching setups.
     Returns list sorted by progress % (most ready first).
+    Skips enrich_dataframe if data is already enriched (has sma_50 column).
     """
     all_setups = []
     for symbol, df in data_dict.items():
         try:
-            enriched = Indicators.enrich_dataframe(df)
+            if df is None or len(df) < 50:
+                continue
+            # Skip re-enrichment if already enriched — huge speedup when called
+            # with st.session_state.enriched_data
+            if "sma_50" in df.columns and "rsi_14" in df.columns:
+                enriched = df
+            else:
+                enriched = Indicators.enrich_dataframe(df)
             setups = scan_approaching_setups(enriched, symbol, nifty_df)
             all_setups.extend([s for s in setups if s.progress_pct >= min_progress])
         except Exception:
             continue
-    
+
     all_setups.sort(key=lambda x: x.progress_pct, reverse=True)
     return all_setups

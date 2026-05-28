@@ -24,9 +24,16 @@ logger = logging.getLogger(__name__)
 # DYNAMIC FETCH FROM NSE (tries first)
 # ============================================================================
 
-@st.cache_data(ttl=86400, show_spinner=False)  # Cache for 24 hours
+# Module-level cache — HTTP call happens at most once per process lifetime
+_nse_cache = {"symbols": None, "sector_map": None, "fetched": False}
+
 def fetch_nifty500_from_nse():
-    """Fetch latest Nifty 500 constituents from NSE Indices website."""
+    """Fetch latest Nifty 500 constituents from NSE Indices website.
+    Results are cached in _nse_cache so HTTP is called at most once per session.
+    """
+    global _nse_cache
+    if _nse_cache["fetched"]:
+        return _nse_cache["symbols"], _nse_cache["sector_map"]
     try:
         url = "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv"
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -42,9 +49,13 @@ def fetch_nifty500_from_nse():
                     symbols.append(sym)
                     sector_map[sym] = industry
             if len(symbols) > 400:
+                _nse_cache["symbols"] = symbols
+                _nse_cache["sector_map"] = sector_map
+                _nse_cache["fetched"] = True
                 return symbols, sector_map
     except Exception as e:
         logger.warning(f"Failed to fetch Nifty 500 from NSE: {e}")
+    _nse_cache["fetched"] = True  # Don't retry on failure
     return None, None
 
 
@@ -191,9 +202,8 @@ def get_stock_universe(size: str = "nifty200") -> list:
 
 
 def get_sector(symbol: str) -> str:
-    """Get sector for a symbol. Checks dynamic map first, then hardcoded."""
-    # Check if we have dynamic sector data
-    _, dynamic_sectors = fetch_nifty500_from_nse()
+    """Get sector for a symbol. Uses cached NSE data — no repeated HTTP calls."""
+    _, dynamic_sectors = fetch_nifty500_from_nse()  # returns cached after first call
     if dynamic_sectors and symbol in dynamic_sectors:
         return dynamic_sectors[symbol]
     return HARDCODED_SECTOR_MAP.get(symbol, "Other")

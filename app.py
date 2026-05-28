@@ -1291,12 +1291,13 @@ def page_dashboard():
             with st.expander(f"{p.get('icon','')} {p.get('name',strat)} — {len(results)}", expanded=True):
                 st.dataframe(results_df(results), use_container_width=True, hide_index=True)
         
-        # v5.2: Approaching Setups section
+        # v5.2: Approaching Setups section — only runs on scan click, not every render
         st.markdown("### 👀 Approaching Setups — Forming Watchlist")
         st.caption("Stocks 50-95% through a setup — not yet triggering, but getting close.")
         with st.spinner("Scanning for approaching setups..."):
+            _app_data = st.session_state.get("enriched_data") or st.session_state.get("stock_data") or {}
             approaching = collect_approaching_setups(
-                st.session_state.stock_data, st.session_state.nifty_data, min_progress=50)
+                _app_data, st.session_state.nifty_data, min_progress=50)
             st.session_state.approaching_setups = approaching
         if approaching:
             app_rows = []
