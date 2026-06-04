@@ -1,0 +1,19 @@
+{
+  "date": "2026-06-04",
+  "scan_time": "13:53",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "PANIC",
+  "regime_score": -6,
+  "nifty": 23416.55,
+  "nifty_last_bar_date": "2026-06-04",
+  "stocks_scanned": 183,
+  "total_signals": 12,
+  "new_signals": 12,
+  "strategies": {
+    "EMA21_Bounce": 9,
+    "52WH_Breakout": 1,
+    "Last30Min_ATH": 1,
+    "Failed_Breakout_Short": 1
+  }
+}
