@@ -1,0 +1,20 @@
+{
+  "date": "2026-06-05",
+  "scan_time": "13:48",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "PANIC",
+  "regime_score": -6,
+  "nifty": 23366.7,
+  "nifty_last_bar_date": "2026-06-05",
+  "stocks_scanned": 183,
+  "total_signals": 9,
+  "new_signals": 9,
+  "strategies": {
+    "VCP": 1,
+    "EMA21_Bounce": 3,
+    "52WH_Breakout": 1,
+    "Last30Min_ATH": 3,
+    "Failed_Breakout_Short": 1
+  }
+}
