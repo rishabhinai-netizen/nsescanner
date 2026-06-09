@@ -93,30 +93,44 @@ def fetch_batch_daily(symbols: List[str], period: str = "1y",
             if raw is not None and not raw.empty:
                 for symbol, yf_sym in zip(batch, yf_symbols):
                     try:
-                        if len(batch) == 1:
-                            df = raw.copy()
-                        elif isinstance(raw.columns, pd.MultiIndex):
-                            if yf_sym in raw.columns.get_level_values(0):
-                                df = raw[yf_sym].copy()
+                        # ── yfinance ≥0.2.x always returns MultiIndex (ticker, field)
+                        # regardless of whether 1 or N symbols were requested.
+                        # Flatten to a plain frame keyed by OHLCV column names. ──
+                        if isinstance(raw.columns, pd.MultiIndex):
+                            lvl0 = raw.columns.get_level_values(0).tolist()
+                            lvl1 = raw.columns.get_level_values(1).tolist()
+                            # Detect orientation: (ticker, field) vs (field, ticker)
+                            ohlcv_keywords = {"open", "high", "low", "close", "volume"}
+                            lvl0_is_field = len(set(str(v).lower() for v in lvl0) & ohlcv_keywords) >= 4
+                            if lvl0_is_field:
+                                # Old layout (field, ticker) — ticker in level 1
+                                if yf_sym not in raw.columns.get_level_values(1):
+                                    continue
+                                df = raw.xs(yf_sym, axis=1, level=1).copy()
                             else:
-                                continue
+                                # New layout (ticker, field) — ticker in level 0
+                                if yf_sym not in raw.columns.get_level_values(0):
+                                    continue
+                                df = raw[yf_sym].copy()
                         else:
+                            # Flat columns — single symbol edge case
                             df = raw.copy()
-                        
+
                         if df is not None and not df.empty:
                             df = df.dropna(how="all")
                             if len(df) >= 50:
-                                # Normalize columns
+                                # Normalize columns (handles both Title-case and lower-case)
                                 col_map = {}
                                 for c in df.columns:
+                                    # c is now a plain string (MultiIndex already resolved above)
                                     cl = str(c).lower()
-                                    if "open" in cl: col_map[c] = "open"
-                                    elif "high" in cl: col_map[c] = "high"
-                                    elif "low" in cl: col_map[c] = "low"
-                                    elif "close" in cl: col_map[c] = "close"
-                                    elif "volume" in cl or "vol" in cl: col_map[c] = "volume"
+                                    if cl == "open": col_map[c] = "open"
+                                    elif cl == "high": col_map[c] = "high"
+                                    elif cl == "low": col_map[c] = "low"
+                                    elif cl in ("close", "adj close"): col_map[c] = "close"
+                                    elif "volume" in cl or cl == "vol": col_map[c] = "volume"
                                 df = df.rename(columns=col_map)
-                                
+
                                 needed = ["open", "high", "low", "close", "volume"]
                                 if all(c in df.columns for c in needed):
                                     df = df[needed]
