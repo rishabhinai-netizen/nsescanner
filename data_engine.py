@@ -40,6 +40,17 @@ def now_ist() -> datetime:
     return datetime.now(IST)
 
 
+def is_market_hours() -> bool:
+    """True during NSE cash-market hours (Mon–Fri, 09:15–15:30 IST).
+    Intraday scanners are meaningless (and Breeze endpoints unreliable)
+    outside this window."""
+    n = now_ist()
+    if n.weekday() >= 5:
+        return False
+    minutes = n.hour * 60 + n.minute
+    return (9 * 60 + 15) <= minutes <= (15 * 60 + 30)
+
+
 # ============================================================================
 # YFINANCE DATA ENGINE (FREE — DAILY DATA, RATE-LIMITED)
 # ============================================================================
@@ -235,6 +246,10 @@ def update_breeze_token_in_supabase(new_token: str) -> bool:
             "key":        "BREEZE_SESSION_TOKEN",
             "value":      new_token.strip(),
             "updated_by": "settings_page",
+            # Must be set explicitly — column default only fires on INSERT,
+            # so upserts left the timestamp frozen at row-creation time and
+            # made the token look months stale in audits.
+            "updated_at": datetime.now(IST).isoformat(),
         }, on_conflict="key").execute()
         return True
     except Exception:
@@ -248,10 +263,40 @@ class BreezeEngine:
     Session token must be regenerated daily from ICICI Direct portal.
     """
     
+    # Hard ceiling for any single Breeze REST call. The breeze-connect SDK
+    # uses requests WITHOUT a timeout — one stalled TCP connection used to
+    # hang the entire Streamlit script forever (the infinite "Scanning..."
+    # spinner bug). Every SDK call now goes through _breeze_call().
+    BREEZE_CALL_TIMEOUT = 8          # seconds per API call
+    INTRADAY_CACHE_TTL = 300         # seconds — ORB/VWAP/LunchLow share one fetch
+
     def __init__(self):
         self.connected = False
         self.breeze = None
         self.connection_message = ""
+        self._intraday_cache: Dict[tuple, tuple] = {}   # (symbol, interval) -> (ts, df)
+
+    def _breeze_call(self, fn, *args, timeout: int = None, **kwargs):
+        """Run a Breeze SDK call in a worker thread with a hard timeout.
+        Returns the result, or None if the call timed out or raised."""
+        import threading
+        timeout = timeout or self.BREEZE_CALL_TIMEOUT
+        box = {}
+        def _worker():
+            try:
+                box["result"] = fn(*args, **kwargs)
+            except Exception as e:
+                box["error"] = e
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        t.join(timeout=timeout)
+        if t.is_alive():
+            logger.warning(f"Breeze call {getattr(fn, '__name__', fn)} timed out after {timeout}s")
+            return None
+        if "error" in box:
+            logger.warning(f"Breeze call failed: {box['error']}")
+            return None
+        return box.get("result")
     
     def connect_from_secrets(self) -> Tuple[bool, str]:
         """
@@ -288,17 +333,21 @@ class BreezeEngine:
             self.breeze = BreezeConnect(api_key=api_key)
             self.breeze.generate_session(api_secret=api_secret, session_token=session_token)
             
-            # VALIDATE connection by making a test call
-            test = self.breeze.get_customer_details()
+            # VALIDATE connection by making a test call (with hard timeout —
+            # the SDK has none). A stale daily token can pass generate_session
+            # locally yet fail every real API call; treating that as
+            # "connected" used to unleash hundreds of doomed intraday calls.
+            test = self._breeze_call(self.breeze.get_customer_details)
             if test and ("Success" in str(test.get("Status", "")) or test.get("Success")):
                 self.connected = True
                 self.connection_message = "✅ Breeze API connected and validated!"
                 return True, self.connection_message
             else:
-                # generate_session succeeded, so connection works
-                self.connected = True
-                self.connection_message = "✅ Breeze API connected!"
-                return True, self.connection_message
+                self.connected = False
+                self.breeze = None
+                return False, ("❌ Breeze session token appears stale or invalid — "
+                               "generate a fresh one from ICICI Direct and update it "
+                               "in Settings → Breeze Token.")
                 
         except ImportError:
             return False, "❌ breeze-connect not installed. Run: pip install breeze-connect"
@@ -316,6 +365,14 @@ class BreezeEngine:
                        days_back: int = 5) -> Optional[pd.DataFrame]:
         """Fetch intraday data from Breeze API.
 
+        v3 fixes (infinite-spinner bug):
+        - Per-(symbol, interval) cache with 5-min TTL: ORB, VWAP-Reclaim and
+          Lunch-Low scanners previously each refetched the SAME data —
+          3× the API calls for zero benefit.
+        - Every SDK call runs through _breeze_call() with a hard 8s timeout.
+          The breeze-connect SDK has NO HTTP timeout, so a single stalled
+          connection used to freeze the whole app forever.
+
         v2 fix: NSE trading symbol → Breeze internal stock_code via
         breeze_symbol_map.to_breeze_code(). Previously sent the NSE symbol
         raw, which Breeze rejected for most stocks, so every intraday scan
@@ -323,6 +380,14 @@ class BreezeEngine:
         """
         if not self.connected or self.breeze is None:
             return None
+
+        # ── Cache hit? ──
+        import time as _time
+        ck = (symbol, interval)
+        hit = self._intraday_cache.get(ck)
+        if hit and (_time.time() - hit[0]) < self.INTRADAY_CACHE_TTL:
+            return hit[1]
+
         try:
             try:
                 from breeze_symbol_map import to_breeze_code
@@ -333,7 +398,8 @@ class BreezeEngine:
             from_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%dT07:00:00.000Z")
             to_date = datetime.now().strftime("%Y-%m-%dT23:59:59.000Z")
 
-            data = self.breeze.get_historical_data_v2(
+            data = self._breeze_call(
+                self.breeze.get_historical_data_v2,
                 interval=interval,
                 from_date=from_date,
                 to_date=to_date,
@@ -344,6 +410,7 @@ class BreezeEngine:
             if data and "Success" in str(data.get("Status", "")):
                 df = pd.DataFrame(data["Success"])
                 if df.empty:
+                    self._intraday_cache[ck] = (_time.time(), None)
                     return None
                 df["datetime"] = pd.to_datetime(df["datetime"])
                 df = df.set_index("datetime")
@@ -353,10 +420,15 @@ class BreezeEngine:
                 })
                 df = df[["open", "high", "low", "close", "volume"]].astype(float)
                 df["symbol"] = symbol
+                self._intraday_cache[ck] = (_time.time(), df)
                 return df
+            # Negative-cache failures too so a dead Breeze session doesn't
+            # cost 183 × 8s of timeouts in one scan.
+            self._intraday_cache[ck] = (_time.time(), None)
             return None
         except Exception as e:
             logger.warning(f"Breeze intraday failed for {symbol}: {e}")
+            self._intraday_cache[ck] = (_time.time(), None)
             return None
 
     def fetch_volume_profile(self, symbol: str, days_back: int = 20,

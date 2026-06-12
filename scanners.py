@@ -1525,7 +1525,8 @@ def run_all_scanners(data_dict: Dict[str, pd.DataFrame],
                      compute_sqi_flag: bool = True,
                      breeze=None,
                      hard_gate: bool = False,
-                     diagnostics: dict = None) -> Dict[str, List[ScanResult]]:
+                     diagnostics: dict = None,
+                     progress_callback=None) -> Dict[str, List[ScanResult]]:
     """
     Run all scanners with regime/RS/sector filters and SQI ranking.
 
@@ -1550,7 +1551,12 @@ def run_all_scanners(data_dict: Dict[str, pd.DataFrame],
         except Exception as e:
             logger.warning(f"run_all_scanners: Nifty pre-enrichment failed: {e}")
 
-    for name in scanners:
+    for i, name in enumerate(scanners):
+        if progress_callback:
+            try:
+                progress_callback(i, len(scanners), name)
+            except Exception:
+                pass
         res = run_scanner(
             name, data_dict, nifty_df, regime,
             has_intraday, sector_rankings, min_rs,

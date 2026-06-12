@@ -601,11 +601,19 @@ def detect_confluence(scan_results: dict) -> dict:
 
 
 def send_scan_alerts(scan_results: dict):
-    """Send telegram alerts with confluence awareness."""
+    """Send Telegram alerts as a batched digest.
+
+    v3 fix: previously sent ONE Telegram POST per signal (sequential, 10s
+    timeout each). A 40-signal scan could add 5+ minutes inside the scan
+    spinner and trip Telegram's per-chat rate limit. Now everything is
+    packed into as few messages as possible (Telegram caps at 4096 chars).
+    """
     confluence = detect_confluence(scan_results)
     confluence_symbols = set(confluence.keys())
-    
-    # Send confluence alerts first (higher priority)
+
+    chunks = []
+
+    # Confluence block first (highest priority)
     if confluence:
         msg = "🔥🔥 <b>CONFLUENCE ALERT</b> 🔥🔥\n"
         for sym, strats in confluence.items():
@@ -613,13 +621,26 @@ def send_scan_alerts(scan_results: dict):
             fno = "F&O ✓" if is_fno(sym) else "Cash"
             msg += f"\n📈 <b>{sym}</b> [{fno}] — {len(strats)} strategies:\n"
             msg += ", ".join(strat_names) + "\n"
-        send_tg(msg)
-    
-    # Then individual signals
+        chunks.append(msg)
+
+    # Individual signals — packed into 4000-char digest messages
+    current = ""
     for strat, signals in scan_results.items():
         for r in signals:
             is_conf = r.symbol in confluence_symbols
-            send_tg(fmt_alert(r, is_confluence=is_conf))
+            block = fmt_alert(r, is_confluence=is_conf) + "\n\n— — —\n\n"
+            if len(current) + len(block) > 4000:
+                chunks.append(current)
+                current = ""
+            current += block
+    if current.strip():
+        chunks.append(current)
+
+    sent = 0
+    for chunk in chunks[:12]:  # hard cap: never spend more than ~12 POSTs
+        if send_tg(chunk):
+            sent += 1
+    return sent
 
 def is_data_stale():
     """Check if scan data is stale (>15 min old)."""
@@ -1182,23 +1203,45 @@ def page_dashboard():
             st.stop()
 
         with st.spinner(f"🔍 Scanning {len(_scan_data)} stocks across all strategies..."):
+            # ── BUGFIX (infinite spinner): this is a SWING scan — it must
+            # NEVER run intraday scanners. Previously, with Breeze connected,
+            # daily_only flipped to False → 183 stocks × 3 intraday scanners
+            # = 549 sequential Breeze REST calls with NO HTTP timeout. One
+            # stalled connection froze the app forever. Intraday strategies
+            # now run only from their dedicated Scanner Hub buttons, during
+            # market hours, with cached fetches and per-call timeouts. ──
+            _prog = st.progress(0.0, "Starting scan...")
+            def _scan_cb(i, total, strat_name):
+                _p = STRATEGY_PROFILES.get(strat_name, {})
+                _prog.progress(i / max(total, 1),
+                               f"Strategy {i+1}/{total}: {_p.get('name', strat_name)}")
             results = run_all_scanners(
                 _scan_data, st.session_state.nifty_data,
-                daily_only=not st.session_state.get("breeze_connected", False),
+                daily_only=True,
                 regime=st.session_state.regime if st.session_state.regime_filter else None,
-                has_intraday=st.session_state.breeze_connected,
+                has_intraday=False,
                 sector_rankings=st.session_state.sector_rankings,
                 min_rs=st.session_state.rs_filter,
-                breeze=st.session_state.get("breeze_engine"),
+                breeze=None,
                 hard_gate=not st.session_state.soft_gate,
                 diagnostics=diagnostics,
+                progress_callback=_scan_cb,
             )
+            _prog.progress(0.9, "Saving signals & sending alerts...")
             st.session_state.scan_results = results
             st.session_state.scan_diagnostics = diagnostics
             st.session_state.last_scan_time = now_ist()
             all_sigs = [r for sigs in results.values() for r in sigs]
-            save_signals_today(all_sigs, st.session_state.regime)
-            send_scan_alerts(results)
+            # Post-scan steps must NEVER block the UI from showing results.
+            try:
+                save_signals_today(all_sigs, st.session_state.regime)
+            except Exception as _sv_e:
+                st.warning(f"⚠️ Signals scanned OK but Supabase save failed: {_sv_e}")
+            try:
+                send_scan_alerts(results)
+            except Exception as _tg_e:
+                st.warning(f"⚠️ Telegram alert send failed: {_tg_e}")
+            _prog.progress(1.0, f"✅ Done — {len(all_sigs)} signals")
         st.rerun()
     
     # Always render the funnel after a scan — even if zero signals.
@@ -1434,18 +1477,41 @@ def page_scanner_hub():
             st.error("❌ No stock data available. Please click **Load / Refresh Data** first.")
             st.stop()
         if selected == "ALL":
-            with st.spinner(f"🔍 Scanning {len(_hub_data)} stocks across all strategies..."):
+            with st.spinner(f"🔍 Scanning {len(_hub_data)} stocks across all swing strategies..."):
+                # Same infinite-spinner fix as Dashboard: the bulk button is
+                # swing-only. Intraday strategies run via their own buttons
+                # below (market hours + Breeze + cached fetch + timeouts).
+                _hub_prog = st.progress(0.0, "Starting scan...")
+                def _hub_cb(i, total, strat_name):
+                    _p = STRATEGY_PROFILES.get(strat_name, {})
+                    _hub_prog.progress(i / max(total, 1),
+                                       f"Strategy {i+1}/{total}: {_p.get('name', strat_name)}")
                 st.session_state.scan_results = run_all_scanners(
                     _hub_data, n,
-                    daily_only=not st.session_state.get("breeze_connected", False),
+                    daily_only=True,
                     regime=st.session_state.regime if st.session_state.regime_filter else None,
-                    has_intraday=st.session_state.breeze_connected,
+                    has_intraday=False,
                     sector_rankings=st.session_state.sector_rankings,
                     min_rs=st.session_state.rs_filter,
-                    breeze=st.session_state.get("breeze_engine"),
+                    breeze=None,
                     hard_gate=not st.session_state.soft_gate,
-                    diagnostics=diagnostics)
+                    diagnostics=diagnostics,
+                    progress_callback=_hub_cb)
+                _hub_prog.progress(1.0, "✅ Scan complete")
         else:
+            # Individual strategy — intraday strategies get guard rails.
+            from scanners import INTRADAY_SCANNERS as _INTRA
+            if selected in _INTRA:
+                from data_engine import is_market_hours
+                if not st.session_state.get("breeze_connected", False):
+                    st.error("⛔ Intraday strategies need a live Breeze connection. "
+                             "Connect via Settings → Breeze Token first.")
+                    st.stop()
+                if not is_market_hours():
+                    st.error("⛔ Intraday strategies only run during NSE market hours "
+                             "(Mon–Fri 09:15–15:30 IST). Breeze intraday endpoints are "
+                             "unreliable outside this window and the signals would be stale anyway.")
+                    st.stop()
             with st.spinner(f"Running {STRATEGY_PROFILES[selected]['name']} on {len(_hub_data)} stocks..."):
                 st.session_state.scan_results[selected] = run_scanner(
                     selected, _hub_data, n,
@@ -1458,10 +1524,16 @@ def page_scanner_hub():
                     diagnostics=diagnostics)
         st.session_state.scan_diagnostics = diagnostics
         st.session_state.last_scan_time = now_ist()
-        # Auto-save signals to log
+        # Auto-save signals to log — must never block the UI from rendering results
         all_sigs = [r for sigs in st.session_state.scan_results.values() for r in sigs]
-        saved = save_signals_today(all_sigs, st.session_state.regime)
-        send_scan_alerts(st.session_state.scan_results)
+        try:
+            saved = save_signals_today(all_sigs, st.session_state.regime)
+        except Exception as _sv_e:
+            st.warning(f"⚠️ Supabase save failed: {_sv_e}")
+        try:
+            send_scan_alerts(st.session_state.scan_results)
+        except Exception as _tg_e:
+            st.warning(f"⚠️ Telegram send failed: {_tg_e}")
         st.rerun()
     
     if not st.session_state.scan_results:

@@ -41,9 +41,6 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          BREEZE_API_KEY: ${{ secrets.BREEZE_API_KEY }}
-          BREEZE_API_SECRET: ${{ secrets.BREEZE_API_SECRET }}
-          BREEZE_SESSION_TOKEN: ${{ secrets.BREEZE_SESSION_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ALERT_UNIVERSE: nifty200
         run: python alert_engine.py
