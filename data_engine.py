@@ -1,5 +1,7 @@
 """
-Data Engine — yfinance (daily, rate-limited) + ICICI Breeze (intraday, from st.secrets)
+Data Engine v3.1 — yfinance (daily, rate-limited) + ICICI Breeze (intraday)
+Patch 2026-06-13: BreezeEngine hard timeout wrapper; intraday cache (5-min TTL);
+strict connect validation; is_market_hours() helper; updated_at fix on token upsert.
 """
 
 import pandas as pd

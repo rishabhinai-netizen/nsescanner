@@ -1,6 +1,8 @@
 """
-NSE Elite Scanners v15 — Regime-Aware, SQI, RRG, Option Chain + IPO
-====================================================================
+NSE Elite Scanners v15.1 — Regime-Aware, SQI, RRG, Option Chain + IPO
+======================================================================
+Patch 2026-06-13: run_all_scanners() accepts progress_callback kwarg for
+real-time progress bars; intraday strategies separated from swing path.
 1. Market Regime Engine (4 regimes: Accumulation/Expansion/Distribution/Panic)
 2. Intraday scanners require Breeze API (no proxies)
 3. RS > 70 filter on all long signals

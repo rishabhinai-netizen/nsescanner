@@ -13,3 +13,5 @@ gotrue>=2.0.0
 
 # AI — Claude only (replaces openai + google-generativeai)
 anthropic>=0.40.0
+
+# v3.1 patch 2026-06-13 — Breeze timeout, intraday cache, progress bars
