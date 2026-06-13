@@ -949,6 +949,24 @@ def page_ai_deep_dive():
     groq_key = ""
     gemini_key = ""
 
+    # ── Admin-only gate ─────────────────────────────────────────────────────
+    # AI Deep Dive consumes Anthropic tokens. Only the Admin user may generate
+    # new analysis. Other users see this page but cannot trigger API calls.
+    try:
+        from auth_manager import is_admin as _ia_dd
+        _user_is_admin = _ia_dd()
+    except Exception:
+        _user_is_admin = False
+    if not _user_is_admin:
+        st.warning(
+            "🔒 **AI Deep Dive is available for Admin only.**\n\n"
+            "To keep the platform running efficiently, AI-generated analysis is "
+            "restricted to the Admin user. You can view any analysis the Admin "
+            "has already generated — it will appear here once available.",
+            icon="🛡️"
+        )
+        return
+
     # ── Premium model toggle ──
     st.sidebar.markdown("### 🧠 AI Settings")
     st.session_state["ai_use_premium"] = st.sidebar.checkbox(

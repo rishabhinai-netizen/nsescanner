@@ -93,6 +93,30 @@ except Exception as _auth_e:
     def get_current_user(): return None
     def get_current_profile(): return None
     def is_admin(): return False
+
+
+def _admin_only_ai_gate(feature_name: str = "AI analysis") -> bool:
+    """
+    Returns True if the current user is admin (allow AI call).
+    Returns False and renders a clear block message for all other users.
+    Called at every AI generation entry point — the single source of truth
+    for AI token access control.
+    """
+    try:
+        from auth_manager import is_admin as _ia
+        _is_admin = _ia()
+    except Exception:
+        _is_admin = False
+    if _is_admin:
+        return True
+    st.info(
+        f"🔒 **{feature_name} is available for Admin only.**\n\n"
+        "To keep the platform running efficiently, AI-generated analysis is "
+        "restricted to the Admin user. You can view any analysis that the Admin "
+        "has already generated — it will appear here once available.",
+        icon="🛡️"
+    )
+    return False
     def is_pro(): return False
     def logout(): pass
     def render_alert_preferences(): st.info("Auth not configured.")
@@ -2786,7 +2810,9 @@ def page_stock_lookup():
                 if hits:
                     _sig_dir = hits[0].signal
                     _strategy = hits[0].strategy
-                render_signal_context_card(sym, _strategy, _sig_dir)
+                # Admin-only gate: non-admin users see cached results but cannot generate new ones
+                if _admin_only_ai_gate("AI News Analysis"):
+                    render_signal_context_card(sym, _strategy, _sig_dir)
         else:
             with st.expander("📰 AI News Analysis"):
                 st.caption("AI News Analysis is powered by the same Anthropic API key used in AI Deep Dive. "
