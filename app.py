@@ -2751,58 +2751,82 @@ def page_stock_lookup():
     hits = []
     for scanner_name, scanner_func in DAILY_SCANNERS.items():
         try:
-            result = scanner_func(df, sym, nifty_df)
+            result = scanner_func(df, sym)
             if result:
                 hits.append(result)
-        except Exception:
-            pass
+        except Exception as _verdict_e:
+            pass  # logged below in debug expander if hits is empty
 
     if hits:
         st.success(f"**{sym} qualifies in {len(hits)} strateg{'y' if len(hits)==1 else 'ies'}!**")
         for r in hits:
             p = STRATEGY_PROFILES.get(r.strategy, {})
-            st.markdown(f"**{p.get('icon','')} {p.get('name', r.strategy)}** — {r.signal} | "
-                        f"Entry ₹{r.entry:,.1f} | SL ₹{r.stop_loss:,.1f} | T1 ₹{r.target_1:,.1f}")
+            p = STRATEGY_PROFILES.get(r.strategy, {})
+            _sqi = getattr(r, "sqi", None)
+            _sqi_str = f" | SQI {_sqi}" if _sqi else ""
+            st.markdown(f"**{p.get('icon','')} {p.get('name', r.strategy)}** — {r.signal} | Entry ₹{r.entry:,.1f} | SL ₹{r.stop_loss:,.1f} | T1 ₹{r.target_1:,.1f} | Conf {r.confidence}{_sqi_str}")
             for reason in r.reasons[:3]:
                 st.markdown(f"  • {reason}")
     else:
         st.info(f"**{sym}** doesn't qualify in any daily strategy right now.")
 
     # ── Gemini News Analysis (on-demand, cached per symbol per day) ──────────────
+    # ── AI News Analysis (uses Anthropic — same key as AI Deep Dive) ────────────
     if PERPLEXITY_AVAILABLE:
         import os as _os
-        _gemini_key = _os.environ.get("GEMINI_API_KEY", "") or st.secrets.get("GEMINI_API_KEY", "")
-        if _gemini_key:
-            with st.expander("📰 Why is this stock moving? (AI News Analysis)", expanded=True):
-                # Use the signal direction from latest signal if available, else neutral
+        _anthropic_key = _os.environ.get("ANTHROPIC_API_KEY", "")
+        try:
+            _anthropic_key = _anthropic_key or st.secrets.get("ANTHROPIC_API_KEY", "")
+        except Exception:
+            pass
+        if _anthropic_key:
+            with st.expander("📰 Why is this stock moving? (AI News Analysis)", expanded=False):
                 _sig_dir = "BUY"
                 _strategy = "Technical"
-                if 'hits' in dir() and hits:
+                if hits:
                     _sig_dir = hits[0].signal
                     _strategy = hits[0].strategy
                 render_signal_context_card(sym, _strategy, _sig_dir)
         else:
-            with st.expander("📰 AI News Analysis (not configured)"):
-                st.caption("Add `GEMINI_API_KEY` in Streamlit Secrets to enable live news analysis for any stock.")
-                st.code('GEMINI_API_KEY = "AIza..."', language="toml")
+            with st.expander("📰 AI News Analysis"):
+                st.caption("AI News Analysis is powered by the same Anthropic API key used in AI Deep Dive. "
+                           "It appears configured — if you see this, reload the page or check Streamlit Secrets.")
 
     # Signal history for this stock
     st.markdown("### 📜 Signal History")
+    # Auto-update open signal statuses against current data whenever this page loads.
+    # This ensures STOPPED/TARGET/EXPIRED statuses are always current, not stale.
+    if st.session_state.get("stock_data"):
+        _auto_updated = update_open_signals_live(st.session_state.stock_data)
+        if _auto_updated > 0:
+            st.toast(f"✅ Updated {_auto_updated} signal status(es) automatically", icon="🔄")
     all_signals = load_signals()
     if all_signals is not None and not all_signals.empty:
         stock_hist = all_signals[all_signals["Symbol"] == sym].copy()
         if not stock_hist.empty:
             stock_hist = stock_hist.sort_values("Date", ascending=False)
             first = stock_hist.iloc[-1]
-            first_entry = first.get("Entry", 0)
+            first_entry = float(first.get("Entry", 0) or 0)
             pnl_since = ((cmp / first_entry) - 1) * 100 if first_entry > 0 else 0
             c1, c2, c3, c4 = st.columns(4)
             with c1: pc("First Flagged", str(first.get("Date", "?")))
             with c2: pc("Entry Then", f"₹{first_entry:,.1f}")
             with c3: pc("CMP Now", f"₹{cmp:,.1f}")
             with c4: pc("Since Signal", f"{pnl_since:+.1f}%", "g" if pnl_since > 0 else "r")
-            st.dataframe(stock_hist[["Date","Strategy","Signal","CMP","Entry","SL","T1","Confidence","RS","Status"]].head(20),
-                         use_container_width=True, hide_index=True)
+            # Show all outcome columns including exit info
+            _hist_cols = ["Date","Strategy","Signal","Entry","SL","T1","Status","Exit_Date","Exit_Price","PnL_Pct","Confidence","RS"]
+            _avail_cols = [c for c in _hist_cols if c in stock_hist.columns]
+            _display = stock_hist[_avail_cols].copy()
+            # Color-code status column
+            def _status_fmt(s):
+                icons = {"TARGET": "🎯 TARGET", "STOPPED": "🛑 STOPPED", "EXPIRED": "⏰ EXPIRED", "OPEN": "🟢 OPEN"}
+                return icons.get(str(s), str(s))
+            if "Status" in _display.columns:
+                _display["Status"] = _display["Status"].apply(_status_fmt)
+            if "PnL_Pct" in _display.columns:
+                _display["PnL_Pct"] = _display["PnL_Pct"].apply(
+                    lambda x: f"{float(x):+.1f}%" if pd.notna(x) and x != "" else "—")
+            st.dataframe(_display.head(20), use_container_width=True, hide_index=True)
         else:
             st.info(f"No historical signals recorded for {sym}.")
     else:

@@ -995,8 +995,9 @@ def scan_last30min_ath(df: pd.DataFrame, symbol: str) -> Optional[ScanResult]:
     if latest["close"] < latest["ema_21"]:
         return None
     
-    # Within 5% of 52W high
-    if latest["pct_from_52w_high"] < -5:
+    # Within 3% of 52W high (tightened from 5% — stocks 3-5% away are "approaching"
+    # not "at" the high, which is confusing for users expecting a 52W high signal)
+    if latest["pct_from_52w_high"] < -3:
         return None
     
     # Bullish day
@@ -1005,7 +1006,7 @@ def scan_last30min_ath(df: pd.DataFrame, symbol: str) -> Optional[ScanResult]:
     
     # Volume
     vol_ratio = latest["volume"] / (latest["vol_sma_20"] + 1)
-    if vol_ratio < 1.0:
+    if vol_ratio < 1.2:  # raised from 1.0x — require real institutional participation
         return None
     
     reasons = []
