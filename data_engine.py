@@ -330,40 +330,77 @@ class BreezeEngine:
             return False, f"Error reading secrets: {str(e)}"
     
     def connect(self, api_key: str, api_secret: str, session_token: str) -> Tuple[bool, str]:
-        """Connect to ICICI Breeze API with validation."""
+        """Connect to ICICI Breeze API with validation.
+
+        v4 fix (2026-06-16) — two SDK bugs worked around:
+
+        BUG 1: generate_session() calls get_stock_script_list() which downloads
+        SecurityMaster.zip with a 60-second HTTP timeout. On Streamlit Cloud this
+        always times out; the exception is swallowed inside get_stock_script_list().
+        But since api_handler = ApificationBreeze(self) is set AFTER that call,
+        and our try_breeze() thread timeout is 20s, the thread is abandoned before
+        api_handler is ever set. Every subsequent SDK call silently returns None.
+
+        FIX: skip generate_session() entirely. Manually call api_util() (the part
+        that validates + exchanges the token) then set api_handler directly.
+
+        BUG 2: self.breeze.get_customer_details() with NO arguments passes
+        api_session='' to the SDK, which returns {'Status': 500, 'Error':
+        'API Session cannot be empty'}. Valid tokens always looked like failures.
+
+        FIX: pass session_token explicitly to the validation call.
+        """
         try:
             from breeze_connect import BreezeConnect
-            
+            from breeze_connect.breeze_connect import ApificationBreeze
+
             self.breeze = BreezeConnect(api_key=api_key)
-            self.breeze.generate_session(api_secret=api_secret, session_token=session_token)
-            
-            # VALIDATE connection by making a test call (with hard timeout —
-            # the SDK has none). A stale daily token can pass generate_session
-            # locally yet fail every real API call; treating that as
-            # "connected" used to unleash hundreds of doomed intraday calls.
-            test = self._breeze_call(self.breeze.get_customer_details)
-            if test and ("Success" in str(test.get("Status", "")) or test.get("Success")):
+
+            # Step 1: manually replicate generate_session() WITHOUT SecurityMaster download
+            self.breeze.session_key = session_token
+            self.breeze.secret_key = api_secret
+            self.breeze.api_util()                           # raises on bad token/key
+            self.breeze.api_handler = ApificationBreeze(self.breeze)
+            # SecurityMaster intentionally skipped — 60s timeout always expires on
+            # Streamlit Cloud; symbol lookup is handled by breeze_symbol_map.py.
+
+            # Step 2: validate with a live API call, passing session_token explicitly
+            test = self._breeze_call(
+                self.breeze.get_customer_details,
+                api_session=session_token
+            )
+            if test and test.get("Status") == 200 and test.get("Success") is not None:
+                user = test["Success"].get("idirect_userid", "")
+                name = test["Success"].get("idirect_user_name", "").strip()
                 self.connected = True
-                self.connection_message = "✅ Breeze API connected and validated!"
+                self.connection_message = f"✅ Breeze connected — {name} ({user})"
+                logger.info(self.connection_message)
                 return True, self.connection_message
             else:
+                err_msg = test.get("Error", "Unknown") if test else "No response"
                 self.connected = False
                 self.breeze = None
-                return False, ("❌ Breeze session token appears stale or invalid — "
-                               "generate a fresh one from ICICI Direct and update it "
-                               "in Settings → Breeze Token.")
-                
+                logger.warning(f"Breeze validation failed: {err_msg}")
+                return False, (
+                    f"Breeze rejected the session token ({err_msg}). "
+                    "Use the Open Breeze Login link in Settings to get a fresh token."
+                )
+
         except ImportError:
-            return False, "❌ breeze-connect not installed. Run: pip install breeze-connect"
+            return False, "breeze-connect not installed. Run: pip install breeze-connect"
         except Exception as e:
             err = str(e)
             self.connected = False
-            if "Invalid Session" in err or "session" in err.lower():
-                return False, "❌ Session token expired. Generate a new one from ICICI Direct portal."
-            elif "Invalid" in err:
-                return False, f"❌ Invalid credentials: {err}"
+            self.breeze = None
+            logger.exception(f"Breeze connect() exception: {err}")
+            if "APPKEY_INCORRECT" in err or "Public Key" in err:
+                return False, "API Key is wrong. Check BREEZE_API_KEY in Streamlit secrets."
+            elif "SESSIONKEY_INCORRECT" in err or "Invalid session" in err.lower():
+                return False, "Session token invalid. Use Open Breeze Login in Settings."
+            elif "SESSIONKEY_EXPIRED" in err or "Resource not available" in err:
+                return False, "Session token expired. Generate a fresh one via Settings."
             else:
-                return False, f"❌ Connection failed: {err}"
+                return False, f"Connection failed: {err[:120]}"
     
     def fetch_intraday(self, symbol: str, interval: str = "5minute",
                        days_back: int = 5) -> Optional[pd.DataFrame]:
