@@ -220,7 +220,7 @@ def _get_breeze_token_from_supabase() -> str:
         logger.warning("Breeze token not found in Supabase app_config")
         return ""
     except Exception as e:
-        logger.warning(f"_get_breeze_token_from_supabase failed: {type(e).__name__}: {e}")
+        logger.exception(f"_get_breeze_token_from_supabase failed: {type(e).__name__}: {e}")
         return ""
 
 
@@ -253,8 +253,10 @@ def update_breeze_token_in_supabase(new_token: str) -> bool:
             # made the token look months stale in audits.
             "updated_at": datetime.now(IST).isoformat(),
         }, on_conflict="key").execute()
+        logger.info(f"Breeze token updated in Supabase: {new_token.strip()[:4]}****")
         return True
-    except Exception:
+    except Exception as e:
+        logger.exception(f"update_breeze_token_in_supabase failed: {type(e).__name__}: {e}")
         return False
 
 

@@ -17,7 +17,9 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, time as dtime
 from typing import Optional, List, Dict
+import logging
 
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # UTILITIES

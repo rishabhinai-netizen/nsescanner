@@ -2465,8 +2465,10 @@ def page_settings():
     # ── Daily token update — THE ONLY THING YOU DO EACH MORNING ──────────
     st.markdown("#### 🔑 Update Session Token (do this each morning)")
     st.caption(
-        "Generate a new token from ICICIDirect.com → My Profile → API → Generate Token. "
-        "Paste it here — no Streamlit secrets update needed, no GitHub secrets needed."
+        "**How to get today's token:** Open "
+        "`https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY` → "
+        "log in → copy the `apisession=XXXXXXXX` value from the redirect URL → paste below. "
+        "This is different from 'My Profile → Generate Token' (that regenerates your API key, not the daily session)."
     )
     current_token = _get_breeze_token_from_supabase()
     with st.form("token_update_form"):
@@ -2492,7 +2494,16 @@ def page_settings():
                         st.success("✅ Breeze connected successfully!")
                     else:
                         st.error(f"Connection failed: {st.session_state.breeze_msg}")
-                        st.info("The token was saved. Try clicking 'Retry Breeze' in the sidebar, or check the token is today's value.")
+                        st.warning(
+                            "**Token saved to Supabase ✅ — but ICICI rejected it.**\n\n"
+                            "The session token comes from logging in via the Breeze API login URL, "
+                            "NOT from 'My Profile → Generate Token'.\n\n"
+                            "**Correct steps to get today's session token:**\n"
+                            "1. Open: `https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY`\n"
+                            "2. Log in with your ICICI Direct credentials\n"
+                            "3. After redirect, copy the `apisession=XXXXXXXX` value from the URL\n"
+                            "4. Paste ONLY that value (e.g. `55966339`) here and click Update again"
+                        )
                     st.rerun()
                 else:
                     # Supabase not connected yet — fall back to direct connect
@@ -3073,10 +3084,11 @@ def page_option_chain():
                             try:
                                 from datetime import date, timedelta
                                 today = date.today()
-                                # Get next Thursday
-                                days_to_thu = (3 - today.weekday()) % 7 or 7
-                                next_thu = today + timedelta(days=days_to_thu)
-                                test_expiry = next_thu.strftime("%Y-%m-%dT06:00:00.000Z")
+                                # NSE moved NIFTY weekly expiry to Tuesday (effective Sept 2025)
+                                # weekday(): Monday=0, Tuesday=1
+                                days_to_tue = (1 - today.weekday()) % 7 or 7
+                                next_tue = today + timedelta(days=days_to_tue)
+                                test_expiry = next_tue.strftime("%Y-%m-%dT06:00:00.000Z")
                                 test_resp = be.breeze.get_option_chain_quotes(
                                     stock_code="NIFTY", exchange_code="NFO",
                                     product_type="options", expiry_date=test_expiry,
