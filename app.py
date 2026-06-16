@@ -2464,12 +2464,34 @@ def page_settings():
 
     # ── Daily token update — THE ONLY THING YOU DO EACH MORNING ──────────
     st.markdown("#### 🔑 Update Session Token (do this each morning)")
-    st.caption(
-        "**How to get today's token:** Open "
-        "`https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY` → "
-        "log in → copy the `apisession=XXXXXXXX` value from the redirect URL → paste below. "
-        "This is different from 'My Profile → Generate Token' (that regenerates your API key, not the daily session)."
-    )
+
+    # Build the ICICI login URL with proper URL-encoding of the API key.
+    # CRITICAL: the API key contains special chars (#, (, ), +, !) that break
+    # raw URLs — the browser treats '#' as a fragment separator and truncates
+    # everything after it, causing ICICI to return "Public Key does not exist".
+    try:
+        from urllib.parse import quote as _url_quote
+        _raw_api_key = st.secrets.get("BREEZE_API_KEY", "")
+    except Exception:
+        _raw_api_key = ""
+
+    if _raw_api_key and "your_" not in _raw_api_key:
+        _encoded_key = _url_quote(_raw_api_key, safe="")
+        _login_url = f"https://api.icicidirect.com/apiuser/login?api_key={_encoded_key}"
+        st.info(
+            f"**Step 1 — Click this link to generate today's session token:**\n\n"
+            f"[🔗 Open Breeze Login]({_login_url})\n\n"
+            f"After logging in, ICICI redirects to `localhost/?apisession=XXXXXXXX` "
+            f"(page will say 'can't reach' — that's normal). "
+            f"Copy the `apisession` value from the URL bar and paste it below."
+        )
+    else:
+        st.caption(
+            "**How to get today's token:** Open "
+            "`https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY` "
+            "(URL-encode special chars like `#` → `%23`) → "
+            "log in → copy the `apisession=XXXXXXXX` value from the redirect URL → paste below."
+        )
     current_token = _get_breeze_token_from_supabase()
     with st.form("token_update_form"):
         new_token = st.text_input(
@@ -2496,13 +2518,13 @@ def page_settings():
                         st.error(f"Connection failed: {st.session_state.breeze_msg}")
                         st.warning(
                             "**Token saved to Supabase ✅ — but ICICI rejected it.**\n\n"
-                            "The session token comes from logging in via the Breeze API login URL, "
-                            "NOT from 'My Profile → Generate Token'.\n\n"
-                            "**Correct steps to get today's session token:**\n"
-                            "1. Open: `https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY`\n"
-                            "2. Log in with your ICICI Direct credentials\n"
-                            "3. After redirect, copy the `apisession=XXXXXXXX` value from the URL\n"
-                            "4. Paste ONLY that value (e.g. `55966339`) here and click Update again"
+                            "Most likely cause: you used the raw API key in the login URL — "
+                            "special characters like `#`, `(`, `)`, `+` must be URL-encoded "
+                            "(e.g. `#` → `%23`). Use the **🔗 Open Breeze Login** link above "
+                            "which handles encoding automatically.\n\n"
+                            "After clicking that link and logging in, copy the `apisession=XXXXXXXX` "
+                            "value from the URL bar (even though the page says 'can't reach localhost') "
+                            "and paste it here."
                         )
                     st.rerun()
                 else:
