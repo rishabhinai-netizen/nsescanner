@@ -1070,6 +1070,12 @@ def page_ai_deep_dive():
         analysis = _r["analysis"]
         gemini_model = _r.get("gemini_model", "gemini-2.0-flash")
         # Skip data fetch / computation — jump straight to rendering
+        # Re-render the analysis text (it disappears on Streamlit button re-runs)
+        if analysis:
+            st.markdown(analysis, unsafe_allow_html=True)
+        if sent.get("factors"):
+            with st.expander("📊 Sentiment Breakdown", expanded=False):
+                for f in sent["factors"]: st.markdown(f"- {f}")
         _render_deep_dive_results(
             ticker, m, df, regime, sent, rec, sig_ctx, analysis,
             gemini_model, groq_key, gemini_key, open_sigs
@@ -1234,7 +1240,7 @@ def page_ai_deep_dive():
 
     analysis = _run_ai(ticker,m,regime,sent,rec,sig_ctx,groq_key,gemini_key, _gm)
     if analysis:
-        st.markdown(analysis)
+        st.markdown(analysis, unsafe_allow_html=True)
 
     if sent.get("factors"):
         with st.expander("📊 Sentiment Breakdown", expanded=False):

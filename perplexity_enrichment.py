@@ -101,56 +101,71 @@ def get_signal_context(symbol: str, strategy: str, signal_direction: str) -> dic
         return {"error": "ANTHROPIC_API_KEY not set. Add it in Streamlit Secrets."}
 
     today = date.today().strftime("%d %B %Y")
+    cat_types_str = " / ".join(CATALYST_TYPES[:8])
     prompt = f"""Today is {today}. You are a precise NSE India market analyst.
 
-The stock {symbol} (NSE) triggered a {signal_direction} signal using the {strategy} pattern.
+OUTPUT: Respond ONLY with this exact JSON — no prose, no markdown fences, no explanation:
+{{"catalyst": "one-sentence specific reason with numbers", "catalyst_type": "one of: {cat_types_str}", "factors": ["specific factor with data point", "specific factor with data point"], "sentiment": "BULLISH or BEARISH or NEUTRAL", "confidence": 65}}
 
-Search for the most likely reason this stock is in focus. Look for:
-1. Recent Q results / earnings (PAT, revenue vs estimates)
+TASK: {symbol} (NSE) has a {signal_direction} signal via {strategy} pattern.
+Search and identify the most likely catalyst. Look for (in priority order):
+1. Q results / earnings — PAT, revenue vs estimates, margins
 2. Management guidance or concall highlights
-3. Large FII/DII buy or sell activity
-4. Promoter activity (pledge/sale/buy)
-5. Order wins or contract news
-6. SEBI/regulatory news
-7. Analyst rating changes with target price
-8. Sectoral news affecting this company
-9. Global events (US tariffs, crude, USD/INR)
+3. Large FII/DII activity (amount in crores)
+4. Promoter activity — pledge change, buy/sell
+5. Order wins or contracts (amount if available)
+6. Analyst upgrades/downgrades with target price
+7. Sectoral / macro theme
+8. If nothing found: say so — set catalyst_type to "No specific catalyst"
 
-RULES: Be specific with numbers. If nothing found, say so clearly. Do NOT hallucinate.
-
-Respond ONLY with valid JSON (no markdown fences):
-{{"catalyst": "specific one-sentence reason with data", "catalyst_type": "one of: {' / '.join(CATALYST_TYPES[:8])}", "factors": ["factor 1 with data", "factor 2 with data"], "sentiment": "BULLISH or BEARISH or NEUTRAL", "confidence": "HIGH or MEDIUM or LOW"}}"""
+RULES: Numbers required. No hallucination. confidence = integer 0-100."""
 
     try:
         data = _call_claude(prompt, use_search=True)
         raw_text = data["text"].strip()
+
+        # Strip markdown fences
         if raw_text.startswith("```"):
             lines = raw_text.split("\n")
             if lines[0].startswith("```"): lines = lines[1:]
             if lines and lines[-1].startswith("```"): lines = lines[:-1]
             raw_text = "\n".join(lines).strip()
 
-        # Some models add prose before JSON — find the JSON substring
-        try:
-            parsed = json.loads(raw_text)
-        except json.JSONDecodeError:
-            start = raw_text.index("{")
-            end = raw_text.rindex("}") + 1
-            parsed = json.loads(raw_text[start:end])
+        # Find JSON object — safe version that doesn't raise ValueError
+        parsed = None
+        start = raw_text.find("{")
+        end = raw_text.rfind("}") + 1
+        if start != -1 and end > start:
+            try:
+                parsed = json.loads(raw_text[start:end])
+            except json.JSONDecodeError:
+                pass
+        if parsed is None:
+            try:
+                parsed = json.loads(raw_text)
+            except json.JSONDecodeError:
+                pass
+
+        if not parsed:
+            return {
+                "catalyst": "Could not parse AI response. Claude may have returned prose instead of JSON.",
+                "catalyst_type": "No specific catalyst",
+                "factors": [], "sentiment": "NEUTRAL",
+                "confidence": 50, "sources": [], "is_live": False,
+            }
+
+        # Normalise confidence: convert "HIGH"/"MEDIUM"/"LOW" string to int
+        conf = parsed.get("confidence", 50)
+        if isinstance(conf, str):
+            conf = {"HIGH": 80, "MEDIUM": 55, "LOW": 30}.get(conf.upper(), 50)
+        parsed["confidence"] = conf
 
         parsed["sources"] = data["sources"]
         parsed["is_live"] = data["is_live"]
         return parsed
 
-    except json.JSONDecodeError as e:
-        return {
-            "catalyst":      "Parse error",
-            "catalyst_type": "other", "factors": [],
-            "sentiment":     "NEUTRAL", "confidence": "LOW",
-            "sources": [], "is_live": False,
-        }
     except Exception as e:
-        return {"error": str(e)[:300]}
+        return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
 
 
 def get_sector_context(sector: str) -> str:
