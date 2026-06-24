@@ -1,0 +1,19 @@
+{
+  "date": "2026-06-24",
+  "scan_time": "13:11",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "ACCUMULATION",
+  "regime_score": 4,
+  "nifty": 24021.65,
+  "nifty_last_bar_date": "2026-06-24",
+  "stocks_scanned": 183,
+  "total_signals": 25,
+  "new_signals": 25,
+  "strategies": {
+    "EMA21_Bounce": 14,
+    "52WH_Breakout": 2,
+    "Last30Min_ATH": 6,
+    "Failed_Breakout_Short": 3
+  }
+}
