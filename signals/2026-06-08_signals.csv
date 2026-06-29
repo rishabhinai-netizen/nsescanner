@@ -26,4 +26,4 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,TTML,SHORT,43.48,43.48,48.58,35.83,30.73,2.5,72,71.7,STRONG,79.0,Telecommunication,PANIC,-7,IDEAL,OK,OPEN,,,,
 2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,ANANTRAJ,SHORT,537.3,537.3,605.53,434.95,366.72,2.5,72,71.5,STRONG,81.0,Realty,PANIC,-7,IDEAL,OK,OPEN,,,,
 2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,EMCURE,SHORT,1719.6,1719.6,1811.74,1581.39,1489.25,2.5,72,70.9,STRONG,100.0,Healthcare,PANIC,-7,IDEAL,OK,STOPPED,2026-06-10,1811.74,Stop Loss Hit,-5.36
-2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,RPOWER,SHORT,27.25,27.25,29.28,24.2,22.17,2.5,72,70.9,STRONG,100.0,Power,PANIC,-7,IDEAL,OK,OPEN,,,,
+2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,RPOWER,SHORT,27.25,27.25,29.28,24.2,22.17,2.5,72,70.9,STRONG,100.0,Power,PANIC,-7,IDEAL,OK,TARGET,2026-06-29,24.2,Target 1 Hit,11.19

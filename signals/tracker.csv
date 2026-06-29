@@ -445,14 +445,14 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-01,16:32,Last30Min_ATH,Near 52W High (EOD),LAURUSLABS,BUY,1388.4,1388.4,1358.0,1668.37,2121.4,8.0,35,100.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-16,1358.0,Stop Loss Hit,-2.19,48.6,WEAK,OK
 2026-06-01,16:32,Last30Min_ATH,Near 52W High (EOD),HINDALCO,BUY,1141.3,1141.3,1127.2,1176.0,1330.01,8.0,33,100.0,Metals & Mining,PANIC,-6,BLOCKED,STOPPED,2026-06-03,1127.2,Stop Loss Hit,-1.24,48.5,WEAK,OK
 2026-06-01,16:32,Last30Min_ATH,Near 52W High (EOD),OFSS,BUY,10191.0,10191.0,10063.0,10584.5,12743.42,8.0,33,100.0,Information Technology,PANIC,-6,BLOCKED,STOPPED,2026-06-03,10063.0,Stop Loss Hit,-1.26,46.5,WEAK,OK
-2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ATGL,SHORT,733.8,733.8,872.97,525.04,385.87,2.5,77,100.0,Oil Gas & Consumable Fuels,PANIC,-6,IDEAL,OPEN,,,,,72.9,STRONG,OK
+2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ATGL,SHORT,733.8,733.8,872.97,525.04,385.87,2.5,77,100.0,Oil Gas & Consumable Fuels,PANIC,-6,IDEAL,EXPIRED,2026-06-29,731.65,Expired (28d > 25d),0.29,72.9,STRONG,OK
 2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ASIANPAINT,SHORT,2632.4,2632.4,2798.48,2383.28,2217.2,2.5,77,86.0,Consumer Durables,PANIC,-6,IDEAL,STOPPED,2026-06-15,2798.48,Stop Loss Hit,-6.31,72.4,STRONG,OK
 2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,YESBANK,SHORT,23.01,23.01,23.95,21.6,20.66,2.5,77,85.0,Financial Services,PANIC,-6,IDEAL,STOPPED,2026-06-15,23.95,Stop Loss Hit,-4.09,68.9,STRONG,OK
-2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ALKEM,SHORT,5314.5,5314.5,5837.06,4530.66,4008.1,2.5,72,55.0,Healthcare,PANIC,-6,IDEAL,OPEN,,,,,64.5,MODERATE,OK
-2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ADANIPOWER,SHORT,232.3,232.3,256.89,195.42,170.83,2.5,77,100.0,Power,PANIC,-6,IDEAL,OPEN,,,,,63.9,MODERATE,OK
+2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ALKEM,SHORT,5314.5,5314.5,5837.06,4530.66,4008.1,2.5,72,55.0,Healthcare,PANIC,-6,IDEAL,EXPIRED,2026-06-29,5416.5,Expired (28d > 25d),-1.92,64.5,MODERATE,OK
+2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,ADANIPOWER,SHORT,232.3,232.3,256.89,195.42,170.83,2.5,77,100.0,Power,PANIC,-6,IDEAL,EXPIRED,2026-06-29,227.05,Expired (28d > 25d),2.26,63.9,MODERATE,OK
 2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,MOTHERSON,SHORT,141.77,141.77,153.37,124.37,112.77,2.5,77,76.0,Automobile and Auto Components,PANIC,-6,IDEAL,STOPPED,2026-06-25,153.37,Stop Loss Hit,-8.18,63.4,MODERATE,OK
-2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,CUMMINSIND,SHORT,5680.5,5680.5,6156.59,4966.36,4490.27,2.5,72,97.0,Capital Goods,PANIC,-6,IDEAL,OPEN,,,,,62.7,MODERATE,OK
-2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,BAJAJ-AUTO,SHORT,10376.0,10376.0,10822.86,9705.71,9258.85,2.5,72,74.0,Automobile and Auto Components,PANIC,-6,IDEAL,OPEN,,,,,61.9,MODERATE,OK
+2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,CUMMINSIND,SHORT,5680.5,5680.5,6156.59,4966.36,4490.27,2.5,72,97.0,Capital Goods,PANIC,-6,IDEAL,EXPIRED,2026-06-29,5541.5,Expired (28d > 25d),2.45,62.7,MODERATE,OK
+2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,BAJAJ-AUTO,SHORT,10376.0,10376.0,10822.86,9705.71,9258.85,2.5,72,74.0,Automobile and Auto Components,PANIC,-6,IDEAL,TARGET,2026-06-29,9705.71,Target 1 Hit,6.46,61.9,MODERATE,OK
 2026-06-01,16:32,Failed_Breakout_Short,Failed Breakout Short,INDUSTOWER,SHORT,431.45,431.45,452.99,399.14,377.6,2.5,72,53.0,Telecommunication,PANIC,-6,IDEAL,TARGET,2026-06-23,399.14,Target 1 Hit,7.49,60.3,MODERATE,OK
 2026-06-01,19:09,VCP,VCP (Minervini v2),ABBOTINDIA,BUY,,28280.0,26496.85,30954.72,33344.34,2.8,35,,Healthcare,PANIC,-4,BLOCKED,STOPPED,2026-06-02,26496.85,Stop Loss Hit,-6.31,,WEAK,OK
 2026-06-01,19:09,VCP,VCP (Minervini v2),ATUL,BUY,,7180.0,6724.71,7862.94,7923.45,1.6,36,,Chemicals,PANIC,-4,BLOCKED,STOPPED,2026-06-02,6724.71,Stop Loss Hit,-6.34,,WEAK,OK
@@ -953,79 +953,79 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-01,19:09,EMA21_Bounce,21 EMA Bounce,ZYDUSLIFE,BUY,,,,,,1.0,45,,Healthcare,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,1061.4,Expired (16d > 15d),,,WEAK,OK
 2026-06-01,19:09,EMA21_Bounce,21 EMA Bounce,ZYDUSWELL,BUY,,,,,,1.0,50,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,506.2,Expired (16d > 15d),,,WEAK,OK
 2026-06-01,19:09,EMA21_Bounce,21 EMA Bounce,ECLERX,BUY,,,,,,1.0,45,,Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,1456.4,Expired (16d > 15d),,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ACMESOLAR,BUY,,,,,,1.0,37,,Power,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,AIAENG,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,AADHARHFC,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ATGL,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CPPLUS,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,AEGISLOG,BUY,,,,,,1.0,37,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ANANDRATHI,BUY,,,,,,1.0,37,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ANANTRAJ,BUY,,,,,,1.0,37,,Realty,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ASIANPAINT,BUY,,,,,,1.0,32,,Consumer Durables,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,BDL,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CHENNPETRO,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CHOLAHLDNG,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CHOLAFIN,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,COALINDIA,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,COLPAL,BUY,,,,,,1.0,32,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CONCORDBIO,BUY,,,,,,1.0,32,,Healthcare,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CYIENT,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,DELHIVERY,BUY,,,,,,1.0,32,,Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,EIDPARRY,BUY,,,,,,1.0,32,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,EIHOTEL,BUY,,,,,,1.0,32,,Consumer Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,FINCABLES,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,GVT&D,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,GLENMARK,BUY,,,,,,1.0,32,,Healthcare,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,HCLTECH,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,POWERINDIA,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,IFCI,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,INDHOTEL,BUY,,,,,,1.0,32,,Consumer Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,IREDA,BUY,,,,,,1.0,37,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,INOXWIND,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JBCHEPHARM,BUY,,,,,,1.0,32,,Healthcare,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JKTYRE,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JMFINANCIL,BUY,,,,,,1.0,37,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JPPOWER,BUY,,,,,,1.0,37,,Power,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JYOTICNC,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,KPRMILL,BUY,,,,,,1.0,37,,Textiles,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,KPIL,BUY,,,,,,1.0,32,,Construction,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,KARURVYSYA,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,LTTS,BUY,,,,,,1.0,37,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,LTFOODS,BUY,,,,,,1.0,32,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,LINDEINDIA,BUY,,,,,,1.0,32,,Chemicals,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,MGL,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,M&M,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,MSUMI,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NATCOPHARM,BUY,,,,,,1.0,37,,Healthcare,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NBCC,BUY,,,,,,1.0,37,,Construction,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NMDC,BUY,,,,,,1.0,37,,Metals & Mining,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NSLNISP,BUY,,,,,,1.0,37,,Metals & Mining,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NTPC,BUY,,,,,,1.0,32,,Power,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NETWEB,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,OLAELEC,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,OLECTRA,BUY,,,,,,1.0,37,,Automobile and Auto Components,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PTCIL,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PERSISTENT,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PETRONET,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PHOENIXLTD,BUY,,,,,,1.0,32,,Realty,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,RHIM,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,REDINGTON,BUY,,,,,,1.0,37,,Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SBILIFE,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SAREGAMA,BUY,,,,,,1.0,32,,Media Entertainment & Publication,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SHREECEM,BUY,,,,,,1.0,32,,Construction Materials,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,STARHEALTH,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SUZLON,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TCS,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TECHM,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TEGA,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TORNTPOWER,BUY,,,,,,1.0,32,,Power,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TRIDENT,BUY,,,,,,1.0,37,,Textiles,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,VTL,BUY,,,,,,1.0,32,,Textiles,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,WELSPUNLIV,BUY,,,,,,1.0,32,,Textiles,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,WHIRLPOOL,BUY,,,,,,1.0,32,,Consumer Durables,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,WOCKPHARMA,BUY,,,,,,1.0,37,,Healthcare,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ZEEL,BUY,,,,,,1.0,37,,Media Entertainment & Publication,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ZENSARTECH,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,OPEN,,,,,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ACMESOLAR,BUY,,,,,,1.0,37,,Power,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,379.25,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,AIAENG,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,4951.4,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,AADHARHFC,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,518.75,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ATGL,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,731.65,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CPPLUS,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,3714.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,AEGISLOG,BUY,,,,,,1.0,37,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1174.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ANANDRATHI,BUY,,,,,,1.0,37,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1988.7,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ANANTRAJ,BUY,,,,,,1.0,37,,Realty,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,513.75,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ASIANPAINT,BUY,,,,,,1.0,32,,Consumer Durables,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,2656.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,BDL,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1335.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CHENNPETRO,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1153.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CHOLAHLDNG,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1646.6,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CHOLAFIN,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1774.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,COALINDIA,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,444.85,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,COLPAL,BUY,,,,,,1.0,32,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1999.2,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CONCORDBIO,BUY,,,,,,1.0,32,,Healthcare,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1261.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,CYIENT,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,881.55,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,DELHIVERY,BUY,,,,,,1.0,32,,Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,463.55,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,EIDPARRY,BUY,,,,,,1.0,32,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,714.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,EIHOTEL,BUY,,,,,,1.0,32,,Consumer Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,320.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,FINCABLES,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1179.2,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,GVT&D,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,4956.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,GLENMARK,BUY,,,,,,1.0,32,,Healthcare,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,2186.6,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,HCLTECH,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1102.4,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,POWERINDIA,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,34975.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,IFCI,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,77.18,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,INDHOTEL,BUY,,,,,,1.0,32,,Consumer Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,707.05,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,IREDA,BUY,,,,,,1.0,37,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,127.49,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,INOXWIND,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,88.18,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JBCHEPHARM,BUY,,,,,,1.0,32,,Healthcare,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,2303.2,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JKTYRE,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,388.6,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JMFINANCIL,BUY,,,,,,1.0,37,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,123.6,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JPPOWER,BUY,,,,,,1.0,37,,Power,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,17.81,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,JYOTICNC,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,785.45,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,KPRMILL,BUY,,,,,,1.0,37,,Textiles,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1131.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,KPIL,BUY,,,,,,1.0,32,,Construction,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1346.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,KARURVYSYA,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,298.85,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,LTTS,BUY,,,,,,1.0,37,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,3129.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,LTFOODS,BUY,,,,,,1.0,32,,Fast Moving Consumer Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,374.95,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,LINDEINDIA,BUY,,,,,,1.0,32,,Chemicals,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,7297.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,MGL,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1142.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,M&M,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,3093.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,MSUMI,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,39.86,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NATCOPHARM,BUY,,,,,,1.0,37,,Healthcare,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,919.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NBCC,BUY,,,,,,1.0,37,,Construction,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,104.35,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NMDC,BUY,,,,,,1.0,37,,Metals & Mining,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,85.45,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NSLNISP,BUY,,,,,,1.0,37,,Metals & Mining,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,43.12,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NTPC,BUY,,,,,,1.0,32,,Power,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,356.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,NETWEB,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,4454.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,OLAELEC,BUY,,,,,,1.0,32,,Automobile and Auto Components,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,40.38,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,OLECTRA,BUY,,,,,,1.0,37,,Automobile and Auto Components,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1474.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PTCIL,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,17193.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PERSISTENT,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,4298.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PETRONET,BUY,,,,,,1.0,32,,Oil Gas & Consumable Fuels,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,281.25,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,PHOENIXLTD,BUY,,,,,,1.0,32,,Realty,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1912.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,RHIM,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,372.95,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,REDINGTON,BUY,,,,,,1.0,37,,Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,275.52,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SBILIFE,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1755.4,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SAREGAMA,BUY,,,,,,1.0,32,,Media Entertainment & Publication,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,498.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SHREECEM,BUY,,,,,,1.0,32,,Construction Materials,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,25145.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,STARHEALTH,BUY,,,,,,1.0,32,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,584.75,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,SUZLON,BUY,,,,,,1.0,32,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,57.21,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TCS,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,2097.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TECHM,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1433.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TEGA,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1704.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TORNTPOWER,BUY,,,,,,1.0,32,,Power,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1418.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,TRIDENT,BUY,,,,,,1.0,37,,Textiles,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,25.88,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,VTL,BUY,,,,,,1.0,32,,Textiles,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,632.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,WELSPUNLIV,BUY,,,,,,1.0,32,,Textiles,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,162.04,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,WHIRLPOOL,BUY,,,,,,1.0,32,,Consumer Durables,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,800.3,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,WOCKPHARMA,BUY,,,,,,1.0,37,,Healthcare,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,1949.7,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ZEEL,BUY,,,,,,1.0,37,,Media Entertainment & Publication,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,107.32,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,52WH_Breakout,52-Week High Breakout,ZENSARTECH,BUY,,,,,,1.0,32,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-29,433.4,Expired (28d > 25d),,,WEAK,OK
 2026-06-01,19:09,Last30Min_ATH,Near 52W High (EOD),360ONE,BUY,,,,,,1.0,33,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,1136.9,Expired (16d > 15d),,,WEAK,OK
 2026-06-01,19:09,Last30Min_ATH,Near 52W High (EOD),ACMESOLAR,BUY,,,,,,1.0,37,,Power,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,331.8,Expired (16d > 15d),,,WEAK,OK
 2026-06-01,19:09,Last30Min_ATH,Near 52W High (EOD),AIAENG,BUY,,,,,,1.0,37,,Capital Goods,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,4501.6,Expired (16d > 15d),,,WEAK,OK
@@ -1178,34 +1178,34 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-01,19:09,Last30Min_ATH,Near 52W High (EOD),YESBANK,BUY,,,,,,1.0,33,,Financial Services,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,25.11,Expired (16d > 15d),,,WEAK,OK
 2026-06-01,19:09,Last30Min_ATH,Near 52W High (EOD),ZEEL,BUY,,,,,,1.0,37,,Media Entertainment & Publication,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,109.97,Expired (16d > 15d),,,WEAK,OK
 2026-06-01,19:09,Last30Min_ATH,Near 52W High (EOD),ZENSARTECH,BUY,,,,,,1.0,37,,Information Technology,PANIC,-4,BLOCKED,EXPIRED,2026-06-17,461.5,Expired (16d > 15d),,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,ACMESOLAR,SHORT,,,,,,1.0,80,,Power,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,AIAENG,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,CPPLUS,SHORT,,,,,,1.0,80,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,AEGISLOG,SHORT,,,,,,1.0,80,,Oil Gas & Consumable Fuels,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,COFORGE,SHORT,,,,,,1.0,77,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,ELGIEQUIP,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,EMMVEE,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,GVT&D,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,HINDALCO,SHORT,,,,,,1.0,77,,Metals & Mining,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,POWERINDIA,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,ICICIAMC,SHORT,,,,,,1.0,77,,Financial Services,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,IFCI,SHORT,,,,,,1.0,77,,Financial Services,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,INFY,SHORT,,,,,,1.0,72,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,JPPOWER,SHORT,,,,,,1.0,80,,Power,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,KIRLOSENG,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,LAURUSLABS,SHORT,,,,,,1.0,77,,Healthcare,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,MPHASIS,SHORT,,,,,,1.0,72,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,NBCC,SHORT,,,,,,1.0,80,,Construction,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,NETWEB,SHORT,,,,,,1.0,80,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,OLAELEC,SHORT,,,,,,1.0,77,,Automobile and Auto Components,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,OFSS,SHORT,,,,,,1.0,77,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,PERSISTENT,SHORT,,,,,,1.0,72,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,RRKABEL,SHORT,,,,,,1.0,72,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,SUZLON,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,TEGA,SHORT,,,,,,1.0,80,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,WELCORP,SHORT,,,,,,1.0,72,,Capital Goods,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,WIPRO,SHORT,,,,,,1.0,77,,Information Technology,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
-2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,WOCKPHARMA,SHORT,,,,,,1.0,80,,Healthcare,PANIC,-4,IDEAL,OPEN,,,,,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,ACMESOLAR,SHORT,,,,,,1.0,80,,Power,PANIC,-4,IDEAL,EXPIRED,2026-06-29,379.25,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,AIAENG,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,4951.4,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,CPPLUS,SHORT,,,,,,1.0,80,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,3714.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,AEGISLOG,SHORT,,,,,,1.0,80,,Oil Gas & Consumable Fuels,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1174.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,COFORGE,SHORT,,,,,,1.0,77,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1491.4,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,ELGIEQUIP,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,608.3,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,EMMVEE,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,332.35,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,GVT&D,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,4956.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,HINDALCO,SHORT,,,,,,1.0,77,,Metals & Mining,PANIC,-4,IDEAL,EXPIRED,2026-06-29,963.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,POWERINDIA,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,34975.0,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,ICICIAMC,SHORT,,,,,,1.0,77,,Financial Services,PANIC,-4,IDEAL,EXPIRED,2026-06-29,3282.3,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,IFCI,SHORT,,,,,,1.0,77,,Financial Services,PANIC,-4,IDEAL,EXPIRED,2026-06-29,77.18,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,INFY,SHORT,,,,,,1.0,72,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1036.7,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,JPPOWER,SHORT,,,,,,1.0,80,,Power,PANIC,-4,IDEAL,EXPIRED,2026-06-29,17.81,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,KIRLOSENG,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,2441.1,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,LAURUSLABS,SHORT,,,,,,1.0,77,,Healthcare,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1500.3,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,MPHASIS,SHORT,,,,,,1.0,72,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,2207.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,NBCC,SHORT,,,,,,1.0,80,,Construction,PANIC,-4,IDEAL,EXPIRED,2026-06-29,104.35,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,NETWEB,SHORT,,,,,,1.0,80,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,4454.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,OLAELEC,SHORT,,,,,,1.0,77,,Automobile and Auto Components,PANIC,-4,IDEAL,EXPIRED,2026-06-29,40.38,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,OFSS,SHORT,,,,,,1.0,77,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,10874.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,PERSISTENT,SHORT,,,,,,1.0,72,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,4298.5,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,RRKABEL,SHORT,,,,,,1.0,72,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,2502.3,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,SUZLON,SHORT,,,,,,1.0,77,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,57.21,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,TEGA,SHORT,,,,,,1.0,80,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1704.9,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,WELCORP,SHORT,,,,,,1.0,72,,Capital Goods,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1510.8,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,WIPRO,SHORT,,,,,,1.0,77,,Information Technology,PANIC,-4,IDEAL,EXPIRED,2026-06-29,175.48,Expired (28d > 25d),,,WEAK,OK
+2026-06-01,19:09,Failed_Breakout_Short,Failed Breakout Short,WOCKPHARMA,SHORT,,,,,,1.0,80,,Healthcare,PANIC,-4,IDEAL,EXPIRED,2026-06-29,1949.7,Expired (28d > 25d),,,WEAK,OK
 2026-06-02,14:43,EMA21_Bounce,21 EMA Bounce,STARHEALTH,BUY,533.7,533.7,511.69,566.72,586.25,2.4,50,91.0,Financial Services,PANIC,-5,BLOCKED,TARGET,2026-06-18,566.72,Target 1 Hit,6.19,91.9,ELITE,OK
 2026-06-02,14:43,EMA21_Bounce,21 EMA Bounce,SONACOMS,BUY,611.35,611.35,582.61,654.46,695.99,2.9,50,94.0,Automobile and Auto Components,PANIC,-5,BLOCKED,STOPPED,2026-06-11,582.61,Stop Loss Hit,-4.7,88.5,ELITE,OK
 2026-06-02,14:43,EMA21_Bounce,21 EMA Bounce,COALINDIA,BUY,472.15,472.15,455.33,497.38,514.2,2.5,50,85.0,Oil Gas & Consumable Fuels,PANIC,-5,BLOCKED,STOPPED,2026-06-10,455.33,Stop Loss Hit,-3.56,86.8,ELITE,OK
@@ -1227,7 +1227,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-02,14:43,Last30Min_ATH,Near 52W High (EOD),APOLLOHOSP,BUY,8089.5,8089.5,7816.0,8499.75,8773.25,2.5,33,73.0,Healthcare,PANIC,-5,BLOCKED,TARGET,2026-06-09,8499.75,Target 1 Hit,5.07,37.9,WEAK,OK
 2026-06-02,14:43,Failed_Breakout_Short,Failed Breakout Short,YESBANK,SHORT,22.83,22.83,23.95,21.15,20.03,2.5,72,86.0,Financial Services,PANIC,-5,IDEAL,STOPPED,2026-06-15,23.95,Stop Loss Hit,-4.91,70.9,STRONG,OK
 2026-06-02,14:43,Failed_Breakout_Short,Failed Breakout Short,LAURUSLABS,SHORT,1382.6,1382.6,1406.74,1346.39,1322.25,2.5,77,100.0,Healthcare,PANIC,-5,IDEAL,STOPPED,2026-06-04,1406.74,Stop Loss Hit,-1.75,64.2,MODERATE,OK
-2026-06-03,15:25,VCP,VCP (Minervini v2),ADANIPORTS,BUY,1803.8,1842.8,1735.58,2182.27,2731.57,8.0,42,100.0,Services,PANIC,-5,BLOCKED,OPEN,,,,,45.2,WEAK,OK
+2026-06-03,15:25,VCP,VCP (Minervini v2),ADANIPORTS,BUY,1803.8,1842.8,1735.58,2182.27,2731.57,8.0,42,100.0,Services,PANIC,-5,BLOCKED,EXPIRED,2026-06-29,1776.1,Expired (26d > 25d),-3.62,45.2,WEAK,OK
 2026-06-03,15:25,VCP,VCP (Minervini v2),JSWSTEEL,BUY,1312.9,1328.0,1252.01,1467.36,1692.86,4.8,41,74.0,Metals & Mining,PANIC,-5,BLOCKED,STOPPED,2026-06-23,1252.01,Stop Loss Hit,-5.72,39.2,WEAK,OK
 2026-06-03,15:25,EMA21_Bounce,21 EMA Bounce,GRASIM,BUY,3101.6,3101.6,3004.21,3247.68,3471.84,3.8,45,90.0,Construction Materials,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,3149.5,Expired (16d > 15d),1.54,89.8,ELITE,OK
 2026-06-03,15:25,EMA21_Bounce,21 EMA Bounce,APOLLOHOSP,BUY,8290.5,8290.5,8016.54,8701.44,9038.59,2.7,55,79.0,Healthcare,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,8489.5,Expired (16d > 15d),2.4,83.3,ELITE,OK
@@ -1235,11 +1235,11 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-03,15:25,EMA21_Bounce,21 EMA Bounce,TATASTEEL,BUY,211.89,211.89,205.03,222.18,229.04,2.5,45,67.0,Metals & Mining,PANIC,-5,BLOCKED,STOPPED,2026-06-05,205.03,Stop Loss Hit,-3.24,72.3,STRONG,OK
 2026-06-03,15:25,52WH_Breakout,52-Week High Breakout,IDEA,BUY,14.85,14.85,14.21,15.81,19.0,6.5,37,100.0,Telecommunication,PANIC,-5,BLOCKED,STOPPED,2026-06-09,14.21,Stop Loss Hit,-4.31,52.2,MODERATE,OK
 2026-06-03,15:25,Last30Min_ATH,Near 52W High (EOD),APOLLOHOSP,BUY,8290.5,8290.5,8109.5,8562.0,9038.59,4.1,35,79.0,Healthcare,PANIC,-5,BLOCKED,TARGET,2026-06-10,8562.0,Target 1 Hit,3.27,40.3,WEAK,OK
-2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,TECHM,SHORT,1472.3,1472.3,1602.94,1276.34,1145.7,2.5,77,85.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,73.9,STRONG,OK
-2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,PERSISTENT,SHORT,5097.5,5097.5,5665.75,4245.12,3676.87,2.5,77,85.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,70.9,STRONG,OK
+2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,TECHM,SHORT,1472.3,1472.3,1602.94,1276.34,1145.7,2.5,77,85.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,1433.8,Expired (26d > 25d),2.61,73.9,STRONG,OK
+2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,PERSISTENT,SHORT,5097.5,5097.5,5665.75,4245.12,3676.87,2.5,77,85.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,4298.5,Expired (26d > 25d),15.67,70.9,STRONG,OK
 2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,TATAELXSI,SHORT,4347.0,4347.0,4576.73,4002.41,3772.68,2.5,77,62.0,Information Technology,PANIC,-5,IDEAL,TARGET,2026-06-11,4002.41,Target 1 Hit,7.93,69.2,STRONG,OK
-2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,TCS,SHORT,2241.7,2241.7,2477.88,1887.43,1651.25,2.5,75,40.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,67.5,STRONG,OK
-2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,HCLTECH,SHORT,1179.0,1179.0,1265.4,1049.4,963.0,2.5,72,42.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,64.7,MODERATE,OK
+2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,TCS,SHORT,2241.7,2241.7,2477.88,1887.43,1651.25,2.5,75,40.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,2097.9,Expired (26d > 25d),6.41,67.5,STRONG,OK
+2026-06-03,15:25,Failed_Breakout_Short,Failed Breakout Short,HCLTECH,SHORT,1179.0,1179.0,1265.4,1049.4,963.0,2.5,72,42.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,1102.4,Expired (26d > 25d),6.5,64.7,MODERATE,OK
 2026-06-03,18:10,EMA21_Bounce,21 EMA Bounce,NIVABUPA,BUY,84.03,84.03,81.21,88.26,91.08,2.5,45,90.0,Financial Services,PANIC,-5,BLOCKED,STOPPED,2026-06-08,81.21,Stop Loss Hit,-3.36,89.8,ELITE,OK
 2026-06-03,18:10,EMA21_Bounce,21 EMA Bounce,BELRISE,BUY,219.54,219.54,211.06,232.26,240.74,2.5,45,100.0,Automobile and Auto Components,PANIC,-5,BLOCKED,STOPPED,2026-06-08,211.06,Stop Loss Hit,-3.86,88.3,ELITE,OK
 2026-06-03,18:10,EMA21_Bounce,21 EMA Bounce,ICICIAMC,BUY,3342.9,3342.9,3168.7,3604.2,3778.4,2.5,50,83.0,Financial Services,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,3429.0,Expired (16d > 15d),2.58,85.7,ELITE,OK
@@ -1254,11 +1254,11 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-03,18:10,EMA21_Bounce,21 EMA Bounce,NYKAA,BUY,269.4,269.4,260.26,283.11,292.25,2.5,45,74.0,Consumer Services,PANIC,-5,BLOCKED,STOPPED,2026-06-08,260.26,Stop Loss Hit,-3.39,73.5,STRONG,OK
 2026-06-03,18:10,EMA21_Bounce,21 EMA Bounce,BANKINDIA,BUY,139.92,139.92,132.99,150.31,157.24,2.5,50,34.0,Financial Services,PANIC,-5,BLOCKED,TARGET,2026-06-15,150.31,Target 1 Hit,7.43,63.1,MODERATE,OK
 2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,RRKABEL,BUY,2155.9,2155.9,2087.98,2696.4,3571.0,8.0,37,100.0,Capital Goods,PANIC,-5,BLOCKED,STOPPED,2026-06-11,2087.98,Stop Loss Hit,-3.15,49.5,WEAK,OK
-2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,J&KBANK,BUY,148.65,148.65,142.73,173.77,214.42,8.0,37,100.0,Financial Services,PANIC,-5,BLOCKED,OPEN,,,,,49.4,WEAK,OK
+2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,J&KBANK,BUY,148.65,148.65,142.73,173.77,214.42,8.0,37,100.0,Financial Services,PANIC,-5,BLOCKED,EXPIRED,2026-06-29,159.64,Expired (26d > 25d),7.39,49.4,WEAK,OK
 2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,WELCORP,BUY,1413.6,1413.6,1374.99,1818.14,2472.74,8.0,32,100.0,Capital Goods,PANIC,-5,BLOCKED,STOPPED,2026-06-08,1374.99,Stop Loss Hit,-2.73,48.8,WEAK,OK
 2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,IFCI,BUY,80.42,80.42,70.65,95.07,101.44,2.2,42,100.0,Financial Services,PANIC,-5,BLOCKED,STOPPED,2026-06-11,70.65,Stop Loss Hit,-12.15,47.0,WEAK,OK
 2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,ATHERENERG,BUY,1022.05,1022.05,983.59,1079.74,1251.61,6.0,37,100.0,Automobile and Auto Components,PANIC,-5,BLOCKED,STOPPED,2026-06-04,983.59,Stop Loss Hit,-3.76,45.0,WEAK,OK
-2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,CPPLUS,BUY,3369.2,3369.2,3206.92,4494.76,6316.06,8.0,37,100.0,Capital Goods,PANIC,-5,BLOCKED,OPEN,,,,,40.5,WEAK,OK
+2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,CPPLUS,BUY,3369.2,3369.2,3206.92,4494.76,6316.06,8.0,37,100.0,Capital Goods,PANIC,-5,BLOCKED,EXPIRED,2026-06-29,3714.0,Expired (26d > 25d),10.23,40.5,WEAK,OK
 2026-06-03,18:10,52WH_Breakout,52-Week High Breakout,CHENNPETRO,BUY,1189.8,1189.8,1126.82,1284.27,1392.06,3.2,42,100.0,Oil Gas & Consumable Fuels,PANIC,-5,BLOCKED,STOPPED,2026-06-12,1126.82,Stop Loss Hit,-5.29,40.2,WEAK,OK
 2026-06-03,18:10,Last30Min_ATH,Near 52W High (EOD),RRKABEL,BUY,2155.9,2155.9,2020.1,2696.4,3571.0,8.0,39,100.0,Capital Goods,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,2321.1,Expired (16d > 15d),7.66,49.5,WEAK,OK
 2026-06-03,18:10,Last30Min_ATH,Near 52W High (EOD),J&KBANK,BUY,148.65,148.65,141.92,173.77,214.42,8.0,39,100.0,Financial Services,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,163.56,Expired (16d > 15d),10.03,49.4,WEAK,OK
@@ -1268,10 +1268,10 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-03,18:10,Last30Min_ATH,Near 52W High (EOD),CPPLUS,BUY,3369.2,3369.2,3114.1,4494.76,6316.06,8.0,39,100.0,Capital Goods,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,3637.8,Expired (16d > 15d),7.97,40.5,WEAK,OK
 2026-06-03,18:10,Last30Min_ATH,Near 52W High (EOD),EMMVEE,BUY,327.7,327.7,311.05,352.67,415.54,5.3,35,100.0,Capital Goods,PANIC,-5,BLOCKED,EXPIRED,2026-06-19,332.1,Expired (16d > 15d),1.34,39.0,WEAK,OK
 2026-06-03,18:10,Last30Min_ATH,Near 52W High (EOD),RBLBANK,BUY,348.2,348.2,337.05,364.92,385.77,3.4,35,89.0,Financial Services,PANIC,-5,BLOCKED,TARGET,2026-06-11,364.92,Target 1 Hit,4.8,38.2,WEAK,OK
-2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,PTCIL,SHORT,18919.0,18919.0,20074.14,17186.29,16031.15,2.5,77,77.0,Capital Goods,PANIC,-5,IDEAL,OPEN,,,,,76.5,STRONG,OK
-2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,LTM,SHORT,4052.7,4052.7,4402.64,3527.79,3177.85,2.5,75,53.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,69.4,STRONG,OK
-2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,COFORGE,SHORT,1420.9,1420.9,1571.39,1195.16,1044.67,2.5,77,100.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,68.9,STRONG,OK
-2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,MPHASIS,SHORT,2288.5,2288.5,2453.23,2041.4,1876.67,2.5,77,69.0,Information Technology,PANIC,-5,IDEAL,OPEN,,,,,66.8,STRONG,OK
+2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,PTCIL,SHORT,18919.0,18919.0,20074.14,17186.29,16031.15,2.5,77,77.0,Capital Goods,PANIC,-5,IDEAL,TARGET,2026-06-29,17186.29,Target 1 Hit,9.16,76.5,STRONG,OK
+2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,LTM,SHORT,4052.7,4052.7,4402.64,3527.79,3177.85,2.5,75,53.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,3686.1,Expired (26d > 25d),9.05,69.4,STRONG,OK
+2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,COFORGE,SHORT,1420.9,1420.9,1571.39,1195.16,1044.67,2.5,77,100.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,1491.4,Expired (26d > 25d),-4.96,68.9,STRONG,OK
+2026-06-03,18:10,Failed_Breakout_Short,Failed Breakout Short,MPHASIS,SHORT,2288.5,2288.5,2453.23,2041.4,1876.67,2.5,77,69.0,Information Technology,PANIC,-5,IDEAL,EXPIRED,2026-06-29,2207.8,Expired (26d > 25d),3.53,66.8,STRONG,OK
 2026-06-04,13:53,EMA21_Bounce,21 EMA Bounce,SONACOMS,BUY,601.15,601.15,587.47,621.67,621.8,1.5,45,100.0,Automobile and Auto Components,PANIC,-6,BLOCKED,STOPPED,2026-06-08,587.47,Stop Loss Hit,-2.28,91.7,ELITE,OK
 2026-06-04,13:53,EMA21_Bounce,21 EMA Bounce,STARHEALTH,BUY,526.25,526.25,514.19,544.34,556.4,2.5,45,93.0,Financial Services,PANIC,-6,BLOCKED,STOPPED,2026-06-08,514.19,Stop Loss Hit,-2.29,90.5,ELITE,OK
 2026-06-04,13:53,EMA21_Bounce,21 EMA Bounce,BSE,BUY,4033.4,4033.4,3856.49,4298.9,4446.8,2.3,50,100.0,Financial Services,PANIC,-6,BLOCKED,STOPPED,2026-06-05,3856.49,Stop Loss Hit,-4.39,86.8,ELITE,OK
@@ -1388,7 +1388,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,TTML,SHORT,43.48,43.48,48.58,35.83,30.73,2.5,72,79.0,Telecommunication,PANIC,-7,IDEAL,OPEN,,,,,71.7,STRONG,OK
 2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,ANANTRAJ,SHORT,537.3,537.3,605.53,434.95,366.72,2.5,72,81.0,Realty,PANIC,-7,IDEAL,OPEN,,,,,71.5,STRONG,OK
 2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,EMCURE,SHORT,1719.6,1719.6,1811.74,1581.39,1489.25,2.5,72,100.0,Healthcare,PANIC,-7,IDEAL,STOPPED,2026-06-10,1811.74,Stop Loss Hit,-5.36,70.9,STRONG,OK
-2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,RPOWER,SHORT,27.25,27.25,29.28,24.2,22.17,2.5,72,100.0,Power,PANIC,-7,IDEAL,OPEN,,,,,70.9,STRONG,OK
+2026-06-08,16:58,Failed_Breakout_Short,Failed Breakout Short,RPOWER,SHORT,27.25,27.25,29.28,24.2,22.17,2.5,72,100.0,Power,PANIC,-7,IDEAL,TARGET,2026-06-29,24.2,Target 1 Hit,11.19,70.9,STRONG,OK
 2026-06-09,13:37,VCP,VCP (Minervini v2),ADANIPORTS,BUY,1826.4,1842.8,1735.58,2182.27,2731.57,8.0,41,100.0,Services,PANIC,-6,BLOCKED,OPEN,,,,,45.4,WEAK,OK
 2026-06-09,13:37,EMA21_Bounce,21 EMA Bounce,SONACOMS,BUY,601.85,601.85,580.88,633.31,654.28,2.5,50,100.0,Automobile and Auto Components,PANIC,-6,BLOCKED,STOPPED,2026-06-11,580.88,Stop Loss Hit,-3.48,93.0,ELITE,OK
 2026-06-09,13:37,EMA21_Bounce,21 EMA Bounce,GRASIM,BUY,3095.5,3095.5,3020.2,3208.45,3283.75,2.5,45,93.0,Construction Materials,PANIC,-6,BLOCKED,EXPIRED,2026-06-25,3126.6,Expired (16d > 15d),1.0,91.8,ELITE,OK
@@ -1487,7 +1487,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-11,14:29,EMA21_Bounce,21 EMA Bounce,AUROPHARMA,BUY,1464.1,1464.1,1437.86,1503.46,1513.4,1.9,50,82.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-15,1437.86,Stop Loss Hit,-1.79,80.1,ELITE,OK
 2026-06-11,14:29,EMA21_Bounce,21 EMA Bounce,JSWSTEEL,BUY,1282.3,1282.3,1248.05,1333.68,1367.93,2.5,50,75.0,Metals & Mining,PANIC,-6,BLOCKED,STOPPED,2026-06-23,1248.05,Stop Loss Hit,-2.67,79.4,STRONG,OK
 2026-06-11,14:29,EMA21_Bounce,21 EMA Bounce,BIOCON,BUY,415.95,415.95,407.34,428.86,436.9,2.4,45,68.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-17,407.34,Stop Loss Hit,-2.07,73.1,STRONG,OK
-2026-06-11,14:29,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6655.5,6655.5,6545.59,6960.5,6968.0,2.8,45,66.0,Healthcare,PANIC,-6,BLOCKED,OPEN,,,,,72.2,STRONG,OK
+2026-06-11,14:29,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6655.5,6655.5,6545.59,6960.5,6968.0,2.8,45,66.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-29,6545.59,Stop Loss Hit,-1.65,72.2,STRONG,OK
 2026-06-11,14:29,Last30Min_ATH,Near 52W High (EOD),NAVINFLUOR,BUY,7157.0,7157.0,6987.5,7525.0,8078.13,5.4,33,84.0,Chemicals,PANIC,-6,BLOCKED,TARGET,2026-06-19,7525.0,Target 1 Hit,5.14,40.0,WEAK,OK
 2026-06-11,14:29,Last30Min_ATH,Near 52W High (EOD),JSWSTEEL,BUY,1282.3,1282.3,1261.0,1314.25,1335.55,2.5,33,75.0,Metals & Mining,PANIC,-6,BLOCKED,TARGET,2026-06-15,1314.25,Target 1 Hit,2.49,36.4,WEAK,OK
 2026-06-11,14:29,Last30Min_ATH,Near 52W High (EOD),TORNTPHARM,BUY,4572.2,4572.2,4431.1,4783.85,5010.22,3.1,37,64.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-17,4431.1,Stop Loss Hit,-3.09,32.1,WEAK,OK
@@ -1500,9 +1500,9 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,VIJAYA,BUY,1279.2,1279.2,1231.44,1375.0,1379.3,2.1,50,100.0,Healthcare,PANIC,-6,BLOCKED,TARGET,2026-06-19,1375.0,Target 1 Hit,7.49,87.5,ELITE,OK
 2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,LALPATHLAB,BUY,1593.5,1593.5,1531.18,1686.98,1749.3,2.5,50,84.0,Healthcare,PANIC,-6,BLOCKED,TARGET,2026-06-16,1686.98,Target 1 Hit,5.87,86.0,ELITE,OK
 2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,GRANULES,BUY,763.15,763.15,739.45,798.7,822.4,2.5,50,100.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-17,739.45,Stop Loss Hit,-3.11,85.5,ELITE,OK
-2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,ANTHEM,BUY,780.05,780.05,746.56,830.28,863.77,2.5,50,98.0,Healthcare,PANIC,-6,BLOCKED,OPEN,,,,,83.5,ELITE,OK
+2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,ANTHEM,BUY,780.05,780.05,746.56,830.28,863.77,2.5,50,98.0,Healthcare,PANIC,-6,BLOCKED,EXPIRED,2026-06-29,775.0,Expired (18d > 15d),-0.65,83.5,ELITE,OK
 2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,FLUOROCHEM,BUY,3680.5,3680.5,3552.14,3873.04,3874.9,1.5,45,84.0,Chemicals,PANIC,-6,BLOCKED,TARGET,2026-06-18,3873.04,Target 1 Hit,5.23,80.0,ELITE,OK
-2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,BALRAMCHIN,BUY,548.55,548.55,525.74,582.76,605.57,2.5,55,69.0,Fast Moving Consumer Goods,PANIC,-6,BLOCKED,OPEN,,,,,76.8,STRONG,OK
+2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,BALRAMCHIN,BUY,548.55,548.55,525.74,582.76,605.57,2.5,55,69.0,Fast Moving Consumer Goods,PANIC,-6,BLOCKED,STOPPED,2026-06-29,525.74,Stop Loss Hit,-4.16,76.8,STRONG,OK
 2026-06-11,17:08,EMA21_Bounce,21 EMA Bounce,VTL,BUY,614.45,614.45,596.85,640.85,658.45,2.5,55,82.0,Textiles,PANIC,-6,BLOCKED,TARGET,2026-06-15,640.85,Target 1 Hit,4.3,76.4,STRONG,OK
 2026-06-11,17:08,52WH_Breakout,52-Week High Breakout,APARINDS,BUY,14551.0,14551.0,13929.43,15483.36,18070.51,5.7,37,100.0,Capital Goods,PANIC,-6,BLOCKED,TARGET,2026-06-15,15483.36,Target 1 Hit,6.41,46.5,WEAK,OK
 2026-06-11,17:08,Last30Min_ATH,Near 52W High (EOD),JBCHEPHARM,BUY,2252.7,2252.7,2181.1,2360.1,2480.18,3.2,35,70.0,Healthcare,PANIC,-6,BLOCKED,STOPPED,2026-06-17,2181.1,Stop Loss Hit,-3.18,31.5,WEAK,OK
@@ -1519,36 +1519,36 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-12,13:58,VCP,VCP (Minervini v2),POLYCAB,BUY,9554.0,9833.0,9249.52,11775.06,14917.56,8.0,44,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,38.5,WEAK,OK
 2026-06-12,13:58,VCP,VCP (Minervini v2),KEI,BUY,5369.5,5476.3,5042.16,6427.59,7966.89,5.7,39,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,36.4,WEAK,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,METROPOLIS,BUY,530.7,530.7,510.98,560.28,580.0,2.5,50,89.0,Pharma,PANIC,-3,BLOCKED,TARGET,2026-06-25,560.28,Target 1 Hit,5.57,90.5,ELITE,OK
-2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,ADANIPORTS,BUY,1812.9,1812.9,1758.33,1894.76,1949.33,2.5,50,100.0,Services,PANIC,-3,BLOCKED,OPEN,,,,,90.1,ELITE,OK
+2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,ADANIPORTS,BUY,1812.9,1812.9,1758.33,1894.76,1949.33,2.5,50,100.0,Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,1776.1,Expired (17d > 15d),-2.03,90.1,ELITE,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,NAM-INDIA,BUY,1089.1,1089.1,1028.35,1180.22,1240.97,2.5,50,100.0,Financial Services,PANIC,-3,BLOCKED,TARGET,2026-06-19,1180.22,Target 1 Hit,8.37,89.3,ELITE,OK
-2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,LT,BUY,4049.3,4049.3,3883.61,4297.84,4463.53,2.5,55,75.0,Construction,PANIC,-3,BLOCKED,OPEN,,,,,87.7,ELITE,OK
-2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,INDUSINDBK,BUY,917.35,917.35,878.34,975.86,1014.87,2.5,55,76.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,86.3,ELITE,OK
+2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,LT,BUY,4049.3,4049.3,3883.61,4297.84,4463.53,2.5,55,75.0,Construction,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,4165.2,Expired (17d > 15d),2.86,87.7,ELITE,OK
+2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,INDUSINDBK,BUY,917.35,917.35,878.34,975.86,1014.87,2.5,55,76.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,915.4,Expired (17d > 15d),-0.21,86.3,ELITE,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,GNFC,BUY,503.85,503.85,487.61,528.21,539.6,2.2,45,88.0,Chemicals,PANIC,-3,BLOCKED,TARGET,2026-06-16,528.21,Target 1 Hit,4.83,86.2,ELITE,OK
-2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,LICHSGFIN,BUY,559.5,559.5,534.95,596.32,620.87,2.5,55,80.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,84.9,ELITE,OK
-2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,BSE,BUY,4041.1,4041.1,3830.84,4356.49,4566.75,2.5,45,100.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,84.8,ELITE,OK
+2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,LICHSGFIN,BUY,559.5,559.5,534.95,596.32,620.87,2.5,55,80.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,560.75,Expired (17d > 15d),0.22,84.9,ELITE,OK
+2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,BSE,BUY,4041.1,4041.1,3830.84,4356.49,4566.75,2.5,45,100.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,3859.9,Expired (17d > 15d),-4.48,84.8,ELITE,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,ABCAPITAL,BUY,358.1,358.1,336.62,390.32,411.8,2.5,50,79.0,Financial Services,PANIC,-3,BLOCKED,TARGET,2026-06-22,390.32,Target 1 Hit,9.0,82.1,ELITE,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,POLYCAB,BUY,9554.0,9554.0,9262.43,9991.36,10282.93,2.5,50,100.0,Capital Goods,PANIC,-3,BLOCKED,TARGET,2026-06-18,9991.36,Target 1 Hit,4.58,81.5,ELITE,OK
-2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,BANDHANBNK,BUY,204.6,204.6,191.15,224.77,238.22,2.5,50,85.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,81.5,ELITE,OK
+2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,BANDHANBNK,BUY,204.6,204.6,191.15,224.77,238.22,2.5,50,85.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,202.33,Expired (17d > 15d),-1.11,81.5,ELITE,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,EICHERMOT,BUY,7312.0,7312.0,7091.2,7643.2,7864.0,2.5,45,65.0,Automobile and Auto Components,PANIC,-3,BLOCKED,TARGET,2026-06-15,7643.2,Target 1 Hit,4.53,80.3,ELITE,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,NMDC,BUY,90.93,90.93,88.14,95.12,97.91,2.5,50,80.0,Metals & Mining,PANIC,-3,BLOCKED,STOPPED,2026-06-16,88.14,Stop Loss Hit,-3.07,75.7,STRONG,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,MARICO,BUY,819.05,819.05,800.71,846.56,864.9,2.5,50,72.0,Fast Moving Consumer Goods,PANIC,-3,BLOCKED,STOPPED,2026-06-17,800.71,Stop Loss Hit,-2.24,74.1,STRONG,OK
 2026-06-12,13:58,EMA21_Bounce,21 EMA Bounce,SUNPHARMA,BUY,1807.7,1807.7,1776.76,1857.8,1882.0,2.4,45,53.0,Healthcare,PANIC,-3,BLOCKED,TARGET,2026-06-22,1857.8,Target 1 Hit,2.77,70.3,STRONG,OK
 2026-06-12,13:58,Last30Min_ATH,Near 52W High (EOD),ADANIPORTS,BUY,1812.9,1812.9,1777.9,1865.4,1900.4,2.5,33,100.0,Services,PANIC,-3,BLOCKED,STOPPED,2026-06-24,1777.9,Stop Loss Hit,-1.93,47.1,WEAK,OK
-2026-06-12,13:58,Last30Min_ATH,Near 52W High (EOD),BANDHANBNK,BUY,204.6,204.6,194.4,219.9,230.1,2.5,33,85.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,38.5,WEAK,OK
-2026-06-12,13:58,Last30Min_ATH,Near 52W High (EOD),AXISBANK,BUY,1356.3,1356.3,1318.5,1413.0,1450.8,2.5,33,75.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,37.1,WEAK,OK
+2026-06-12,13:58,Last30Min_ATH,Near 52W High (EOD),BANDHANBNK,BUY,204.6,204.6,194.4,219.9,230.1,2.5,33,85.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,202.33,Expired (17d > 15d),-1.11,38.5,WEAK,OK
+2026-06-12,13:58,Last30Min_ATH,Near 52W High (EOD),AXISBANK,BUY,1356.3,1356.3,1318.5,1413.0,1450.8,2.5,33,75.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,1356.8,Expired (17d > 15d),0.04,37.1,WEAK,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,CRAFTSMAN,BUY,8917.5,8917.5,8595.95,9399.82,9721.37,2.5,50,99.0,Automobile and Auto Components,PANIC,-3,BLOCKED,TARGET,2026-06-16,9399.82,Target 1 Hit,5.41,91.8,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,NIVABUPA,BUY,83.96,83.96,81.67,87.39,89.68,2.5,50,90.0,Financial Services,PANIC,-3,BLOCKED,TARGET,2026-06-18,87.39,Target 1 Hit,4.09,90.5,ELITE,OK
-2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,ANGELONE,BUY,339.5,339.5,318.94,370.34,390.9,2.5,50,100.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,89.8,ELITE,OK
+2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,ANGELONE,BUY,339.5,339.5,318.94,370.34,390.9,2.5,50,100.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,328.75,Expired (17d > 15d),-3.17,89.8,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,IKS,BUY,1678.3,1678.3,1623.65,1760.27,1763.8,1.6,50,100.0,Information Technology,PANIC,-3,BLOCKED,STOPPED,2026-06-16,1623.65,Stop Loss Hit,-3.26,89.8,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,RADICO,BUY,3541.7,3541.7,3417.68,3727.73,3851.75,2.5,50,100.0,Fast Moving Consumer Goods,PANIC,-3,BLOCKED,TARGET,2026-06-18,3727.73,Target 1 Hit,5.25,89.3,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,CARBORUNIV,BUY,1053.1,1053.1,976.89,1167.41,1243.62,2.5,55,100.0,Capital Goods,PANIC,-3,BLOCKED,TARGET,2026-06-18,1167.41,Target 1 Hit,10.85,88.8,ELITE,OK
-2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,LLOYDSME,BUY,1761.9,1761.9,1680.87,1883.45,1964.48,2.5,50,100.0,Metals & Mining,PANIC,-3,BLOCKED,OPEN,,,,,88.0,ELITE,OK
+2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,LLOYDSME,BUY,1761.9,1761.9,1680.87,1883.45,1964.48,2.5,50,100.0,Metals & Mining,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,1805.7,Expired (17d > 15d),2.49,88.0,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,VIJAYA,BUY,1287.2,1287.2,1221.37,1385.95,1451.78,2.5,50,100.0,Healthcare,PANIC,-3,BLOCKED,TARGET,2026-06-19,1385.95,Target 1 Hit,7.67,87.5,ELITE,OK
-2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,ENRIN,BUY,3606.9,3606.9,3349.15,3993.52,4251.27,2.5,50,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,87.4,ELITE,OK
+2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,ENRIN,BUY,3606.9,3606.9,3349.15,3993.52,4251.27,2.5,50,100.0,Capital Goods,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,3583.9,Expired (17d > 15d),-0.64,87.4,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,SUZLON,BUY,55.08,55.08,52.82,58.47,60.73,2.5,50,100.0,Capital Goods,PANIC,-3,BLOCKED,TARGET,2026-06-16,58.47,Target 1 Hit,6.15,87.3,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,NSLNISP,BUY,47.24,47.24,44.97,53.75,56.03,3.9,50,100.0,Metals & Mining,PANIC,-3,BLOCKED,STOPPED,2026-06-23,44.97,Stop Loss Hit,-4.81,86.0,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,GVT&D,BUY,4942.5,4942.5,4662.99,5361.76,5641.27,2.5,50,100.0,Capital Goods,PANIC,-3,BLOCKED,TARGET,2026-06-19,5361.76,Target 1 Hit,8.48,85.5,ELITE,OK
-2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,THERMAX,BUY,4726.3,4726.3,4528.57,5022.9,5075.0,1.8,45,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,85.5,ELITE,OK
+2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,THERMAX,BUY,4726.3,4726.3,4528.57,5022.9,5075.0,1.8,45,100.0,Capital Goods,PANIC,-3,BLOCKED,TARGET,2026-06-29,5022.9,Target 1 Hit,6.28,85.5,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,TRITURBINE,BUY,671.2,671.2,629.37,733.95,738.0,1.6,50,100.0,Capital Goods,PANIC,-3,BLOCKED,TARGET,2026-06-22,733.95,Target 1 Hit,9.35,85.5,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,IGIL,BUY,366.75,366.75,350.66,390.88,406.97,2.5,50,84.0,Services,PANIC,-3,BLOCKED,STOPPED,2026-06-24,350.66,Stop Loss Hit,-4.39,84.9,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,NYKAA,BUY,273.5,273.5,259.46,294.56,308.6,2.5,55,79.0,Consumer Services,PANIC,-3,BLOCKED,TARGET,2026-06-18,294.56,Target 1 Hit,7.7,84.3,ELITE,OK
@@ -1558,20 +1558,20 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,ZYDUSWELL,BUY,506.0,506.0,491.31,528.04,542.73,2.5,50,100.0,Fast Moving Consumer Goods,PANIC,-3,BLOCKED,TARGET,2026-06-22,528.04,Target 1 Hit,4.36,81.0,ELITE,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,EMCURE,BUY,1736.2,1736.2,1649.28,1866.58,1953.5,2.5,50,85.0,Healthcare,PANIC,-3,BLOCKED,TARGET,2026-06-23,1866.58,Target 1 Hit,7.51,78.6,STRONG,OK
 2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,VTL,BUY,627.85,627.85,600.82,668.4,695.43,2.5,45,87.0,Textiles,PANIC,-3,BLOCKED,TARGET,2026-06-19,668.4,Target 1 Hit,6.46,78.1,STRONG,OK
-2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,KARURVYSYA,BUY,288.95,288.95,272.91,313.01,329.05,2.5,55,51.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,76.8,STRONG,OK
+2026-06-12,16:32,EMA21_Bounce,21 EMA Bounce,KARURVYSYA,BUY,288.95,288.95,272.91,313.01,329.05,2.5,55,51.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,298.85,Expired (17d > 15d),3.43,76.8,STRONG,OK
 2026-06-12,16:32,52WH_Breakout,52-Week High Breakout,IFCI,BUY,84.57,84.57,80.82,108.16,146.33,8.0,42,100.0,Financial Services,PANIC,-3,BLOCKED,STOPPED,2026-06-18,80.82,Stop Loss Hit,-4.43,47.0,WEAK,OK
 2026-06-12,16:32,52WH_Breakout,52-Week High Breakout,APARINDS,BUY,15221.0,15221.0,14649.07,19060.02,25272.02,8.0,32,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,42.0,WEAK,OK
 2026-06-12,16:32,52WH_Breakout,52-Week High Breakout,MAHABANK,BUY,87.3,87.3,83.96,104.1,131.29,8.0,37,100.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,41.4,WEAK,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),CGCL,BUY,208.48,208.48,199.05,222.62,240.33,3.4,33,100.0,Financial Services,PANIC,-3,BLOCKED,TARGET,2026-06-16,222.62,Target 1 Hit,6.78,50.8,MODERATE,OK
-2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),RBLBANK,BUY,365.85,365.85,353.55,414.33,492.78,8.0,39,99.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,50.0,MODERATE,OK
+2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),RBLBANK,BUY,365.85,365.85,353.55,414.33,492.78,8.0,39,99.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,363.8,Expired (17d > 15d),-0.56,50.0,MODERATE,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),NUVAMA,BUY,1588.1,1588.1,1521.5,1688.0,1754.6,2.5,33,100.0,Financial Services,PANIC,-3,BLOCKED,TARGET,2026-06-17,1688.0,Target 1 Hit,6.29,48.1,WEAK,OK
-2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),IFCI,BUY,84.57,84.57,72.3,108.16,146.33,5.0,39,100.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,47.0,WEAK,OK
+2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),IFCI,BUY,84.57,84.57,72.3,108.16,146.33,5.0,39,100.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,77.18,Expired (17d > 15d),-8.74,47.0,WEAK,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),RADICO,BUY,3541.7,3541.7,3460.2,3663.95,3679.0,1.7,33,100.0,Fast Moving Consumer Goods,PANIC,-3,BLOCKED,TARGET,2026-06-18,3663.95,Target 1 Hit,3.45,46.3,WEAK,OK
-2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),DATAPATTNS,BUY,4545.7,4545.7,4253.5,4984.0,5562.68,3.5,37,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,43.5,WEAK,OK
+2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),DATAPATTNS,BUY,4545.7,4545.7,4253.5,4984.0,5562.68,3.5,37,100.0,Capital Goods,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,4472.1,Expired (17d > 15d),-1.62,43.5,WEAK,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),EMMVEE,BUY,343.55,343.55,327.15,426.27,560.12,8.0,35,100.0,Capital Goods,PANIC,-3,BLOCKED,STOPPED,2026-06-22,327.15,Stop Loss Hit,-4.77,43.0,WEAK,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),PIRAMALFIN,BUY,2017.2,2017.2,1953.7,2112.45,2268.26,4.0,33,82.0,Financial Services,PANIC,-3,BLOCKED,TARGET,2026-06-19,2112.45,Target 1 Hit,4.72,42.9,WEAK,OK
-2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),APARINDS,BUY,15221.0,15221.0,14733.0,19060.02,25272.02,8.0,39,100.0,Capital Goods,PANIC,-3,BLOCKED,OPEN,,,,,42.0,WEAK,OK
-2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),MAHABANK,BUY,87.3,87.3,83.67,104.1,131.29,8.0,39,100.0,Financial Services,PANIC,-3,BLOCKED,OPEN,,,,,41.4,WEAK,OK
+2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),APARINDS,BUY,15221.0,15221.0,14733.0,19060.02,25272.02,8.0,39,100.0,Capital Goods,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,15986.0,Expired (17d > 15d),5.03,42.0,WEAK,OK
+2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),MAHABANK,BUY,87.3,87.3,83.67,104.1,131.29,8.0,39,100.0,Financial Services,PANIC,-3,BLOCKED,EXPIRED,2026-06-29,93.85,Expired (17d > 15d),7.5,41.4,WEAK,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),NYKAA,BUY,273.5,273.5,262.8,289.55,300.25,2.5,37,79.0,Consumer Services,PANIC,-3,BLOCKED,TARGET,2026-06-18,289.55,Target 1 Hit,5.87,41.3,WEAK,OK
 2026-06-12,16:32,Last30Min_ATH,Near 52W High (EOD),CAPLIPOINT,BUY,2407.8,2407.8,2344.0,2970.47,3880.93,8.0,35,100.0,Healthcare,PANIC,-3,BLOCKED,STOPPED,2026-06-16,2344.0,Stop Loss Hit,-2.65,37.8,WEAK,OK
 2026-06-12,16:32,Failed_Breakout_Short,Failed Breakout Short,JSWDULUX,SHORT,3168.4,3168.4,3318.9,2942.65,2792.15,2.5,77,73.0,Consumer Durables,PANIC,-3,IDEAL,STOPPED,2026-06-19,3318.9,Stop Loss Hit,-4.75,67.3,STRONG,OK
@@ -1592,10 +1592,10 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-15,18:09,EMA21_Bounce,21 EMA Bounce,USHAMART,BUY,494.95,494.95,478.24,520.02,527.5,1.9,60,93.0,Capital Goods,ACCUMULATION,2,CAUTION,STOPPED,2026-06-19,478.24,Stop Loss Hit,-3.38,66.5,STRONG,OK
 2026-06-15,18:09,EMA21_Bounce,21 EMA Bounce,CIEINDIA,BUY,464.8,464.8,444.7,494.95,515.05,2.5,65,57.0,Automobile and Auto Components,ACCUMULATION,2,CAUTION,OPEN,,,,,54.4,MODERATE,OK
 2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,NUVAMA,BUY,1660.9,1660.9,1573.96,1791.31,2015.87,4.1,62,100.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,87.4,ELITE,OK
-2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,RBLBANK,BUY,372.65,372.65,363.11,425.33,510.58,8.0,57,100.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,84.6,ELITE,OK
+2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,RBLBANK,BUY,372.65,372.65,363.11,425.33,510.58,8.0,57,100.0,Financial Services,ACCUMULATION,2,CAUTION,STOPPED,2026-06-29,363.11,Stop Loss Hit,-2.56,84.6,ELITE,OK
 2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,ANGELONE,BUY,352.3,352.3,344.58,363.88,436.79,8.0,62,100.0,Financial Services,ACCUMULATION,2,CAUTION,STOPPED,2026-06-16,344.58,Stop Loss Hit,-2.19,83.8,ELITE,OK
 2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,IFCI,BUY,89.6,89.6,81.82,101.27,116.3,3.4,67,100.0,Financial Services,ACCUMULATION,2,CAUTION,STOPPED,2026-06-18,81.82,Stop Loss Hit,-8.68,83.1,ELITE,OK
-2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,MAHABANK,BUY,89.12,89.12,86.43,93.16,107.05,6.7,57,100.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,77.0,STRONG,OK
+2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,MAHABANK,BUY,89.12,89.12,86.43,93.16,107.05,6.7,57,100.0,Financial Services,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,93.16,Target 1 Hit,4.53,77.0,STRONG,OK
 2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,APARINDS,BUY,15986.0,15986.0,14996.46,17470.31,20146.38,4.2,57,100.0,Capital Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,75.1,STRONG,OK
 2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,BHARATFORG,BUY,2020.5,2020.5,1961.61,2108.84,2274.07,4.3,57,91.0,Automobile and Auto Components,ACCUMULATION,2,CAUTION,TARGET,2026-06-22,2108.84,Target 1 Hit,4.37,73.8,STRONG,OK
 2026-06-15,18:09,52WH_Breakout,52-Week High Breakout,ABSLAMC,BUY,1146.1,1146.1,1099.34,1216.24,1318.52,3.7,67,96.0,Financial Services,ACCUMULATION,2,CAUTION,STOPPED,2026-06-17,1099.34,Stop Loss Hit,-4.08,70.3,STRONG,OK
@@ -1617,7 +1617,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-16,18:17,VCP,VCP (Minervini v2),VBL,BUY,541.05,544.4,508.94,645.9,810.14,7.5,85,100.0,Fast Moving Consumer Goods,ACCUMULATION,2,IDEAL,STOPPED,2026-06-22,508.94,Stop Loss Hit,-6.51,69.3,STRONG,OK
 2026-06-16,18:17,VCP,VCP (Minervini v2),KAJARIACER,BUY,1139.1,1142.8,1054.8,1274.8,1362.8,2.5,80,100.0,Consumer Durables,ACCUMULATION,2,IDEAL,OPEN,,,,,69.1,STRONG,OK
 2026-06-16,18:17,VCP,VCP (Minervini v2),RADICO,BUY,3578.7,3679.0,3393.05,4375.24,5501.84,6.4,86,100.0,Fast Moving Consumer Goods,ACCUMULATION,2,IDEAL,OPEN,,,,,67.5,STRONG,OK
-2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,AMBER,BUY,7810.5,7810.5,7476.16,8312.01,8646.35,2.5,60,88.0,Consumer Durables,ACCUMULATION,2,CAUTION,OPEN,,,,,77.2,STRONG,OK
+2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,AMBER,BUY,7810.5,7810.5,7476.16,8312.01,8646.35,2.5,60,88.0,Consumer Durables,ACCUMULATION,2,CAUTION,STOPPED,2026-06-29,7476.16,Stop Loss Hit,-4.28,77.2,STRONG,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,VIJAYA,BUY,1298.6,1298.6,1245.54,1378.19,1379.3,1.5,60,100.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-19,1378.19,Target 1 Hit,6.13,72.9,STRONG,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,KIMS,BUY,778.65,778.65,749.78,821.96,850.83,2.5,60,90.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,69.9,STRONG,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,LLOYDSME,BUY,1765.0,1765.0,1708.05,1850.43,1907.38,2.5,55,100.0,Metals & Mining,ACCUMULATION,2,CAUTION,STOPPED,2026-06-24,1708.05,Stop Loss Hit,-3.23,69.4,STRONG,OK
@@ -1628,7 +1628,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,FINCABLES,BUY,1055.5,1055.5,1013.67,1118.25,1172.8,2.8,55,99.0,Capital Goods,ACCUMULATION,2,CAUTION,TARGET,2026-06-17,1118.25,Target 1 Hit,5.95,60.8,MODERATE,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,LGEINDIA,BUY,1569.6,1569.6,1513.13,1654.3,1710.77,2.5,60,53.0,Consumer Durables,ACCUMULATION,2,CAUTION,TARGET,2026-06-19,1654.3,Target 1 Hit,5.4,60.0,MODERATE,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,EMCURE,BUY,1735.0,1735.0,1680.49,1816.76,1871.27,2.5,60,87.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-23,1816.76,Target 1 Hit,4.71,59.9,MODERATE,OK
-2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,ZYDUSWELL,BUY,510.5,510.5,487.15,545.53,568.88,2.5,55,89.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,59.7,MODERATE,OK
+2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,ZYDUSWELL,BUY,510.5,510.5,487.15,545.53,568.88,2.5,55,89.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,545.53,Target 1 Hit,6.86,59.7,MODERATE,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,TIMKEN,BUY,3634.3,3634.3,3483.5,3860.5,4011.3,2.5,65,60.0,Capital Goods,ACCUMULATION,2,CAUTION,TARGET,2026-06-22,3860.5,Target 1 Hit,6.22,57.9,MODERATE,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,KARURVYSYA,BUY,294.55,294.55,282.37,312.82,325.0,2.5,60,56.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,56.7,MODERATE,OK
 2026-06-16,18:17,EMA21_Bounce,21 EMA Bounce,AJANTPHARM,BUY,3079.7,3079.7,2976.95,3233.82,3336.57,2.5,60,57.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-23,3233.82,Target 1 Hit,5.0,54.0,MODERATE,OK
@@ -1646,7 +1646,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,STARHEALTH,BUY,533.7,533.7,514.74,562.14,586.25,2.8,65,75.0,Financial Services,ACCUMULATION,2,CAUTION,TARGET,2026-06-18,562.14,Target 1 Hit,5.33,65.9,STRONG,OK
 2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,NESTLEIND,BUY,1407.3,1407.3,1369.75,1463.62,1501.17,2.5,60,75.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,65.3,STRONG,OK
 2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,INDUSINDBK,BUY,936.2,936.2,898.46,992.81,1030.55,2.5,60,70.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,61.8,MODERATE,OK
-2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,APOLLOHOSP,BUY,8427.5,8427.5,8224.98,8731.28,9260.25,4.1,60,67.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,60.4,MODERATE,OK
+2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,APOLLOHOSP,BUY,8427.5,8427.5,8224.98,8731.28,9260.25,4.1,60,67.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,8731.28,Target 1 Hit,3.6,60.4,MODERATE,OK
 2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,OBEROIRLTY,BUY,1694.8,1694.8,1625.49,1798.76,1868.07,2.5,65,81.0,Realty,ACCUMULATION,2,CAUTION,OPEN,,,,,57.6,MODERATE,OK
 2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,JSWSTEEL,BUY,1287.2,1287.2,1254.83,1335.76,1368.13,2.5,55,62.0,Metals & Mining,ACCUMULATION,2,CAUTION,STOPPED,2026-06-23,1254.83,Stop Loss Hit,-2.51,57.1,MODERATE,OK
 2026-06-17,14:23,EMA21_Bounce,21 EMA Bounce,SIEMENS,BUY,3725.4,3725.4,3574.75,3951.38,4102.03,2.5,55,77.0,Capital Goods,ACCUMULATION,2,CAUTION,STOPPED,2026-06-24,3574.75,Stop Loss Hit,-4.04,54.9,MODERATE,OK
@@ -1665,12 +1665,12 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,NEULANDLAB,BUY,17016.0,17016.0,16422.89,17905.66,18498.77,2.5,60,100.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-23,17905.66,Target 1 Hit,5.23,68.9,STRONG,OK
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,TRITURBINE,BUY,677.4,677.4,640.37,732.94,769.97,2.5,55,100.0,Capital Goods,ACCUMULATION,2,CAUTION,TARGET,2026-06-22,732.94,Target 1 Hit,8.2,68.9,STRONG,OK
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,HONASA,BUY,401.45,401.45,390.59,422.4,424.9,2.2,55,100.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,TARGET,2026-06-24,422.4,Target 1 Hit,5.22,68.2,STRONG,OK
-2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,WELCORP,BUY,1394.3,1394.3,1336.35,1481.22,1539.17,2.5,60,100.0,Capital Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,68.2,STRONG,OK
+2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,WELCORP,BUY,1394.3,1394.3,1336.35,1481.22,1539.17,2.5,60,100.0,Capital Goods,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,1481.22,Target 1 Hit,6.23,68.2,STRONG,OK
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,NIVABUPA,BUY,84.7,84.7,81.83,89.01,91.88,2.5,60,78.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,67.3,STRONG,OK
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,CROMPTON,BUY,275.9,275.9,261.32,297.77,312.35,2.5,60,64.0,Consumer Durables,ACCUMULATION,2,CAUTION,OPEN,,,,,58.8,MODERATE,OK
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,JSWENERGY,BUY,572.0,572.0,546.18,610.73,636.55,2.5,55,69.0,Power,ACCUMULATION,2,CAUTION,OPEN,,,,,55.6,MODERATE,OK
 2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,ANANDRATHI,BUY,1787.1,1787.1,1737.98,1860.78,1909.9,2.5,60,76.0,Financial Services,ACCUMULATION,2,CAUTION,TARGET,2026-06-19,1860.78,Target 1 Hit,4.12,51.8,MODERATE,OK
-2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,JBCHEPHARM,BUY,2195.6,2195.6,2149.74,2264.39,2275.66,1.7,60,52.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,51.1,MODERATE,OK
+2026-06-17,16:47,EMA21_Bounce,21 EMA Bounce,JBCHEPHARM,BUY,2195.6,2195.6,2149.74,2264.39,2275.66,1.7,60,52.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,2264.39,Target 1 Hit,3.13,51.1,MODERATE,OK
 2026-06-17,16:47,52WH_Breakout,52-Week High Breakout,CRAFTSMAN,BUY,9498.5,9498.5,9307.32,9785.27,9976.45,2.5,62,100.0,Automobile and Auto Components,ACCUMULATION,2,CAUTION,TARGET,2026-06-19,9785.27,Target 1 Hit,3.02,89.8,ELITE,OK
 2026-06-17,16:47,52WH_Breakout,52-Week High Breakout,NUVAMA,BUY,1726.7,1726.7,1657.54,2122.34,2762.53,8.0,62,100.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,79.0,STRONG,OK
 2026-06-17,16:47,52WH_Breakout,52-Week High Breakout,DATAPATTNS,BUY,4769.6,4769.6,4587.99,5924.95,7794.45,8.0,62,100.0,Capital Goods,ACCUMULATION,2,CAUTION,STOPPED,2026-06-24,4587.99,Stop Loss Hit,-3.81,78.1,STRONG,OK
@@ -1691,7 +1691,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,ATGL,BUY,724.35,724.35,672.66,801.89,853.58,2.5,55,100.0,Oil Gas & Consumable Fuels,ACCUMULATION,4,CAUTION,OPEN,,,,,68.2,STRONG,OK
 2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,ZYDUSLIFE,BUY,1074.4,1074.4,1048.07,1113.9,1115.5,1.6,60,82.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-23,1113.9,Target 1 Hit,3.68,63.7,MODERATE,OK
 2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,MARICO,BUY,820.75,820.75,800.0,851.88,872.63,2.5,65,61.0,Fast Moving Consumer Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,62.4,MODERATE,OK
-2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6767.0,6767.0,6562.36,7073.96,7278.6,2.5,60,66.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,58.3,MODERATE,OK
+2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6767.0,6767.0,6562.36,7073.96,7278.6,2.5,60,66.0,Healthcare,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,6562.36,Stop Loss Hit,-3.02,58.3,MODERATE,OK
 2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,JSWSTEEL,BUY,1293.9,1293.9,1270.86,1328.46,1351.5,2.5,60,63.0,Metals & Mining,ACCUMULATION,4,CAUTION,STOPPED,2026-06-19,1270.86,Stop Loss Hit,-1.78,56.6,MODERATE,OK
 2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,SUNPHARMA,BUY,1824.8,1824.8,1795.41,1868.88,1882.0,1.9,55,49.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-23,1868.88,Target 1 Hit,2.42,55.0,MODERATE,OK
 2026-06-18,13:56,EMA21_Bounce,21 EMA Bounce,SIEMENS,BUY,3746.2,3746.2,3622.24,3932.14,4056.1,2.5,55,76.0,Capital Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-24,3622.24,Stop Loss Hit,-3.31,54.8,MODERATE,OK
@@ -1704,15 +1704,15 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,SHYAMMETL,BUY,975.1,975.1,947.27,1016.84,1044.67,2.5,65,91.0,Capital Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-24,947.27,Stop Loss Hit,-2.85,80.9,ELITE,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,IKS,BUY,1673.4,1673.4,1603.93,1777.6,1847.07,2.5,60,91.0,Information Technology,ACCUMULATION,4,CAUTION,OPEN,,,,,75.2,STRONG,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,GRANULES,BUY,782.1,782.1,728.72,862.17,915.55,2.5,60,100.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,72.9,STRONG,OK
-2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,ACUTAAS,BUY,3136.3,3136.3,2930.2,3445.45,3651.55,2.5,60,100.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,69.4,STRONG,OK
+2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,ACUTAAS,BUY,3136.3,3136.3,2930.2,3445.45,3651.55,2.5,60,100.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,3445.45,Target 1 Hit,9.86,69.4,STRONG,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,NEULANDLAB,BUY,17220.0,17220.0,16614.31,18128.53,18734.22,2.5,60,100.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-23,18128.53,Target 1 Hit,5.28,68.9,STRONG,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,HONASA,BUY,406.5,406.5,392.0,428.25,442.75,2.5,60,100.0,Fast Moving Consumer Goods,ACCUMULATION,4,CAUTION,TARGET,2026-06-24,428.25,Target 1 Hit,5.35,68.2,STRONG,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,ACMESOLAR,BUY,331.9,331.9,317.51,353.48,364.8,2.3,60,100.0,Power,ACCUMULATION,4,CAUTION,TARGET,2026-06-22,353.48,Target 1 Hit,6.5,67.4,STRONG,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,ADANIENSOL,BUY,1523.3,1523.3,1453.36,1628.21,1698.15,2.5,60,100.0,Power,ACCUMULATION,4,CAUTION,OPEN,,,,,67.4,STRONG,OK
-2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,PREMIERENE,BUY,1057.7,1057.7,1030.4,1103.9,1134.72,2.8,60,87.0,Capital Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,65.4,STRONG,OK
+2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,PREMIERENE,BUY,1057.7,1057.7,1030.4,1103.9,1134.72,2.8,60,87.0,Capital Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,1030.4,Stop Loss Hit,-2.58,65.4,STRONG,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,SOLARINDS,BUY,17764.0,17764.0,17220.0,18699.0,18770.0,1.8,55,100.0,Chemicals,ACCUMULATION,4,CAUTION,OPEN,,,,,64.2,MODERATE,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,MANKIND,BUY,2406.0,2406.0,2335.85,2511.23,2581.38,2.5,60,76.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-22,2511.23,Target 1 Hit,4.37,59.1,MODERATE,OK
-2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,JBCHEPHARM,BUY,2198.5,2198.5,2148.09,2274.11,2275.66,1.5,60,52.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,57.4,MODERATE,OK
+2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,JBCHEPHARM,BUY,2198.5,2198.5,2148.09,2274.11,2275.66,1.5,60,52.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,2274.11,Target 1 Hit,3.44,57.4,MODERATE,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,ASTERDM,BUY,788.5,788.5,753.1,841.6,904.27,3.3,55,83.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,56.3,MODERATE,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,CANHLIFE,BUY,141.75,141.75,135.98,150.41,156.18,2.5,60,36.0,Financial Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-24,135.98,Stop Loss Hit,-4.07,56.0,MODERATE,OK
 2026-06-18,16:46,EMA21_Bounce,21 EMA Bounce,BALRAMCHIN,BUY,554.15,554.15,530.88,589.05,612.32,2.5,55,76.0,Fast Moving Consumer Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-19,530.88,Stop Loss Hit,-4.2,54.9,MODERATE,OK
@@ -1728,9 +1728,9 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-18,16:46,52WH_Breakout,52-Week High Breakout,NYKAA,BUY,298.1,298.1,281.4,323.15,338.92,2.4,62,88.0,Consumer Services,ACCUMULATION,4,CAUTION,OPEN,,,,,78.3,STRONG,OK
 2026-06-18,16:46,52WH_Breakout,52-Week High Breakout,VTL,BUY,661.4,661.4,637.98,755.86,908.71,8.0,62,85.0,Textiles,ACCUMULATION,4,CAUTION,STOPPED,2026-06-23,637.98,Stop Loss Hit,-3.54,74.3,STRONG,OK
 2026-06-18,16:46,Last30Min_ATH,Near 52W High (EOD),JINDALSAW,BUY,264.06,264.06,255.75,276.52,318.42,6.5,60,100.0,Capital Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-22,255.75,Stop Loss Hit,-3.15,79.3,STRONG,OK
-2026-06-18,16:46,Last30Min_ATH,Near 52W High (EOD),VTL,BUY,661.4,661.4,630.0,755.86,908.71,7.9,64,85.0,Textiles,ACCUMULATION,4,CAUTION,OPEN,,,,,78.7,STRONG,OK
+2026-06-18,16:46,Last30Min_ATH,Near 52W High (EOD),VTL,BUY,661.4,661.4,630.0,755.86,908.71,7.9,64,85.0,Textiles,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,630.0,Stop Loss Hit,-4.75,78.7,STRONG,OK
 2026-06-18,16:46,Last30Min_ATH,Near 52W High (EOD),ABSLAMC,BUY,1167.1,1167.1,1098.7,1352.5,1652.5,7.1,60,84.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,69.9,STRONG,OK
-2026-06-18,16:46,Failed_Breakout_Short,Failed Breakout Short,MMTC,SHORT,74.95,74.95,79.52,68.1,63.53,2.5,62,83.0,Services,ACCUMULATION,4,CAUTION,OPEN,,,,,65.0,STRONG,OK
+2026-06-18,16:46,Failed_Breakout_Short,Failed Breakout Short,MMTC,SHORT,74.95,74.95,79.52,68.1,63.53,2.5,62,83.0,Services,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,68.1,Target 1 Hit,9.14,65.0,STRONG,OK
 2026-06-18,16:46,Failed_Breakout_Short,Failed Breakout Short,IFCI,SHORT,82.31,82.31,97.82,59.05,43.54,2.5,60,100.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,64.1,MODERATE,OK
 2026-06-18,16:46,Failed_Breakout_Short,Failed Breakout Short,HUDCO,SHORT,211.55,211.55,219.66,199.39,199.02,1.5,57,82.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,62.3,MODERATE,OK
 2026-06-18,16:46,Failed_Breakout_Short,Failed Breakout Short,VBL,SHORT,531.55,531.55,560.04,488.81,460.32,2.5,57,100.0,Fast Moving Consumer Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,57.1,MODERATE,OK
@@ -1741,14 +1741,14 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,MOTHERSON,BUY,145.85,145.85,140.07,154.52,160.3,2.5,60,100.0,Automobile and Auto Components,ACCUMULATION,4,CAUTION,TARGET,2026-06-25,154.52,Target 1 Hit,5.94,73.9,STRONG,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,OFSS,BUY,9731.5,9731.5,9420.16,10198.51,10584.5,2.7,55,100.0,Information Technology,ACCUMULATION,4,CAUTION,TARGET,2026-06-24,10198.51,Target 1 Hit,4.8,70.9,STRONG,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,BAJAJ-AUTO,BUY,10191.0,10191.0,9994.0,10486.5,10683.5,2.5,60,76.0,Automobile and Auto Components,ACCUMULATION,4,CAUTION,STOPPED,2026-06-23,9994.0,Stop Loss Hit,-1.93,68.4,STRONG,OK
-2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,ATGL,BUY,733.4,733.4,700.07,783.39,816.72,2.5,60,100.0,Oil Gas & Consumable Fuels,ACCUMULATION,4,CAUTION,OPEN,,,,,68.4,STRONG,OK
-2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,FORTIS,BUY,975.85,975.85,947.89,1017.79,1045.75,2.5,55,85.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,67.9,STRONG,OK
-2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,GRASIM,BUY,3175.2,3175.2,3072.88,3583.7,4244.7,8.0,55,90.0,Construction Materials,ACCUMULATION,4,CAUTION,OPEN,,,,,66.5,STRONG,OK
+2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,ATGL,BUY,733.4,733.4,700.07,783.39,816.72,2.5,60,100.0,Oil Gas & Consumable Fuels,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,700.07,Stop Loss Hit,-4.54,68.4,STRONG,OK
+2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,FORTIS,BUY,975.85,975.85,947.89,1017.79,1045.75,2.5,55,85.0,Healthcare,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,947.89,Stop Loss Hit,-2.87,67.9,STRONG,OK
+2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,GRASIM,BUY,3175.2,3175.2,3072.88,3583.7,4244.7,8.0,55,90.0,Construction Materials,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,3072.88,Stop Loss Hit,-3.22,66.5,STRONG,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,ZYDUSLIFE,BUY,1085.5,1085.5,1052.99,1134.26,1166.77,2.5,60,91.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,63.0,MODERATE,OK
-2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6787.5,6787.5,6613.38,7048.68,7222.8,2.5,55,75.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,58.3,MODERATE,OK
+2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6787.5,6787.5,6613.38,7048.68,7222.8,2.5,55,75.0,Healthcare,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,6613.38,Stop Loss Hit,-2.57,58.3,MODERATE,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,BIOCON,BUY,421.1,421.1,408.46,440.06,452.7,2.5,60,68.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,57.9,MODERATE,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,DRREDDY,BUY,1290.7,1290.7,1260.51,1335.98,1345.0,1.8,55,46.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-24,1335.98,Target 1 Hit,3.51,56.6,MODERATE,OK
-2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4457.0,4457.0,4322.84,4658.24,4792.4,2.5,55,56.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,55.9,MODERATE,OK
+2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4457.0,4457.0,4322.84,4658.24,4792.4,2.5,55,56.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,4658.24,Target 1 Hit,4.52,55.9,MODERATE,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,SUNPHARMA,BUY,1862.9,1862.9,1803.35,1952.23,2011.78,2.5,55,57.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,51.9,MODERATE,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,OBEROIRLTY,BUY,1691.1,1691.1,1639.55,1768.42,1819.97,2.5,60,81.0,Realty,ACCUMULATION,4,CAUTION,TARGET,2026-06-25,1768.42,Target 1 Hit,4.57,51.1,MODERATE,OK
 2026-06-22,15:47,EMA21_Bounce,21 EMA Bounce,ASTRAL,BUY,1557.8,1557.8,1523.42,1609.37,1643.75,2.5,60,38.0,Capital Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-23,1523.42,Stop Loss Hit,-2.21,43.1,WEAK,OK
@@ -1772,7 +1772,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,KARURVYSYA,BUY,295.7,295.7,284.94,311.84,322.6,2.5,60,71.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,57.6,MODERATE,OK
 2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,LENSKART,BUY,517.0,517.0,498.71,544.44,562.73,2.5,55,44.0,Consumer Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-24,498.71,Stop Loss Hit,-3.54,55.0,MODERATE,OK
 2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,JSWCEMENT,BUY,130.05,130.05,126.77,137.38,137.83,2.4,60,71.0,Construction Materials,ACCUMULATION,4,CAUTION,OPEN,,,,,54.7,MODERATE,OK
-2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,JBCHEPHARM,BUY,2206.2,2206.2,2136.58,2310.63,2380.25,2.5,55,54.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,53.8,MODERATE,OK
+2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,JBCHEPHARM,BUY,2206.2,2206.2,2136.58,2310.63,2380.25,2.5,55,54.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,2310.63,Target 1 Hit,4.73,53.8,MODERATE,OK
 2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,CANHLIFE,BUY,143.37,143.37,137.79,151.74,157.32,2.5,55,44.0,Financial Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-24,137.79,Stop Loss Hit,-3.89,53.7,MODERATE,OK
 2026-06-22,18:05,EMA21_Bounce,21 EMA Bounce,FACT,BUY,906.25,906.25,846.16,996.38,1056.47,2.5,60,76.0,Chemicals,ACCUMULATION,4,CAUTION,OPEN,,,,,51.3,MODERATE,OK
 2026-06-22,18:05,52WH_Breakout,52-Week High Breakout,KPIL,BUY,1439.7,1439.7,1385.16,1686.65,2086.25,8.0,62,100.0,Construction,ACCUMULATION,4,CAUTION,STOPPED,2026-06-25,1385.16,Stop Loss Hit,-3.79,78.0,STRONG,OK
@@ -1792,13 +1792,13 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-22,18:05,Failed_Breakout_Short,Failed Breakout Short,CGCL,SHORT,216.1,216.1,228.11,198.08,186.07,2.5,62,100.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,60.6,MODERATE,OK
 2026-06-22,18:05,Failed_Breakout_Short,Failed Breakout Short,JSWINFRA,SHORT,307.05,307.05,315.95,293.7,284.8,2.5,62,93.0,Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-23,315.95,Stop Loss Hit,-2.9,59.5,MODERATE,OK
 2026-06-22,18:05,Failed_Breakout_Short,Failed Breakout Short,CARBORUNIV,SHORT,1211.4,1211.4,1323.88,1042.68,930.2,2.5,62,100.0,Capital Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,56.6,MODERATE,OK
-2026-06-22,18:05,Failed_Breakout_Short,Failed Breakout Short,INDIAMART,SHORT,2050.4,2050.4,2128.3,1933.55,1855.65,2.5,65,59.0,Consumer Services,ACCUMULATION,4,CAUTION,OPEN,,,,,54.6,MODERATE,OK
+2026-06-22,18:05,Failed_Breakout_Short,Failed Breakout Short,INDIAMART,SHORT,2050.4,2050.4,2128.3,1933.55,1855.65,2.5,65,59.0,Consumer Services,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,1933.55,Target 1 Hit,5.7,54.6,MODERATE,OK
 2026-06-22,18:05,Failed_Breakout_Short,Failed Breakout Short,PIRAMALFIN,SHORT,2085.5,2085.5,2197.5,1917.5,1805.5,2.5,62,75.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,47.2,WEAK,OK
 2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,OFSS,BUY,9862.5,9862.5,9449.69,10481.72,10584.5,1.7,60,100.0,Information Technology,ACCUMULATION,2,CAUTION,TARGET,2026-06-24,10481.72,Target 1 Hit,6.28,70.9,STRONG,OK
 2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,MARICO,BUY,821.05,821.05,798.49,854.89,877.45,2.5,60,69.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,61.5,MODERATE,OK
-2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,METROPOLIS,BUY,543.25,543.25,524.41,571.51,590.35,2.5,60,85.0,Pharma,ACCUMULATION,2,CAUTION,OPEN,,,,,60.5,MODERATE,OK
+2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,METROPOLIS,BUY,543.25,543.25,524.41,571.51,590.35,2.5,60,85.0,Pharma,ACCUMULATION,2,CAUTION,STOPPED,2026-06-29,524.41,Stop Loss Hit,-3.47,60.5,MODERATE,OK
 2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,DRREDDY,BUY,1301.3,1301.3,1272.71,1344.18,1345.0,1.5,60,51.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-25,1344.18,Target 1 Hit,3.3,60.2,MODERATE,OK
-2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4514.1,4514.1,4394.21,4693.94,4813.83,2.5,55,58.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,54.0,MODERATE,OK
+2026-06-23,13:35,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4514.1,4514.1,4394.21,4693.94,4813.83,2.5,55,58.0,Healthcare,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,4693.94,Target 1 Hit,3.98,54.0,MODERATE,OK
 2026-06-23,13:35,52WH_Breakout,52-Week High Breakout,LAURUSLABS,BUY,1481.0,1481.0,1435.96,1788.32,2285.6,8.0,57,100.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,84.8,ELITE,OK
 2026-06-23,13:35,52WH_Breakout,52-Week High Breakout,AUROPHARMA,BUY,1534.2,1534.2,1491.76,1597.86,1699.89,3.9,62,83.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,65.0,STRONG,OK
 2026-06-23,13:35,Last30Min_ATH,Near 52W High (EOD),LAURUSLABS,BUY,1481.0,1481.0,1435.0,1788.32,2285.6,8.0,64,100.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,89.2,ELITE,OK
@@ -1826,9 +1826,9 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,AEGISVOPAK,SHORT,232.76,232.76,253.08,202.28,181.96,2.5,62,100.0,Oil Gas & Consumable Fuels,ACCUMULATION,2,CAUTION,OPEN,,,,,61.6,MODERATE,OK
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,RBLBANK,SHORT,371.25,371.25,384.84,350.86,337.27,2.5,62,100.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,60.6,MODERATE,OK
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,INDGN,SHORT,531.1,531.1,555.03,495.21,471.28,2.5,57,94.0,Healthcare,ACCUMULATION,2,CAUTION,OPEN,,,,,56.9,MODERATE,OK
-2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,ZYDUSWELL,SHORT,530.2,530.2,550.59,499.62,479.23,2.5,57,99.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,56.4,MODERATE,OK
+2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,ZYDUSWELL,SHORT,530.2,530.2,550.59,499.62,479.23,2.5,57,99.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,STOPPED,2026-06-29,550.59,Stop Loss Hit,-3.85,56.4,MODERATE,OK
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,EMAMILTD,SHORT,401.25,401.25,421.96,370.19,349.48,2.5,60,43.0,Fast Moving Consumer Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,55.0,MODERATE,OK
-2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,MRF,SHORT,131350.0,131350.0,133555.07,128042.39,125512.99,2.6,62,53.0,Automobile and Auto Components,ACCUMULATION,2,CAUTION,OPEN,,,,,50.9,MODERATE,OK
+2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,MRF,SHORT,131350.0,131350.0,133555.07,128042.39,125512.99,2.6,62,53.0,Automobile and Auto Components,ACCUMULATION,2,CAUTION,TARGET,2026-06-29,128042.39,Target 1 Hit,2.52,50.9,MODERATE,OK
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,KFINTECH,SHORT,888.8,888.8,935.89,818.16,771.07,2.5,57,45.0,Financial Services,ACCUMULATION,2,CAUTION,OPEN,,,,,50.5,MODERATE,OK
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,NCC,SHORT,156.1,156.1,162.42,146.42,145.11,1.7,62,79.0,Construction,ACCUMULATION,2,CAUTION,OPEN,,,,,49.5,WEAK,OK
 2026-06-23,16:10,Failed_Breakout_Short,Failed Breakout Short,MAZDOCK,SHORT,2506.7,2506.7,2587.81,2385.04,2303.93,2.5,57,70.0,Capital Goods,ACCUMULATION,2,CAUTION,OPEN,,,,,41.6,WEAK,OK
@@ -1843,33 +1843,33 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,MANAPPURAM,BUY,318.35,318.35,308.32,333.4,334.0,1.6,60,95.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,67.9,STRONG,OK
 2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,INDUSINDBK,BUY,927.6,927.6,887.28,988.08,1028.4,2.5,60,75.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,67.5,STRONG,OK
 2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,APOLLOHOSP,BUY,8573.5,8573.5,8310.78,9452.91,10875.91,8.0,55,73.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,65.6,STRONG,OK
-2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6753.5,6753.5,6627.29,6942.82,6960.5,1.6,60,67.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,60.9,MODERATE,OK
+2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,DIVISLAB,BUY,6753.5,6753.5,6627.29,6942.82,6960.5,1.6,60,67.0,Healthcare,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,6627.29,Stop Loss Hit,-1.87,60.9,MODERATE,OK
 2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,TITAN,BUY,4323.8,4323.8,4208.6,4496.6,4611.8,2.5,60,64.0,Consumer Durables,ACCUMULATION,4,CAUTION,OPEN,,,,,58.1,MODERATE,OK
-2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4504.4,4504.4,4400.13,4660.8,4666.0,1.5,55,54.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,51.7,MODERATE,OK
+2026-06-24,13:11,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4504.4,4504.4,4400.13,4660.8,4666.0,1.5,55,54.0,Healthcare,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,4660.8,Target 1 Hit,3.47,51.7,MODERATE,OK
 2026-06-24,13:11,52WH_Breakout,52-Week High Breakout,AUBANK,BUY,1067.2,1067.2,1041.79,1105.32,1212.77,5.7,62,85.0,Financial Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-25,1041.79,Stop Loss Hit,-2.38,81.3,ELITE,OK
-2026-06-24,13:11,52WH_Breakout,52-Week High Breakout,ABCAPITAL,BUY,394.8,394.8,388.3,460.99,568.09,8.0,57,100.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,78.6,STRONG,OK
-2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),GMRAIRPORT,BUY,108.07,108.07,106.37,111.15,122.88,8.0,62,85.0,Services,ACCUMULATION,4,CAUTION,OPEN,,,,,89.0,ELITE,OK
-2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),ADANIENT,BUY,3069.7,3069.7,2971.0,3883.9,5201.39,8.0,60,100.0,Metals & Mining,ACCUMULATION,4,CAUTION,OPEN,,,,,87.0,ELITE,OK
-2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),AUBANK,BUY,1067.2,1067.2,1021.0,1136.5,1212.77,3.2,64,85.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,85.7,ELITE,OK
+2026-06-24,13:11,52WH_Breakout,52-Week High Breakout,ABCAPITAL,BUY,394.8,394.8,388.3,460.99,568.09,8.0,57,100.0,Financial Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,388.3,Stop Loss Hit,-1.65,78.6,STRONG,OK
+2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),GMRAIRPORT,BUY,108.07,108.07,106.37,111.15,122.88,8.0,62,85.0,Services,ACCUMULATION,4,CAUTION,TARGET,2026-06-29,111.15,Target 1 Hit,2.85,89.0,ELITE,OK
+2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),ADANIENT,BUY,3069.7,3069.7,2971.0,3883.9,5201.39,8.0,60,100.0,Metals & Mining,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,2971.0,Stop Loss Hit,-3.22,87.0,ELITE,OK
+2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),AUBANK,BUY,1067.2,1067.2,1021.0,1136.5,1212.77,3.2,64,85.0,Financial Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,1021.0,Stop Loss Hit,-4.33,85.7,ELITE,OK
 2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),OFSS,BUY,10468.5,10468.5,9874.5,11359.5,12924.17,4.1,64,100.0,Information Technology,ACCUMULATION,4,CAUTION,OPEN,,,,,85.5,ELITE,OK
 2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),ABCAPITAL,BUY,394.8,394.8,381.85,460.99,568.09,8.0,64,100.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,83.0,ELITE,OK
 2026-06-24,13:11,Last30Min_ATH,Near 52W High (EOD),CHOLAFIN,BUY,1792.9,1792.9,1721.0,1900.75,2097.88,4.2,58,95.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,80.0,ELITE,OK
 2026-06-24,13:11,Failed_Breakout_Short,Failed Breakout Short,KEI,SHORT,5419.0,5419.0,5758.23,4910.16,4570.93,2.5,57,100.0,Capital Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,60.6,MODERATE,OK
-2026-06-24,13:11,Failed_Breakout_Short,Failed Breakout Short,LAURUSLABS,SHORT,1454.2,1454.2,1505.26,1377.61,1326.55,2.5,57,100.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,55.6,MODERATE,OK
+2026-06-24,13:11,Failed_Breakout_Short,Failed Breakout Short,LAURUSLABS,SHORT,1454.2,1454.2,1505.26,1377.61,1326.55,2.5,57,100.0,Healthcare,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,1505.26,Stop Loss Hit,-3.51,55.6,MODERATE,OK
 2026-06-24,13:11,Failed_Breakout_Short,Failed Breakout Short,ZYDUSLIFE,SHORT,1099.3,1099.3,1133.01,1048.73,1015.02,2.5,57,90.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,47.8,WEAK,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,VIJAYA,BUY,1312.6,1312.6,1253.05,1401.92,1461.47,2.5,55,100.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,70.9,STRONG,OK
-2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,TATATECH,BUY,748.6,748.6,718.59,793.62,823.63,2.5,60,100.0,Information Technology,ACCUMULATION,4,CAUTION,OPEN,,,,,68.9,STRONG,OK
+2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,TATATECH,BUY,748.6,748.6,718.59,793.62,823.63,2.5,60,100.0,Information Technology,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,718.59,Stop Loss Hit,-4.01,68.9,STRONG,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,GROWW,BUY,199.69,199.69,190.95,212.8,214.36,1.7,60,90.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,68.7,STRONG,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,HSCL,BUY,663.0,663.0,611.46,740.31,791.85,2.5,60,100.0,Chemicals,ACCUMULATION,4,CAUTION,OPEN,,,,,68.2,STRONG,OK
-2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,AMBER,BUY,7843.5,7843.5,7574.54,8246.94,8515.9,2.5,60,85.0,Consumer Durables,ACCUMULATION,4,CAUTION,OPEN,,,,,67.9,STRONG,OK
-2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,PREMIERENE,BUY,1053.4,1053.4,1025.41,1095.39,1103.9,1.8,55,79.0,Capital Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,64.4,MODERATE,OK
+2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,AMBER,BUY,7843.5,7843.5,7574.54,8246.94,8515.9,2.5,60,85.0,Consumer Durables,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,7574.54,Stop Loss Hit,-3.43,67.9,STRONG,OK
+2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,PREMIERENE,BUY,1053.4,1053.4,1025.41,1095.39,1103.9,1.8,55,79.0,Capital Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,1025.41,Stop Loss Hit,-2.66,64.4,MODERATE,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,KARURVYSYA,BUY,294.95,294.95,284.61,310.46,320.8,2.5,60,59.0,Financial Services,ACCUMULATION,4,CAUTION,OPEN,,,,,61.2,MODERATE,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,JSWENERGY,BUY,574.4,574.4,558.17,598.74,614.97,2.5,55,80.0,Power,ACCUMULATION,4,CAUTION,OPEN,,,,,57.4,MODERATE,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,CROMPTON,BUY,275.25,275.25,266.08,289.0,298.17,2.5,60,74.0,Consumer Durables,ACCUMULATION,4,CAUTION,OPEN,,,,,56.6,MODERATE,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,LENSKART,BUY,516.35,516.35,474.71,578.81,620.45,2.5,60,48.0,Consumer Services,ACCUMULATION,4,CAUTION,OPEN,,,,,54.1,MODERATE,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,CHENNPETRO,BUY,1128.0,1128.0,1089.1,1186.35,1225.0,2.5,55,70.0,Oil Gas & Consumable Fuels,ACCUMULATION,4,CAUTION,OPEN,,,,,52.4,MODERATE,OK
 2026-06-24,15:43,EMA21_Bounce,21 EMA Bounce,GESHIP,BUY,1497.2,1497.2,1407.95,1631.08,1720.33,2.5,60,58.0,Services,ACCUMULATION,4,CAUTION,OPEN,,,,,52.1,MODERATE,OK
-2026-06-24,15:43,52WH_Breakout,52-Week High Breakout,WELSPUNLIV,BUY,169.84,169.84,162.4,208.61,271.35,8.0,67,100.0,Textiles,ACCUMULATION,4,CAUTION,OPEN,,,,,80.1,ELITE,OK
+2026-06-24,15:43,52WH_Breakout,52-Week High Breakout,WELSPUNLIV,BUY,169.84,169.84,162.4,208.61,271.35,8.0,67,100.0,Textiles,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,162.4,Stop Loss Hit,-4.38,80.1,ELITE,OK
 2026-06-24,15:43,52WH_Breakout,52-Week High Breakout,JSWINFRA,BUY,338.4,338.4,312.39,377.42,403.43,2.5,67,100.0,Services,ACCUMULATION,4,CAUTION,OPEN,,,,,79.5,STRONG,OK
 2026-06-24,15:43,Last30Min_ATH,Near 52W High (EOD),RBLBANK,BUY,377.05,377.05,370.35,387.1,431.74,8.0,60,96.0,Financial Services,ACCUMULATION,4,CAUTION,STOPPED,2026-06-25,370.35,Stop Loss Hit,-1.78,92.0,ELITE,OK
 2026-06-24,15:43,Last30Min_ATH,Near 52W High (EOD),GLAND,BUY,2326.2,2326.2,2287.9,2383.65,2395.0,1.8,58,100.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,87.0,ELITE,OK
@@ -1881,13 +1881,13 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-24,15:43,Failed_Breakout_Short,Failed Breakout Short,SCHNEIDER,SHORT,1373.9,1373.9,1490.82,1198.52,1081.6,2.5,62,100.0,Capital Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,56.5,MODERATE,OK
 2026-06-24,15:43,Failed_Breakout_Short,Failed Breakout Short,BDL,SHORT,1383.5,1383.5,1453.33,1278.76,1208.93,2.5,62,78.0,Capital Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,55.0,MODERATE,OK
 2026-06-24,15:43,Failed_Breakout_Short,Failed Breakout Short,INDGN,SHORT,527.2,527.2,555.25,485.13,457.08,2.5,57,80.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,54.6,MODERATE,OK
-2026-06-24,15:43,Failed_Breakout_Short,Failed Breakout Short,ZYDUSWELL,SHORT,525.55,525.55,550.82,487.64,462.37,2.5,57,81.0,Fast Moving Consumer Goods,ACCUMULATION,4,CAUTION,OPEN,,,,,50.2,MODERATE,OK
+2026-06-24,15:43,Failed_Breakout_Short,Failed Breakout Short,ZYDUSWELL,SHORT,525.55,525.55,550.82,487.64,462.37,2.5,57,81.0,Fast Moving Consumer Goods,ACCUMULATION,4,CAUTION,STOPPED,2026-06-29,550.82,Stop Loss Hit,-4.81,50.2,MODERATE,OK
 2026-06-24,15:43,Failed_Breakout_Short,Failed Breakout Short,MANKIND,SHORT,2483.0,2483.0,2622.99,2273.02,2133.03,2.5,62,100.0,Healthcare,ACCUMULATION,4,CAUTION,OPEN,,,,,49.0,WEAK,OK
 2026-06-25,13:10,EMA21_Bounce,21 EMA Bounce,MANAPPURAM,BUY,318.5,318.5,304.05,340.17,354.62,2.5,65,79.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,76.8,STRONG,OK
 2026-06-25,13:10,EMA21_Bounce,21 EMA Bounce,CGPOWER,BUY,942.1,942.1,906.89,994.92,1030.13,2.5,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,70.2,STRONG,OK
 2026-06-25,13:10,EMA21_Bounce,21 EMA Bounce,HDFCAMC,BUY,2649.7,2649.7,2580.7,2753.2,2822.2,2.5,55,63.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,63.9,MODERATE,OK
 2026-06-25,13:10,EMA21_Bounce,21 EMA Bounce,MARICO,BUY,825.8,825.8,808.19,852.21,869.82,2.5,60,55.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,60.6,MODERATE,OK
-2026-06-25,13:10,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4516.2,4516.2,4407.71,4678.93,4787.42,2.5,55,47.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,53.8,MODERATE,OK
+2026-06-25,13:10,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4516.2,4516.2,4407.71,4678.93,4787.42,2.5,55,47.0,Healthcare,ACCUMULATION,3,CAUTION,TARGET,2026-06-29,4678.93,Target 1 Hit,3.6,53.8,MODERATE,OK
 2026-06-25,13:10,52WH_Breakout,52-Week High Breakout,OFSS,BUY,10974.5,10974.5,10411.73,13728.46,18184.7,8.0,67,100.0,Information Technology,ACCUMULATION,3,CAUTION,OPEN,,,,,78.1,STRONG,OK
 2026-06-25,13:10,Last30Min_ATH,Near 52W High (EOD),OFSS,BUY,10974.5,10974.5,10411.0,13728.46,18184.7,8.0,64,100.0,Information Technology,ACCUMULATION,3,CAUTION,OPEN,,,,,82.5,ELITE,OK
 2026-06-25,13:10,Last30Min_ATH,Near 52W High (EOD),AUROPHARMA,BUY,1555.2,1555.2,1532.0,1733.86,2022.96,8.0,60,74.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,65.1,STRONG,OK
@@ -1895,8 +1895,8 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-25,13:10,Failed_Breakout_Short,Failed Breakout Short,ABCAPITAL,SHORT,390.8,390.8,402.94,372.59,360.45,2.5,57,85.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,61.6,MODERATE,OK
 2026-06-25,13:10,Failed_Breakout_Short,Failed Breakout Short,AUBANK,SHORT,1033.85,1033.85,1088.3,952.17,897.72,2.5,57,63.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,56.5,MODERATE,OK
 2026-06-25,13:10,Failed_Breakout_Short,Failed Breakout Short,AXISBANK,SHORT,1377.2,1377.2,1407.43,1331.86,1301.63,2.5,62,62.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,55.4,MODERATE,OK
-2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,THERMAX,BUY,4828.8,4828.8,4628.53,5129.21,5329.48,2.5,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,70.9,STRONG,OK
-2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,ATHERENERG,BUY,998.75,998.75,964.52,1050.1,1069.0,2.1,55,93.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,66.4,STRONG,OK
+2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,THERMAX,BUY,4828.8,4828.8,4628.53,5129.21,5329.48,2.5,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,TARGET,2026-06-29,5129.21,Target 1 Hit,6.22,70.9,STRONG,OK
+2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,ATHERENERG,BUY,998.75,998.75,964.52,1050.1,1069.0,2.1,55,93.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,TARGET,2026-06-29,1050.1,Target 1 Hit,5.14,66.4,STRONG,OK
 2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,SAILIFE,BUY,1221.3,1221.3,1164.96,1305.81,1362.15,2.5,60,78.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,64.6,MODERATE,OK
 2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,GROWW,BUY,199.79,199.79,193.09,209.84,214.36,2.2,60,84.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,64.2,MODERATE,OK
 2026-06-25,16:03,EMA21_Bounce,21 EMA Bounce,IGIL,BUY,359.7,359.7,341.57,386.9,405.03,2.5,60,53.0,Services,ACCUMULATION,3,CAUTION,OPEN,,,,,56.8,MODERATE,OK
@@ -1911,7 +1911,7 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-26,13:02,EMA21_Bounce,21 EMA Bounce,CGPOWER,BUY,942.1,942.1,906.89,994.92,1030.13,2.5,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,70.2,STRONG,OK
 2026-06-26,13:02,EMA21_Bounce,21 EMA Bounce,HDFCAMC,BUY,2649.7,2649.7,2580.7,2753.2,2822.2,2.5,55,63.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,63.9,MODERATE,OK
 2026-06-26,13:02,EMA21_Bounce,21 EMA Bounce,MARICO,BUY,825.8,825.8,808.19,852.21,869.82,2.5,60,55.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,60.6,MODERATE,OK
-2026-06-26,13:02,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4516.2,4516.2,4407.71,4678.93,4787.42,2.5,55,47.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,53.8,MODERATE,OK
+2026-06-26,13:02,EMA21_Bounce,21 EMA Bounce,TORNTPHARM,BUY,4516.2,4516.2,4407.71,4678.93,4787.42,2.5,55,47.0,Healthcare,ACCUMULATION,3,CAUTION,TARGET,2026-06-29,4678.93,Target 1 Hit,3.6,53.8,MODERATE,OK
 2026-06-26,13:02,52WH_Breakout,52-Week High Breakout,OFSS,BUY,10974.5,10974.5,10411.73,13728.46,18184.7,8.0,67,100.0,Information Technology,ACCUMULATION,3,CAUTION,OPEN,,,,,78.1,STRONG,OK
 2026-06-26,13:02,Last30Min_ATH,Near 52W High (EOD),OFSS,BUY,10974.5,10974.5,10411.0,13728.46,18184.7,8.0,64,100.0,Information Technology,ACCUMULATION,3,CAUTION,OPEN,,,,,82.5,ELITE,OK
 2026-06-26,13:02,Last30Min_ATH,Near 52W High (EOD),AUROPHARMA,BUY,1555.2,1555.2,1532.0,1733.86,2022.96,8.0,60,74.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,65.1,STRONG,OK
@@ -1919,8 +1919,8 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-26,13:02,Failed_Breakout_Short,Failed Breakout Short,ABCAPITAL,SHORT,390.8,390.8,402.94,372.59,360.45,2.5,57,85.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,61.6,MODERATE,OK
 2026-06-26,13:02,Failed_Breakout_Short,Failed Breakout Short,AUBANK,SHORT,1033.85,1033.85,1088.3,952.17,897.72,2.5,57,63.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,56.5,MODERATE,OK
 2026-06-26,13:02,Failed_Breakout_Short,Failed Breakout Short,AXISBANK,SHORT,1377.2,1377.2,1407.43,1331.86,1301.63,2.5,62,62.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,55.4,MODERATE,OK
-2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,THERMAX,BUY,4828.8,4828.8,4628.53,5129.21,5329.48,2.5,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,70.9,STRONG,OK
-2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,ATHERENERG,BUY,998.75,998.75,964.52,1050.1,1069.0,2.1,55,93.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,66.4,STRONG,OK
+2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,THERMAX,BUY,4828.8,4828.8,4628.53,5129.21,5329.48,2.5,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,TARGET,2026-06-29,5129.21,Target 1 Hit,6.22,70.9,STRONG,OK
+2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,ATHERENERG,BUY,998.75,998.75,964.52,1050.1,1069.0,2.1,55,93.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,TARGET,2026-06-29,1050.1,Target 1 Hit,5.14,66.4,STRONG,OK
 2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,SAILIFE,BUY,1221.3,1221.3,1164.96,1305.81,1362.15,2.5,60,78.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,64.6,MODERATE,OK
 2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,GROWW,BUY,199.79,199.79,193.09,209.84,214.36,2.2,60,84.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,64.2,MODERATE,OK
 2026-06-26,15:40,EMA21_Bounce,21 EMA Bounce,IGIL,BUY,359.7,359.7,341.57,386.9,405.03,2.5,60,53.0,Services,ACCUMULATION,3,CAUTION,OPEN,,,,,56.8,MODERATE,OK
@@ -1931,3 +1931,47 @@ Date,Time,Strategy,Strategy_Name,Symbol,Signal,CMP,Entry,SL,T1,T2,RR,Confidence,
 2026-06-26,15:40,Failed_Breakout_Short,Failed Breakout Short,KAJARIACER,SHORT,1196.6,1196.6,1241.48,1129.28,1084.4,2.5,65,89.0,Consumer Durables,ACCUMULATION,3,CAUTION,OPEN,,,,,59.3,MODERATE,OK
 2026-06-26,15:40,Failed_Breakout_Short,Failed Breakout Short,TIINDIA,SHORT,3054.0,3054.0,3367.66,2583.51,2269.85,2.5,57,64.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,50.9,MODERATE,OK
 2026-06-26,15:40,Failed_Breakout_Short,Failed Breakout Short,CASTROLIND,SHORT,185.37,185.37,189.39,179.34,175.32,2.5,57,45.0,Oil Gas & Consumable Fuels,ACCUMULATION,3,CAUTION,OPEN,,,,,42.8,WEAK,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,POLYCAB,BUY,9779.0,9779.0,9300.84,10496.24,11707.22,4.0,65,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,79.5,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,KEI,BUY,5452.0,5452.0,5059.07,6041.4,6378.2,2.4,60,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,76.4,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,IDEA,BUY,14.43,14.43,13.56,15.74,16.61,2.5,65,100.0,Telecommunication,ACCUMULATION,3,CAUTION,OPEN,,,,,73.7,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,TATACOMM,BUY,1993.4,1993.4,1901.48,2131.28,2223.2,2.5,55,100.0,Telecommunication,ACCUMULATION,3,CAUTION,OPEN,,,,,71.3,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,LICHSGFIN,BUY,560.75,560.75,537.6,595.47,618.62,2.5,60,63.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,69.4,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,SONACOMS,BUY,620.75,620.75,597.58,655.5,709.64,3.8,60,96.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,68.7,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,ATGL,BUY,731.65,731.65,684.69,802.09,849.05,2.5,60,100.0,Oil Gas & Consumable Fuels,ACCUMULATION,3,CAUTION,OPEN,,,,,68.1,STRONG,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,MARICO,BUY,839.95,839.95,810.08,884.76,908.55,2.3,60,67.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,64.7,MODERATE,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,ABB,BUY,7128.0,7128.0,6795.79,7626.32,7958.53,2.5,65,75.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,63.2,MODERATE,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,DMART,BUY,4357.0,4357.0,4184.66,4615.51,4787.85,2.5,60,64.0,Consumer Services,ACCUMULATION,3,CAUTION,OPEN,,,,,60.8,MODERATE,OK
+2026-06-29,14:41,EMA21_Bounce,21 EMA Bounce,LINDEINDIA,BUY,7297.0,7297.0,6890.82,7906.27,8312.45,2.5,60,46.0,Chemicals,ACCUMULATION,3,CAUTION,OPEN,,,,,52.8,MODERATE,OK
+2026-06-29,14:41,52WH_Breakout,52-Week High Breakout,LAURUSLABS,BUY,1500.3,1500.3,1470.8,1544.55,1813.65,8.0,62,100.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,84.1,ELITE,OK
+2026-06-29,14:41,52WH_Breakout,52-Week High Breakout,MARICO,BUY,839.95,839.95,824.41,863.26,908.55,4.4,67,67.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,74.4,STRONG,OK
+2026-06-29,14:41,52WH_Breakout,52-Week High Breakout,DRREDDY,BUY,1375.7,1375.7,1349.13,1415.55,1504.37,4.8,67,56.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,59.9,MODERATE,OK
+2026-06-29,14:41,Last30Min_ATH,Near 52W High (EOD),FEDERALBNK,BUY,324.05,324.05,322.15,365.8,433.35,8.0,64,82.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,93.2,ELITE,OK
+2026-06-29,14:41,Last30Min_ATH,Near 52W High (EOD),NAM-INDIA,BUY,1167.3,1167.3,1129.5,1224.0,1261.8,2.5,60,100.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,89.0,ELITE,OK
+2026-06-29,14:41,Last30Min_ATH,Near 52W High (EOD),BHEL,BUY,413.75,413.75,393.85,443.6,463.5,2.5,62,100.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,88.5,ELITE,OK
+2026-06-29,14:41,Last30Min_ATH,Near 52W High (EOD),ZYDUSLIFE,BUY,1121.3,1121.3,1099.0,1297.92,1583.72,8.0,60,91.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,81.6,ELITE,OK
+2026-06-29,14:41,Last30Min_ATH,Near 52W High (EOD),MARICO,BUY,839.95,839.95,824.6,862.98,908.55,4.5,64,67.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,78.8,STRONG,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,CHOLAFIN,SHORT,1774.0,1774.0,1838.57,1677.14,1612.57,2.5,65,91.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,63.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,LODHA,SHORT,939.55,939.55,981.24,877.01,835.32,2.5,65,100.0,Realty,ACCUMULATION,3,CAUTION,OPEN,,,,,63.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,ABCAPITAL,SHORT,385.3,385.3,402.79,359.06,341.57,2.5,65,93.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,63.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,BOSCHLTD,SHORT,39885.0,39885.0,41668.29,37210.06,35426.77,2.5,65,100.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,63.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,AUBANK,SHORT,1030.45,1030.45,1088.42,943.5,885.53,2.5,60,74.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,60.1,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,HINDPETRO,SHORT,389.6,389.6,423.97,338.04,303.67,2.5,57,70.0,Oil Gas & Consumable Fuels,ACCUMULATION,3,CAUTION,OPEN,,,,,60.1,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,EICHERMOT,SHORT,7426.0,7426.0,7805.79,6856.32,6476.53,2.5,65,59.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,60.0,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,LT,SHORT,4165.2,4165.2,4296.6,3968.1,3836.7,2.5,62,77.0,Construction,ACCUMULATION,3,CAUTION,OPEN,,,,,59.7,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,KOTAKBANK,SHORT,395.5,395.5,416.23,364.4,343.67,2.5,60,57.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,59.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,AXISBANK,SHORT,1356.8,1356.8,1407.92,1280.12,1229.0,2.5,62,66.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,59.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,JKCEMENT,SHORT,5319.5,5319.5,5682.39,4775.16,4412.27,2.5,65,50.0,Construction Materials,ACCUMULATION,3,CAUTION,OPEN,,,,,58.7,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,GODREJPROP,SHORT,1830.1,1830.1,1900.04,1725.19,1655.25,2.5,62,84.0,Realty,ACCUMULATION,3,CAUTION,OPEN,,,,,58.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,SUNDARMFIN,SHORT,4547.5,4547.5,4703.54,4313.44,4157.4,2.5,65,39.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,57.1,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,ASHOKLEY,SHORT,157.36,157.36,163.73,147.81,146.26,1.7,62,37.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,55.2,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,SBIN,SHORT,1036.1,1036.1,1060.81,999.03,974.32,2.5,62,48.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,54.4,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,PAGEIND,SHORT,40405.0,40405.0,42226.96,37672.06,35850.1,2.5,57,90.0,Textiles,ACCUMULATION,3,CAUTION,OPEN,,,,,53.7,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,AUROPHARMA,SHORT,1547.5,1547.5,1596.49,1474.02,1425.03,2.5,65,76.0,Healthcare,ACCUMULATION,3,CAUTION,OPEN,,,,,53.6,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,UNITDSPR,SHORT,1341.5,1341.5,1405.43,1245.6,1181.67,2.5,65,55.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,52.8,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,ESCORTS,SHORT,2897.2,2897.2,3044.93,2675.6,2527.87,2.5,57,45.0,Capital Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,52.1,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,NAVINFLUOR,SHORT,7486.5,7486.5,7808.7,7003.2,6681.0,2.5,62,89.0,Chemicals,ACCUMULATION,3,CAUTION,OPEN,,,,,52.1,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,TVSMOTOR,SHORT,3456.8,3456.8,3627.39,3200.92,3030.33,2.5,60,42.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,52.0,MODERATE,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,METROPOLIS,SHORT,523.8,523.8,570.02,454.47,408.25,2.5,60,85.0,Pharma,ACCUMULATION,3,CAUTION,OPEN,,,,,49.5,WEAK,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,M&M,SHORT,3093.0,3093.0,3231.55,2885.18,2746.63,2.5,57,44.0,Automobile and Auto Components,ACCUMULATION,3,CAUTION,OPEN,,,,,47.0,WEAK,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,SBICARD,SHORT,601.9,601.9,644.05,538.67,496.52,2.5,60,20.0,Financial Services,ACCUMULATION,3,CAUTION,OPEN,,,,,45.6,WEAK,OK
+2026-06-29,14:41,Failed_Breakout_Short,Failed Breakout Short,BRITANNIA,SHORT,5102.0,5102.0,5322.56,4771.16,4594.0,2.3,57,27.0,Fast Moving Consumer Goods,ACCUMULATION,3,CAUTION,OPEN,,,,,42.1,WEAK,OK
