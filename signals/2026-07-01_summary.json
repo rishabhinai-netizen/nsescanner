@@ -1,0 +1,19 @@
+{
+  "date": "2026-07-01",
+  "scan_time": "13:31",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "ACCUMULATION",
+  "regime_score": 3,
+  "nifty": 24005.85,
+  "nifty_last_bar_date": "2026-07-01",
+  "stocks_scanned": 183,
+  "total_signals": 23,
+  "new_signals": 23,
+  "strategies": {
+    "VCP": 3,
+    "EMA21_Bounce": 15,
+    "52WH_Breakout": 2,
+    "Last30Min_ATH": 3
+  }
+}
