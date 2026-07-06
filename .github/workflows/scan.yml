@@ -1,0 +1,28 @@
+name: NX Daily Scan
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'   # 7:00 PM IST — EOD scan, Nifty 200
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: 'nifty50 | nifty200 | nifty500'
+        default: 'nifty200'
+        required: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # No contents:write — this job NEVER commits to the repo. Supabase only.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11', cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Run EOD scan
+        env:
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:      ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m jobs.scan --universe ${{ github.event.inputs.universe || 'nifty200' }}
