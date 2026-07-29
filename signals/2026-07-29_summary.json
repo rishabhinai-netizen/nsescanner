@@ -1,0 +1,20 @@
+{
+  "date": "2026-07-29",
+  "scan_time": "12:55",
+  "mode": "eod",
+  "universe": "nifty200",
+  "regime": "DISTRIBUTION",
+  "regime_score": -1,
+  "nifty": 24250.2,
+  "nifty_last_bar_date": "2026-07-29",
+  "stocks_scanned": 183,
+  "total_signals": 27,
+  "new_signals": 27,
+  "strategies": {
+    "VCP": 1,
+    "EMA21_Bounce": 18,
+    "52WH_Breakout": 1,
+    "Last30Min_ATH": 5,
+    "Failed_Breakout_Short": 2
+  }
+}
