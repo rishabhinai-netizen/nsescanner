@@ -1,19 +1,20 @@
 {
   "date": "2026-08-07",
-  "scan_time": "11:37",
+  "scan_time": "14:33",
   "mode": "eod",
-  "universe": "nifty200",
+  "universe": "nifty500",
   "regime": "DISTRIBUTION",
   "regime_score": 1,
   "nifty": 24570.65,
   "nifty_last_bar_date": "2026-08-07",
-  "stocks_scanned": 183,
-  "total_signals": 17,
-  "new_signals": 17,
+  "stocks_scanned": 500,
+  "total_signals": 59,
+  "new_signals": 42,
   "strategies": {
-    "EMA21_Bounce": 8,
-    "52WH_Breakout": 3,
-    "Last30Min_ATH": 3,
-    "Failed_Breakout_Short": 3
+    "VCP": 2,
+    "EMA21_Bounce": 29,
+    "52WH_Breakout": 6,
+    "Last30Min_ATH": 8,
+    "Failed_Breakout_Short": 14
   }
 }
